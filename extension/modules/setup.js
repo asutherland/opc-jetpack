@@ -97,6 +97,9 @@ let JetpackSetup = {
 
   createServices: function createServices() {
     if (!gServices) {
+      // Allow JS chrome errors to show up in the error console.
+      Application.prefs.setValue("javascript.options.showInConsole", true);
+
       var annDbFile = AnnotationService.getProfileFile(ANN_DB_FILENAME);
       var annDbConn = AnnotationService.openDatabase(annDbFile);
       var annSvc = new AnnotationService(annDbConn);
