@@ -4,7 +4,8 @@
 (function() {
    var jsm = {};
    Components.utils.import("resource://jetpack/modules/setup.js", jsm);
-   jsm.JetpackSetup.createServices();
+   var services = jsm.JetpackSetup.createServices();
+   services.feedManager.installToWindow(window);
  })();
 </script>
 </overlay>

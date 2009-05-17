@@ -38,7 +38,7 @@
 
 Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
 Components.utils.import("resource://jetpack/ubiquity-modules/codesource.js");
-Components.utils.import("resource://jetpack/ubiquity-modules/setup.js");
+Components.utils.import("resource://jetpack/modules/setup.js");
 
 function getUrlParams() {
   var urlFragments = document.URL.split("?")[1];
@@ -78,7 +78,7 @@ function onSubmit() {
   var code = $("#sourceCode").text();
   var canAutoUpdate = $("#autoupdate").attr("checked") ? true : false;
   if (code) {
-    var feedMgr = UbiquitySetup.createServices().feedManager;
+    var feedMgr = JetpackSetup.createServices().feedManager;
     feedMgr.addSubscribedFeed({url: gCommandFeedInfo.url,
                                sourceUrl: gCommandFeedInfo.sourceUrl,
                                sourceCode: code,
@@ -112,7 +112,7 @@ function fetchSource(uri, onSuccess) {
 }
 
 function onReady() {
-  var feedMgr = UbiquitySetup.createServices().feedManager;
+  var feedMgr = JetpackSetup.createServices().feedManager;
   if (feedMgr.isSubscribedFeed(gCommandFeedInfo.url)) {
     if (gCommandFeedInfo.updateCode)
       // TODO: Also check to see if updateCode is different from
