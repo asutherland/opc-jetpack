@@ -330,15 +330,15 @@ FMgrProto.showNotification = function showNotification(plugin, targetDoc, comman
     }
 
     if(!notify_message){
-      var notify_message = ("This page contains Ubiquity commands.  " +
-       "If you'd like to subscribe to them, please " +
+      var notify_message = ("This page contains a Jetpack feature. " +
+       "If you'd like to install it, please " +
        "click the button to the right.");
     }
 
     var buttons = [
       {accessKey: null,
        callback: onSubscribeClick,
-       label: "Subscribe...",
+       label: "Install...",
        popup: null}
     ];
     box.appendNotification(
