@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<script>
+(function() {
+   var jsm = {};
+   Components.utils.import("resource://jetpack/modules/setup.js", jsm);
+   jsm.JetpackSetup.createServices();
+ })();
+</script>
+</overlay>
