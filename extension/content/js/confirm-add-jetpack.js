@@ -66,8 +66,8 @@ function showConfirmation() {
   $("#errorPageContainer").css("background-image",
                                "url('" + largeIconUrl + "')");
 
-  $("title").text("Jetpack Feed Subscription Successful");
-  $("#errorTitle").html("<h1>Subscription Successful</h1>");
+  $("title").text("Jetpack Feature Installation Successful");
+  $("#errorTitle").html("<h1>Installation Successful</h1>");
 
   $("#errorShortDesc").html($("#confirmationShortDesc").html());
   $("#errorLongDesc").html($("#confirmationLongDesc").html());
