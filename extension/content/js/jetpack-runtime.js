@@ -192,6 +192,11 @@ Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
 
 $(window).ready(
   function() {
+    var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
+
+    if (!FeedManager.isSubscribedFeed(JetpackCodeEditor.url))
+      JetpackCodeEditor.registerFeed(FeedManager);
+
     JetpackRuntime.loadJetpacks();
 
     function maybeReload(eventName, uri) {
@@ -210,14 +215,14 @@ $(window).ready(
         }
         break;
       case "subscribe":
-        var feed = JetpackRuntime.FeedPlugin.FeedManager.getFeedForUrl(uri);
+        var feed = FeedManager.getFeedForUrl(uri);
         if (feed && feed.type == "jetpack")
           JetpackRuntime.addJetpack(uri.spec);
         break;
       }
     }
 
-    var watcher = new EventHubWatcher(JetpackRuntime.FeedPlugin.FeedManager);
+    var watcher = new EventHubWatcher(FeedManager);
     watcher.add("feed-change", maybeReload);
     watcher.add("subscribe", maybeReload);
     watcher.add("purge", maybeReload);

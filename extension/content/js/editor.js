@@ -10,6 +10,10 @@ var JetpackCodeEditor = {
     return file;
   },
 
+  get url() {
+    return FileIO.path(this.fullPath);
+  },
+
   initUI: function initUI(divId) {
     var self = this;
     // Loads and configures the objects that the editor needs
@@ -35,5 +39,13 @@ var JetpackCodeEditor = {
     if (!file.exists())
       FileIO.create(file);
     FileIO.write(file, data, 'w', this.CHARSET);
+  },
+
+  registerFeed: function registerFeed(feedManager) {
+    feedManager.addSubscribedFeed({url: this.url,
+                                   type: "jetpack",
+                                   sourceUrl: this.url,
+                                   canAutoUpdate: true,
+                                   isBuiltIn: true});
   }
 };
