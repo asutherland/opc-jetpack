@@ -177,6 +177,22 @@ var App = {
 
 $(window).ready(
   function() {
+    $("#container").tabs(
+      {onShow: function(tabLink, content, hiddenContent) {
+         if ($(tabLink).attr("href") == "#editor") {
+           if ($(content).find("#the-editor").length == 0) {
+             var iframe = $('<iframe id="the-editor"></iframe>');
+             iframe.attr('src', 'editor.html');
+             iframe.addClass('editor-widget');
+             $("#editor-widget-container").append(iframe);
+           }
+         }
+       },
+       onClick: function(tabLink, content, hiddenContent) {
+         $(hiddenContent).find("#the-editor").remove();
+       }
+      });
+
     window.setInterval(App.tick, 1000);
     $("#reload-editor-code").click(
       function() {

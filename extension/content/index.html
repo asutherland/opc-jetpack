@@ -12,6 +12,15 @@
 <img src="gfx/jetpack.png"/><br/>  
   
 <div id="container">
+  <ul>
+    <li><a href="#welcome"><span>Welcome</span></a></li>
+    <li><a href="#develop"><span>Develop</span></a></li>
+    <li><a href="#installed"><span>Installed Features</span></a></li>
+    <li><a href="#memory"><span>Memory Usage</span></a></li>
+    <li><a href="#tests"><span>Test Suite</span></a></li>      
+    <li><a href="#editor"><span>Editor</span></a></li>      
+  </ul>  
+  
   <!-- WELCOME -->
   <div id="welcome">
     <h1>I am Jetpack. Welcome.</h1>
@@ -172,7 +181,7 @@
   <div id="editor">
     <h2>Code Editor</h2>
     <p>You can play around with Jetpack using the editor below.</p>
-    <iframe id="editor-widget" src="editor.html"></iframe>
+    <div class="editor-widget" id="editor-widget-container"></div>    
     <p><span class="buttony" id="reload-editor-code">try out this
     code</span></p>
   </div>
@@ -200,6 +209,7 @@
 <script src="js/tests/test-jetpack-runtime.js"></script>
 <script src="js/tests/test-status-bar-panel.js"></script>
 <!-- Page Interaction -->
+<script src="js/ext/jquery.tabs.js"></script>
 <script src="js/app.js"></script>
 <!-- Code Editor -->
 <script src="js/ext/io.js"></script>

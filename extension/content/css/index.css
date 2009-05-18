@@ -172,7 +172,7 @@ a {
     display: none;
 }
 
-#editor-widget {
+.editor-widget {
     padding: 0;
     margin: 0;
     border: none;
