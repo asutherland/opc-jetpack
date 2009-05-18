@@ -44,14 +44,13 @@
     </div>
 
   <script>
-  function replaceMe(){};
-    
-  function toggle(){
+  function setState(state){
     var pos = $("#slider").css("left");
     
-    if( pos == "-20px" ) $("#slider").animate({left: 0});
-    else $("#slider").animate({left: -20});
-
+    if (pos == "-20px" && state == "on")
+      $("#slider").animate({left: 0});
+    else if (pos == "0px" && state == "off")
+      $("#slider").animate({left: -20});
   }
   </script>
   </body>

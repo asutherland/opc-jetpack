@@ -68,26 +68,27 @@ function removeAds(doc) {
 }
 
 var widgets = [];
+var state = "off";
+
+function toggleState() {
+  if( state == "off" ){
+    jetpack.tabs.onReady(removeAds);
+    state = "on";
+  } else {
+    jetpack.tabs.onReady.unbind(removeAds);
+    state = "off";
+  }
+  widgets.forEach(function(widget) {
+    widget.defaultView.wrappedJSObject.setState(state);
+  });
+}
 
 jetpack.statusBar.append({
   url: "unad.html",
   onReady: function(widget) {
-    var state = "off";
-
     widgets.push(widget);
-
-    $(widget).click(function(){
-      if( state == "off" ){
-        jetpack.tabs.onReady(removeAds);
-        state = "on";
-      } else {
-        jetpack.tabs.onReady.unbind(removeAds);
-        state = "off";
-      }
-      widgets.forEach(function(widget) {
-        widget.defaultView.wrappedJSObject.toggle();
-      });
-    });
+    widget.defaultView.wrappedJSObject.setState(state);
+    $(widget).click(toggleState);
   },
   onUnload: function(widget) {
     widgets.splice(widgets.indexOf(widget), 1);
