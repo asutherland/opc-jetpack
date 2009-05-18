@@ -2,18 +2,9 @@ Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js")
 
 var EXPORTED_SYMBOLS = ["MemoryTracking"];
 
-var persistentData = {};
-
 var MemoryTracking = {
   COMPACT_INTERVAL: 1000,
-  get _trackedObjects() {
-    if (!persistentData.trackedObjects)
-      persistentData.trackedObjects = {};
-    return persistentData.trackedObjects;
-  },
-  set _trackedObjects(object) {
-    persistentData.trackedObjects = object;
-  },
+  _trackedObjects: {},
   track: function track(object, bin, stackFrameNumber) {
     var weakref = Components.utils.getWeakReference(object);
     if (!bin)

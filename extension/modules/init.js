@@ -34,13 +34,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var EXPORTED_SYMBOLS = ["load", "set", "persistentData"];
+var EXPORTED_SYMBOLS = ["load", "set", "sessionStorage"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 var extensions = {};
-var persistentData = {};
+var sessionStorage = {};
 
 function log(msg) {
   //Components.utils.reportError(msg);
