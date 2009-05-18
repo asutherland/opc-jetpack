@@ -178,6 +178,10 @@ var App = {
 $(window).ready(
   function() {
     window.setInterval(App.tick, 1000);
+    $("#reload-editor-code").click(
+      function() {
+        JetpackRuntime.refreshJetpacks();
+      });
     $("#this-page-source-code").click(
       function() {
         App.viewSource(window.location.href, null);

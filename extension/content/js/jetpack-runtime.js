@@ -169,6 +169,16 @@ var JetpackRuntime = {
     this.contexts = [];
   },
 
+  refreshJetpacks: function refreshJetpacks() {
+    var feeds = this.FeedPlugin.FeedManager.getSubscribedFeeds();
+    feeds.forEach(
+      function(feed) {
+        if (feed.type == "jetpack") {
+          feed.refresh();
+        }
+      });
+  },
+
   loadJetpacks: function loadJetpacks() {
     var self = this;
 
