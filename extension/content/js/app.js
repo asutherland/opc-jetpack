@@ -21,7 +21,12 @@ var App = {
     if (!feed)
       return;
 
+    // TODO: Add 'check for manual update'
     switch (name) {
+    case "view-source":
+      // TODO: Show cached code if the feed isn't auto-updating.
+      App.viewSource(feed.srcUri.spec, null);
+      break;
     case "uninstall":
       feed.remove();
       break;
@@ -102,6 +107,8 @@ var App = {
       this._addButton(div, "purge");
       parent = $("#uninstalled-jetpacks");
     }
+
+    this._addButton(div, "view-source", "view source");
 
     div.hide();
     if (parent.children('.jetpack').length == 0)
