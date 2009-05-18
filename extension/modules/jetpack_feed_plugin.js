@@ -91,7 +91,7 @@ function FeedPlugin(feedManager, messageService) {
 
       if (url.scheme == "chrome")
         return true;
-      
+
       if (url.scheme != "https")
         return false;
 
@@ -109,6 +109,7 @@ function FeedPlugin(feedManager, messageService) {
     if (isTrustedUrl(commandsUrl, mimetype)) {
       function onSuccess(data) {
         feedManager.addSubscribedFeed({url: targetDoc.location.href,
+                                       title: targetDoc.title,
                                        sourceUrl: commandsUrl,
                                        canAutoUpdate: true,
                                        sourceCode: data,
