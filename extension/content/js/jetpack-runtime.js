@@ -43,6 +43,9 @@ var JetpackRuntime = {
 
   Context: function JetpackContext(feed, console) {
     MemoryTracking.track(this);
+
+    var timers = new Timers(window);
+
     function makeGlobals(codeSource) {
       var globals = {
         location: codeSource.id,
@@ -51,6 +54,8 @@ var JetpackRuntime = {
         jQuery: jQuery,
         Jetpack: jetpackNamespace.Jetpack
       };
+
+      timers.addMethodsTo(globals);
 
       // Add stubs for deprecated/obsolete functions.
       globals.addStatusBarPanel = function() {
@@ -93,6 +98,7 @@ var JetpackRuntime = {
         jetpackNamespace = null;
         delete sandbox['$'];
         delete sandbox['jQuery'];
+        timers.unload();
       });
 
     this.sandbox = sandbox;
