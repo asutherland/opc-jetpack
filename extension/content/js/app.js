@@ -185,11 +185,21 @@ $(window).ready(
              iframe.addClass('editor-widget');
              $("#editor-widget-container").append(iframe);
            }
+         Extension.Manager.sessionStorage.tab = $(tabLink).attr('href');
        },
        onClick: function(tabLink, content, hiddenContent) {
          $(hiddenContent).find("#editor-widget-container").empty();
        }
       });
+
+    // We'd actually prefer to use the jQuery tab extension's
+    // initialTab setting here so that there isn't an annoying flicker
+    // as the page switches from the initial page to the currently-selected
+    // one here, but the tab extension seems to be rife with bugs, so
+    // we're doing it the hacky and ungraceful way here. Awesome.
+    var selectedTabId = Extension.Manager.sessionStorage.tab;
+    if (selectedTabId)
+      $("a[href='" + selectedTabId + "']").click();
 
     window.setInterval(App.tick, 1000);
     $("#reload-editor-code").click(
