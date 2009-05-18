@@ -4,7 +4,7 @@ Components.utils.import("resource://jetpack/modules/setup.js", JetpackModules);
 
 JetpackModules.baseUri = JetpackModules.JetpackSetup.getBaseUri();
 
-function maybeFixUpUbiquityMessage(target) {
+function maybeFixUpJetpackMessage(target) {
   if (typeof(target.getAttribute) != "function")
     return;
   var href = target.getAttribute("href");
@@ -53,13 +53,13 @@ window.addEventListener(
     var box = document.getElementById("ConsoleBox");
     box.addEventListener(
       "DOMNodeInserted",
-      function(aEvt) { maybeFixUpUbiquityMessage(aEvt.originalTarget); },
+      function(aEvt) { maybeFixUpJetpackMessage(aEvt.originalTarget); },
       true
     );
 
     var child = box.mConsoleRowBox.firstChild;
     while (child) {
-      maybeFixUpUbiquityMessage(child);
+      maybeFixUpJetpackMessage(child);
       child = child.nextSibling;
     }
   },
