@@ -67,10 +67,14 @@ function removeAds(doc) {
       });
 }
 
+var widgets = [];
+
 jetpack.statusBar.append({
   url: "unad.html",
-  onReady: function(widget){
+  onReady: function(widget) {
     var state = "off";
+
+    widgets.push(widget);
 
     $(widget).click(function(){
       if( state == "off" ){
@@ -80,7 +84,13 @@ jetpack.statusBar.append({
         jetpack.tabs.onReady.unbind(removeAds);
         state = "off";
       }
+      widgets.forEach(function(widget) {
+        widget.defaultView.wrappedJSObject.toggle();
+      });
     });
+  },
+  onUnload: function(widget) {
+    widgets.splice(widgets.indexOf(widget), 1);
   },
   width: 42
 });
