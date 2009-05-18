@@ -2,6 +2,8 @@ function JetpackNamespace(urlFactory) {
   var self = this;
   var Jetpack = new JetpackLibrary();
 
+  Jetpack.notifications = new Notifications();
+
   Jetpack.lib = {};
   Jetpack.lib.twitter = Twitter;
 
