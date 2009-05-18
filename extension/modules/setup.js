@@ -52,9 +52,13 @@ let Application = Components.classes["@mozilla.org/fuel/application;1"]
 
 let gServices;
 
+const VERSION_PREF ="extensions.jetpack.lastversion";
 const ANN_DB_FILENAME = "jetpack_ann.sqlite";
 
 let JetpackSetup = {
+  isNewlyInstalledOrUpgraded: false,
+  _wasWelcomePageShownAtStartup: false,
+
   __getExtDir: function __getExtDir() {
     let extMgr = Cc["@mozilla.org/extensions/manager;1"]
                  .getService(Components.interfaces.nsIExtensionManager);
@@ -95,8 +99,20 @@ let JetpackSetup = {
     return false;
   },
 
+  get version() {
+    return Application.extensions.get("jetpack@labs.mozilla.com").version;
+  },
+
   createServices: function createServices() {
     if (!gServices) {
+      // Compare the version in our preferences from our version in the
+      // install.rdf.
+      var currVersion = Application.prefs.getValue(VERSION_PREF, "firstrun");
+      if (currVersion != this.version) {
+        Application.prefs.setValue(VERSION_PREF, this.version);
+        this.isNewlyInstalledOrUpgraded = true;
+      }
+
       // Allow JS chrome errors to show up in the error console.
       Application.prefs.setValue("javascript.options.showInConsole", true);
 
@@ -113,6 +129,33 @@ let JetpackSetup = {
     }
 
     return gServices;
+  },
+
+  installToWindow: function installToWindow(window) {
+    gServices.feedManager.installToWindow(window);
+
+    // Show the welcome page if we need to.
+    if (this.isNewlyInstalledOrUpgraded &&
+        !this._wasWelcomePageShownAtStartup) {
+      this._wasWelcomePageShownAtStartup = true;
+      window.addEventListener(
+        "load",
+        function onWindowLoad() {
+          window.removeEventListener("load", onWindowLoad, false);
+          var tabbrowser = window.getBrowser();
+          tabbrowser.addEventListener(
+            "load",
+            function onBrowserLoad() {
+              tabbrowser.removeEventListener("load", onBrowserLoad, false);
+              var tab = tabbrowser.addTab("about:jetpack");
+              tabbrowser.selectedTab = tab;
+            },
+            false
+          );
+        },
+        false
+      );
+    }
   },
 
   get version() {
