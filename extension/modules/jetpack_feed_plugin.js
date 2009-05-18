@@ -89,6 +89,9 @@ function FeedPlugin(feedManager, messageService) {
 
       var url = Utils.url(commandsUrl);
 
+      if (url.scheme == "chrome")
+        return true;
+      
       if (url.scheme != "https")
         return false;
 
