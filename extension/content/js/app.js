@@ -34,6 +34,32 @@ var App = {
     }
   },
 
+  initTabs: function initTabs() {
+    function showEditor() {
+      var iframe = $('<iframe id="the-editor"></iframe>');
+      iframe.attr('src', 'editor.html');
+      iframe.addClass('editor-widget');
+      $("#editor-widget-container").append(iframe);
+    }
+
+    $("#container").tabs(
+      {initial: (Extension.Manager.sessionStorage.tab ?
+                 Extension.Manager.sessionStorage.tab-1 : 0),
+       onShow: function(tabLink, content, hiddenContent) {
+         if ($(content).find("#editor-widget-container").length)
+           showEditor();
+         Extension.Manager.sessionStorage.tab = $("#container").activeTab();
+       },
+       onClick: function(tabLink, content, hiddenContent) {
+         $(hiddenContent).find("#editor-widget-container").empty();
+       }
+      });
+
+    // Because onShow isn't triggered for the initially showing tab...
+    if ($("#container .tabs-selected > a").attr("href") == "#develop")
+      showEditor();
+  },
+
   removeLinkForJetpack: function removeLinkForJetpack(url) {
     if (url in this._jetpackLinks) {
       this._jetpackLinks[url].slideUp(
@@ -177,29 +203,7 @@ var App = {
 
 $(window).ready(
   function() {
-    $("#container").tabs(
-      {onShow: function(tabLink, content, hiddenContent) {
-         if ($(content).find("#editor-widget-container").length) {
-             var iframe = $('<iframe id="the-editor"></iframe>');
-             iframe.attr('src', 'editor.html');
-             iframe.addClass('editor-widget');
-             $("#editor-widget-container").append(iframe);
-           }
-         Extension.Manager.sessionStorage.tab = $(tabLink).attr('href');
-       },
-       onClick: function(tabLink, content, hiddenContent) {
-         $(hiddenContent).find("#editor-widget-container").empty();
-       }
-      });
-
-    // We'd actually prefer to use the jQuery tab extension's
-    // initialTab setting here so that there isn't an annoying flicker
-    // as the page switches from the initial page to the currently-selected
-    // one here, but the tab extension seems to be rife with bugs, so
-    // we're doing it the hacky and ungraceful way here. Awesome.
-    var selectedTabId = Extension.Manager.sessionStorage.tab;
-    if (selectedTabId)
-      $("a[href='" + selectedTabId + "']").click();
+    App.initTabs();
 
     window.setInterval(App.tick, 1000);
     $("#reload-editor-code").click(
