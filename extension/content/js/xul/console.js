@@ -1,7 +1,8 @@
-Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js");
-Components.utils.import("resource://jetpack/modules/setup.js");
+var JetpackModules = {};
+Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js", JetpackModules);
+Components.utils.import("resource://jetpack/modules/setup.js", JetpackModules);
 
-var baseUri = JetpackSetup.getBaseUri();
+JetpackModules.baseUri = JetpackModules.JetpackSetup.getBaseUri();
 
 function maybeFixUpUbiquityMessage(target) {
   if (typeof(target.getAttribute) != "function")
@@ -10,11 +11,13 @@ function maybeFixUpUbiquityMessage(target) {
 
   // Remove pointless error messages.
   if (href &&
-      href.indexOf(baseUri) == 0 &&
+      href.indexOf(JetpackModules.baseUri) == 0 &&
       target.getAttribute("msg") == "not well-formed") {
     target.parentNode.removeChild(target);
     return;
   }
+
+  var SandboxFactory = JetpackModules.SandboxFactory;
 
   if (SandboxFactory.isInitialized && href) {
     if (SandboxFactory.isFilenameReported) {
