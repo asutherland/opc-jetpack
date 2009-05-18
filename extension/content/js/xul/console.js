@@ -41,7 +41,7 @@ function maybeFixUpJetpackMessage(target) {
          "in a Jetpack feature, but the source " +
          "file and line number reported below may be incorrect. To " +
          "receive accurate information, please consider upgrading to " +
-         "the latest beta of Firefox 3.1.")
+         "the latest beta of Firefox 3.5.")
       );
     }
   }
