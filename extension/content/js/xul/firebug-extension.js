@@ -20,6 +20,9 @@ FBL.ns(
         showContext: function(browser, context) {
           if (browser.contentWindow.location.href == JETPACK_URL) {
             Firebug.showChromeErrors = true;
+            // Supress pointless 'not well formed' errors when
+            // XHRs retrieve content that obviously isn't XML.
+            Firebug.showXMLErrors = false;
             Firebug.toggleBar(true);
           }
         },
