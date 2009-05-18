@@ -179,17 +179,15 @@ $(window).ready(
   function() {
     $("#container").tabs(
       {onShow: function(tabLink, content, hiddenContent) {
-         if ($(tabLink).attr("href") == "#editor") {
-           if ($(content).find("#the-editor").length == 0) {
+         if ($(content).find("#editor-widget-container").length) {
              var iframe = $('<iframe id="the-editor"></iframe>');
              iframe.attr('src', 'editor.html');
              iframe.addClass('editor-widget');
              $("#editor-widget-container").append(iframe);
            }
-         }
        },
        onClick: function(tabLink, content, hiddenContent) {
-         $(hiddenContent).find("#the-editor").remove();
+         $(hiddenContent).find("#editor-widget-container").empty();
        }
       });
 

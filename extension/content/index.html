@@ -18,7 +18,6 @@
     <li><a href="#installed"><span>Installed Features</span></a></li>
     <li><a href="#memory"><span>Memory Usage</span></a></li>
     <li><a href="#tests"><span>Test Suite</span></a></li>      
-    <li><a href="#editor"><span>Editor</span></a></li>      
   </ul>  
   
   <!-- WELCOME -->
@@ -85,35 +84,16 @@
     Firebug team to resolve them soon.
     </div>
     
-    <div class="sidebar">
-      <h2>This is a very special page.</h2>
-      <p>This page actually houses the Jetpack platform. All your Jetpacks
-      are loaded in this page, and you can even use Firebug to inspect
-      their current state.</p>
-      <p>As a result, the lifetime of your Jetpacks is tied to the
-      lifetime of this page. When you reload this page, for instance, all
-      your Jetpacks are reloaded. This means that the time between making
-      a change to a Jetpack and seeing its effects is as small as
-      possible&mdash;you never have to restart your browser.</p>
-      <p>Because it only makes sense for one instance of Jetpack to exist
-      at a time, this page is what developers call a <i>singleton</i>:
-      only one instance of it can exist at once.  Try opening this URL in
-      two tabs at once and see what happens!</p>
-      <p>Finally, the Jetpack singleton always exists, since users
-      obviously need to be able to use their Jetpacks without having
-      Jetpack open in a tab.  If you close the Jetpack tab, it'll actually
-      re-open in a hidden browser that you can't see.</p>
-  
-      <h3>API Documentation</h3>
-      <p>Read the <a href="chrome://jetpack/content/file.html#index.html#content/js/jetpack-library-doc.js">Jetpack Library documentation</a>.</p>
-  
-    </div>
     <h2>Developing With Jetpack</h2>
     
-    <p>If you want to create a Jetpack feature, use the editor at the
-    bottom of this page.</p>
-    <p>Here's a <span class="buttony" id="display-sample">sample Jetpack
-    feature</span> to get you started. We'll have a real tutorial up soon.</p>
+    <p>If you want to create a Jetpack feature, use the editor
+    below.</p> <p>Here's a <span class="buttony"
+    id="display-sample">sample Jetpack feature</span> to get you
+    started. We'll have a real tutorial up soon&mdash;in the meantime,
+    please check out the <a
+    href="chrome://jetpack/content/file.html#index.html#content/js/jetpack-library-doc.js">Jetpack
+    Library documentation</a>.</p>
+
     <div id="sample-code" class="sample code"
       style="display: none;">jetpack.statusBar.append({
       html: "&lt;p&gt;kill flash&lt;/p&gt;",
@@ -126,15 +106,33 @@
         });
       }});
     </div>
-    
+    <div class="editor-widget" id="editor-widget-container"></div>    
+    <p><span class="buttony" id="reload-editor-code">try out this
+    code</span></p>
+
     <p>If you want to hack on the Jetpack platform itself, the vast
     majority of it is contained in the <span class="buttony"
     id="this-page-source-code">source code for this page</span>. Just make
     local changes to the file or one of the scripts it refers to and
     reload this page.</p>
-        
-    
-  
+
+    <h2>About This Page</h2>
+    <p>This page actually houses the Jetpack platform. All your Jetpacks
+    are loaded in this page, and you can even use Firebug to inspect
+    their current state.</p>
+    <p>As a result, the lifetime of your Jetpacks is tied to the
+    lifetime of this page. When you reload this page, for instance, all
+    your Jetpacks are reloaded. This means that the time between making
+    a change to a Jetpack and seeing its effects is as small as
+    possible&mdash;you never have to restart your browser.</p>
+    <p>Because it only makes sense for one instance of Jetpack to exist
+    at a time, this page is what developers call a <i>singleton</i>:
+    only one instance of it can exist at once.  Try opening this URL in
+    two tabs at once and see what happens!</p>
+    <p>Finally, the Jetpack singleton always exists, since users
+    obviously need to be able to use their Jetpacks without having
+    Jetpack open in a tab.  If you close the Jetpack tab, it'll actually
+    re-open in a hidden browser that you can't see.</p> 
   </div>
   
   
@@ -176,14 +174,6 @@
     here.</p>
     <p>All output for the suites is sent to the <span
     class="logging-source"></span>.</p>    
-  </div>
-
-  <div id="editor">
-    <h2>Code Editor</h2>
-    <p>You can play around with Jetpack using the editor below.</p>
-    <div class="editor-widget" id="editor-widget-container"></div>    
-    <p><span class="buttony" id="reload-editor-code">try out this
-    code</span></p>
   </div>
 </div>
 
