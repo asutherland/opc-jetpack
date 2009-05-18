@@ -109,13 +109,13 @@
     <p>Here's a <span class="buttony" id="display-sample">sample Jetpack
     feed</span> to get you started. We'll have a real tutorial up soon.</p>
     <div id="sample-code" class="sample code"
-      style="display: none;">Jetpack.statusBar.append({
+      style="display: none;">jetpack.statusBar.append({
       html: "&lt;p&gt;kill flash&lt;/p&gt;",
       onReady: function(panel) {
         var button = $(panel).find("p");
         button.css({cursor: "pointer", fontFamily: "sans-serif"});
         button.click(function() {
-          var doc = $(Jetpack.tabs.focused.contentDocument);
+          var doc = $(jetpack.tabs.focused.contentDocument);
           doc.find("embed[type=application\\/x-shockwave-flash]").slideUp();
         });
       }});
