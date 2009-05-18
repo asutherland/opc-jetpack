@@ -1,0 +1,28 @@
+<html>
+<head>
+  <title>File Redirector</title>
+</head>
+<body>
+<script>
+Components.utils.import("resource://jetpack/modules/setup.js");
+
+function maybeRedirect() {
+  if (window.location.hash) {
+    var relPath = window.location.hash.slice(1);
+    var fileUrl = JetpackSetup.getBaseUri() + relPath;
+    window.location = fileUrl;
+  }
+}
+
+maybeRedirect();
+window.setInterval(maybeRedirect, 100);
+</script>
+<p>This page is a simple redirector that can be used to take the
+user from a Jetpack chrome: URI to a file: URI.</p>
+<p>To use it, just set the URI's hash to the relative path of the file
+URI to redirect the user to. The path should be relative to the
+root of the Jetpack extension. For instance:</p>
+<blockquote><a href="chrome://jetpack/content/file.html#index.html">
+chrome://jetpack/content/file.html#index.html</a></blockquote>
+</body>
+</html>

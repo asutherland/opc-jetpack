@@ -1,0 +1,74 @@
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" media="all"
+        href="content/css/code-illuminated/docs.css" />
+  <title>Jetpack Code Documentation</title>
+</head>
+<body>
+<div id="content">
+<div id="overview" class="documentation" style="display: none;">
+  <h1>Jetpack Code Documentation</h1>
+  <p><b>Overview</b></p>
+  <p><strong>We need your help!</strong>
+  Contribute by documenting more of the code, and keeping it
+  up-to-date.</p>
+  <p>Here is what we've got for documentation so far.</p>
+  <p>The following code is specific to Jetpack:</p>
+  <ul>
+      <li><a class="intra-wiki"
+           href="#content/js/jetpack-library-doc.js">Jetpack API</a></li>
+  </ul>
+  <p>The following modules were taken from Ubiquity:</p>
+  <ul>
+    <li><a class="intra-wiki"
+           href="#ubiquity-modules/utils.js">Utils</a></li>
+    <li><a class="intra-wiki"
+           href="#ubiquity-modules/eventhub.js">EventHub</a></li>
+    <li><a class="intra-wiki"
+           href="#ubiquity-modules/feedmanager.js">FeedManager</a></li>
+    <li><a class="intra-wiki"
+           href="#ubiquity-modules/annotation_memory.js">AnnotationService</a></li>
+  </ul>
+</div>
+</div>
+</body>
+<script src="content/js/jquery.js"></script>
+<script src="content/js/wikicreole.js"></script>
+<script src="content/js/code-illuminated/docs.js"></script>
+<script>
+  var XUL_PLANET_URL_TEMPLATE = "http://www.xulplanet.com/references/" +
+                                "xpcomref/ifaces/%QUERY%.html";
+  var MDC_URL_TEMPLATE = "https://developer.mozilla.org/en/N%QUERY%";
+
+  var INTRA_DOC_LINKS = {
+    FeedManager: "ubiquity-modules/feedmanager.js",
+    Feed: "ubiquity-modules/feedmanager.js",
+    EventHub: "ubiquity-modules/eventhub.js",
+    AnnotationService: "ubiquity-modules/annotation_memory.js",
+  }
+
+  App.processors.push(
+    function(documentation) {
+      $(documentation).find("tt").each(
+        function() {
+          var text = $(this).text();
+
+          if (text.indexOf("nsI") == 0) {
+            App.addMenuItem(this, "View MDC entry",
+                            MDC_URL_TEMPLATE.replace("%QUERY%",
+                                                     text.slice(1)));
+            App.addMenuItem(this, "View XULPlanet entry",
+                            XUL_PLANET_URL_TEMPLATE.replace("%QUERY%",
+                                                            text));
+          } else {
+            if (text in INTRA_DOC_LINKS) {
+              var href = "#" + INTRA_DOC_LINKS[text];
+              if (window.location.hash != href)
+                $(this).wrap('<a class="intra-wiki" href="' + href +
+                             '"></a>');
+            }
+          }
+        });
+    });
+</script>
+</html>
