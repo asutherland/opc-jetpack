@@ -21,5 +21,6 @@
     <em:name>Jetpack</em:name>
     <em:description>An extension that allows for the use of dynamic commands in Firefox.</em:description>
     <em:creator>Mozilla Corporation</em:creator>
+    <em:optionsURL>chrome://jetpack/content/preferences.xul</em:optionsURL>
   </Description>
 </RDF>
