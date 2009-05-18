@@ -22,6 +22,15 @@ function JetpackNamespace(urlFactory) {
     MemoryTracking.track.apply(MemoryTracking, newArgs);
   };
 
+  // Add Jetpack.sessionStorage.
+  if (!Extension.Manager.sessionStorage.jetpacks)
+    Extension.Manager.sessionStorage.jetpacks = {};
+  var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
+  var id = urlFactory.makeUrl("");
+  if (!sessionStorage[id])
+    sessionStorage[id] = {};
+  Jetpack.sessionStorage = sessionStorage[id];
+
   Extension.addUnloadMethod(
     self,
     function() {
