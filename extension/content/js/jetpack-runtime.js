@@ -1,20 +1,20 @@
 function JetpackNamespace(urlFactory) {
   var self = this;
-  var Jetpack = new JetpackLibrary();
+  var jetpack = new JetpackLibrary();
 
-  Jetpack.notifications = new Notifications();
+  jetpack.notifications = new Notifications();
 
-  Jetpack.lib = {};
-  Jetpack.lib.twitter = Twitter;
+  jetpack.lib = {};
+  jetpack.lib.twitter = Twitter;
 
   var statusBar = new StatusBar(urlFactory);
 
-  Jetpack.statusBar = {};
-  Jetpack.statusBar.append = function append(options) {
+  jetpack.statusBar = {};
+  jetpack.statusBar.append = function append(options) {
     return statusBar.append(options);
   };
 
-  Jetpack.track = function() {
+  jetpack.track = function() {
     var newArgs = [];
     for (var i = 0; i < 2; i++)
       newArgs.push(arguments[i]);
@@ -24,26 +24,26 @@ function JetpackNamespace(urlFactory) {
     MemoryTracking.track.apply(MemoryTracking, newArgs);
   };
 
-  // Add Jetpack.sessionStorage.
+  // Add jetpack.sessionStorage.
   if (!Extension.Manager.sessionStorage.jetpacks)
     Extension.Manager.sessionStorage.jetpacks = {};
   var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
   var id = urlFactory.makeUrl("");
   if (!sessionStorage[id])
     sessionStorage[id] = {};
-  Jetpack.sessionStorage = sessionStorage[id];
+  jetpack.sessionStorage = sessionStorage[id];
 
   Extension.addUnloadMethod(
     self,
     function() {
       statusBar.unload();
-      Jetpack.unload();
+      jetpack.unload();
       statusBar = null;
-      Jetpack.lib = null;
-      Jetpack.statusBar = null;
+      jetpack.lib = null;
+      jetpack.statusBar = null;
     });
 
-  self.Jetpack = Jetpack;
+  self.jetpack = jetpack;
 }
 
 var JetpackRuntime = {
@@ -63,7 +63,7 @@ var JetpackRuntime = {
         console: console,
         $: jQuery,
         jQuery: jQuery,
-        Jetpack: jetpackNamespace.Jetpack
+        jetpack: jetpackNamespace.jetpack
       };
 
       timers.addMethodsTo(globals);
@@ -88,6 +88,21 @@ var JetpackRuntime = {
     var urlFactory = new UrlFactory(feed.uri.spec);
     var jetpackNamespace = new JetpackNamespace(urlFactory);
     var sandbox = sandboxFactory.makeSandbox(codeSource);
+
+    // We would add the stub for this in makeGlobals(), but it's a getter,
+    // so it wouldn't get copied over properly to the sandbox.
+    var wasJetpackDeprecationShown = false;
+    sandbox.__defineGetter__(
+      "Jetpack",
+      function() {
+        if (!wasJetpackDeprecationShown) {
+          wasJetpackDeprecationShown = true;
+          console.warn("The 'Jetpack' namespace is deprecated; " +
+                       "please use 'jetpack' instead.");
+        }
+        return sandbox.jetpack;
+      });
+
     try {
       var codeSections = [{length: code.length,
                            filename: codeSource.id,
