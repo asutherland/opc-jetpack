@@ -4,7 +4,7 @@ Blacklist = function(){
 
 Blacklist.prototype = {
   _rules: [],
-  
+
   _ruleToRegExp: function(text){
     if( text[0] == "!" || text[0] == "[" || text[0] == "@") return null;
     if( text.match(/\$/) ) return null;
@@ -22,19 +22,19 @@ Blacklist.prototype = {
   								 .replace(/^\\\|/, "^")       // process anchor at expression start
   								 .replace(/\\\|$/, "$")       // process anchor at expression end
   								 .replace(/^(\.\*)/,"")       // remove leading wildcards
-  								 .replace(/(\.\*)$/,"");      // remove trailing wildcards 
+  								 .replace(/(\.\*)$/,"");      // remove trailing wildcards
   	}
 
-  	if (regexp == "") return null; 
+  	if (regexp == "") return null;
 
-  	return new RegExp(regexp);    
+  	return new RegExp(regexp);
   },
-  
+
   _addRule: function( text ){
     var rule = this._ruleToRegExp(text);
-    if( rule ) this._rules.push(rule);    
+    if( rule ) this._rules.push(rule);
   },
-  
+
   _getRules: function( url ){
     var self = this;
     $.get( url, function(data){
@@ -43,48 +43,48 @@ Blacklist.prototype = {
       self._addRule( "doubleclick" );
     });
   },
-  
+
   match: function( url ){
     for each( rule in this._rules){
       if( rule.exec(url) ){
         return true;
-        
+
       }
     }
     return false;
   }
-}
+};
 
 var blacklist = new Blacklist();
 
 function removeAds(){
-  var doc = Jetpack.tabs.focused.contentDocument;
+  var doc = jetpack.tabs.focused.contentDocument;
   $(doc).find("[src]").filter(function(){
     var el = $(this);
     if( el && blacklist.match(el.attr("src")) ){
       el.remove();
-    }    
+    }
   });
 }
 
 
-Jetpack.statusBar.append({
+jetpack.statusBar.append({
   url: "unad.html",
   onReady: function(widget){
     var state = "off";
-    
+
     $(widget).click(function(){
       if( state == "off" ){
         removeAds();
-        Jetpack.tabs.onReady( removeAds );
+        jetpack.tabs.onReady( removeAds );
         clicker = "on";
       } else {
-        Jetpack.tabs.onReady.unbind( removeAds );
-        var win = Jetpack.tabs.focused.contentWindow;
+        jetpack.tabs.onReady.unbind( removeAds );
+        var win = jetpack.tabs.focused.contentWindow;
         win.location.assign( win.location );
         clicker = "off";
       }
     });
-  },  
+  },
   width: 42
-})
+});
