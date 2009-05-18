@@ -1,5 +1,15 @@
 FBL.ns(
   function() {
+    var Cc = Components.classes;
+    var Ci = Components.interfaces;
+
+    var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"]
+                         .getService(Ci.nsIVersionComparator);
+
+    // If we're not Firebug 1.4, don't even bother with this.
+    if (versionChecker.compare(Firebug.version, "1.4X0a") < 0)
+      return;
+
     with (FBL) {
       var jsm = {};
       Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",

@@ -163,6 +163,12 @@ var Logging = {
       if (browser.chrome && browser.chrome.window &&
           browser.chrome.window.TabWatcher) {
         try {
+          var Firebug = browser.chrome.window.Firebug;
+          var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"]
+                               .getService(Ci.nsIVersionComparator);
+          if (versionChecker.compare(Firebug.version, "1.4X0a") < 0)
+            throw new Error("Firebug version < 1.4: " + Firebug.version);
+
           // We're not detecting Firebug when we're not the currently
           // focused tab in our window. Right now, the Firebug extension side
           // of Jetpack will force us to reload when the user selects our
