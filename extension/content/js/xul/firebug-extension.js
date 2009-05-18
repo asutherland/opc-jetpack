@@ -96,6 +96,8 @@ FBL.ns(
 
       Firebug.registerModule(JetpackModule);
 
+      Firebug.isJetpackSupported = true;
+      
       // TODO: We should totally use this for something.
       //
       // function JetpackPanel() {}

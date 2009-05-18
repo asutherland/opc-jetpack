@@ -163,11 +163,13 @@ var Logging = {
       if (browser.chrome && browser.chrome.window &&
           browser.chrome.window.TabWatcher) {
         try {
-          var Firebug = browser.chrome.window.Firebug;
-          var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"]
-                               .getService(Ci.nsIVersionComparator);
-          if (versionChecker.compare(Firebug.version, "1.4X0a") < 0)
-            throw new Error("Firebug version < 1.4: " + Firebug.version);
+          // The Jetpack Firebug Extension adds this flag to Firebug
+          // if it was successfully installed, so let's check it.
+          if (!browser.chrome.window.Firebug.isJetpackSupported)
+            throw new Error(
+              "Jetpack Firebug Extension not detected. Please upgrade " +
+              "to the latest version of Firebug."
+            );
 
           // We're not detecting Firebug when we're not the currently
           // focused tab in our window. Right now, the Firebug extension side
