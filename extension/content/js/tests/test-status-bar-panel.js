@@ -1,4 +1,9 @@
 var UrlFactoryTests = {
+  testEmpty: function(self) {
+    var uf = new UrlFactory("http://www.google.com");
+    self.assertEqual(uf.makeUrl(""), "http://www.google.com/");
+  },
+
   testRelative: function(self) {
     var uf = new UrlFactory("http://www.google.com");
     self.assertEqual(uf.makeUrl("blarg"), "http://www.google.com/blarg");
