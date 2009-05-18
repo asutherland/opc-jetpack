@@ -62,6 +62,8 @@ function FeedPlugin(feedManager, messageService) {
   else
     Components.utils.reportError("FeedManager already defined.");
 
+  loadExtension();
+
   this.type = TYPE;
 
   let Application = Components.classes["@mozilla.org/fuel/application;1"]
