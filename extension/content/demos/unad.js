@@ -1,5 +1,5 @@
-Blacklist = function(){
-  this._getRules( "http://easylist.adblockplus.org/easylist.txt" );
+Blacklist = function(url) {
+  this._getRules(url);
 };
 
 Blacklist.prototype = {
@@ -55,18 +55,17 @@ Blacklist.prototype = {
   }
 };
 
-var blacklist = new Blacklist();
+var blacklist = new Blacklist("http://easylist.adblockplus.org/easylist.txt");
 
-function removeAds(){
-  var doc = jetpack.tabs.focused.contentDocument;
-  $(doc).find("[src]").filter(function(){
-    var el = $(this);
-    if( el && blacklist.match(el.attr("src")) ){
-      el.remove();
-    }
-  });
+function removeAds(doc) {
+  if (doc.location.protocol == "http:" ||
+      doc.location.protocol == "https:")
+    $(doc).find("[src]").filter(function(){
+      var el = $(this);
+      if( el && blacklist.match(el.attr("src")) )
+        el.remove();
+      });
 }
-
 
 jetpack.statusBar.append({
   url: "unad.html",
@@ -75,14 +74,11 @@ jetpack.statusBar.append({
 
     $(widget).click(function(){
       if( state == "off" ){
-        removeAds();
-        jetpack.tabs.onReady( removeAds );
-        clicker = "on";
+        jetpack.tabs.onReady(removeAds);
+        state = "on";
       } else {
-        jetpack.tabs.onReady.unbind( removeAds );
-        var win = jetpack.tabs.focused.contentWindow;
-        win.location.assign( win.location );
-        clicker = "off";
+        jetpack.tabs.onReady.unbind(removeAds);
+        state = "off";
       }
     });
   },
