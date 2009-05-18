@@ -1,0 +1,31 @@
+<html>
+<head>
+  <title>Jetpack Code Editor</title>
+</head>
+<body>
+<script src="js/dojo/dojo.js"></script>
+<script src="js/bespin/editor/embed.js"></script>
+<script>
+  var _editorComponent;
+ 
+  // Loads and configures the objects that the editor needs
+  dojo.addOnLoad(function() {
+    _editorComponent = new bespin.editor.Component('editor', {
+      language: "js",
+      loadfromdiv: true
+      });
+  });
+</script>
+<div id="editor" style="height: 300px;">jetpack.statusBar.append({
+  html: "<p>kill flash</p>",
+  onReady: function(panel) {
+    var button = $(panel).find("p");
+    button.css({cursor: "pointer", fontFamily: "sans-serif"});
+    button.click(function() {
+      var doc = $(jetpack.tabs.focused.contentDocument);
+      doc.find("embed[type=application\\/x-shockwave-flash]").slideUp();
+    });
+  }});
+</div>
+</body>
+</html>
