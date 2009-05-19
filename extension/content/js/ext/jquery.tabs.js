@@ -470,7 +470,7 @@ $.fn.tabs = function(initial, settings) {
                 if (!$.browser.msie) { // not in IE to prevent ClearType font issue
                     resetCSS['opacity'] = '';
                 }
-                
+
                 // switch tab, animation prevents browser scrolling to the fragment
                 function switchTab() {
                     if (settings.bookmarkable && trueClick) { // add to history only if true click occured, not a triggered click
@@ -478,7 +478,7 @@ $.fn.tabs = function(initial, settings) {
                     }
                     toHide.animate(hideAnim, hideSpeed, function() { //
                         $(clicked).parents('li:eq(0)').addClass(settings.selectedClass).siblings().removeClass(settings.selectedClass);
-                        toHide.addClass(settings.hideClass).css(resetCSS); // maintain flexible height and accessibility in print etc.                        
+                        toHide.addClass(settings.hideClass).css(resetCSS); // maintain flexible height and accessibility in print etc.
                         if (typeof onHide == 'function') {
                             onHide(clicked, toShow[0], toHide[0]);
                         }
@@ -606,7 +606,7 @@ for (var i = 0; i < tabEvents.length; i++) {
                 if (!tab || typeof tab == 'number') {
                     a = $('li a', nav).eq((tab && tab > 0 && tab - 1 || 0)); // fall back to 0
                 } else if (typeof tab == 'string') {
-                    a = $('li a[@href$="#' + tab + '"]', nav);
+                    a = $('li a[href$="#' + tab + '"]', nav);
                 }
                 a.trigger(tabEvent);
             });

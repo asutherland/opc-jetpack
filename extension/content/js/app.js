@@ -223,8 +223,8 @@ $(window).ready(
       });
     $("#force-gc").click(App.forceGC);
     $("#run-tests").click(function() { Tests.run(); });
-    $("#display-sample").click(
-      function() { $("#sample-code").slideToggle(); }
+    $(".tutorial-link").click(
+      function() { $("#container").triggerTab('tutorial'); }
     );
 
     if (App.isFirefoxOld)
