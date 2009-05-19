@@ -37,10 +37,10 @@
 let EXPORTED_SYMBOLS = ["FeedPlugin", "FeedManager"];
 
 Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
-Components.utils.import("resource://jetpack/ubiquity-modules/codesource.js");
 
-var Extension = {};
-Components.utils.import("resource://jetpack/modules/init.js", Extension);
+var UrlUtils = {};
+Components.utils.import("resource://jetpack/modules/url_utils.js",
+                        UrlUtils);
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
@@ -48,24 +48,14 @@ var Ci = Components.interfaces;
 const CONFIRM_URL = "chrome://jetpack/content/confirm-add-jetpack.html";
 const TYPE = "jetpack";
 const TRUSTED_DOMAINS_PREF = "extensions.jetpack.trustedDomains";
-const REMOTE_URI_TIMEOUT_PREF = "extensions.jetpack.remoteUriTimeout";
 
 var FeedManager = null;
 
-var wasLoadExtensionCalled = false;
-var extensionTimerID = null;
-function loadExtension() {
-  Extension.load("about:jetpack");
-  wasLoadExtensionCalled = true;
-}
-
-function FeedPlugin(feedManager, messageService) {
+function FeedPlugin(feedManager) {
   if (!FeedManager)
     FeedManager = feedManager;
   else
     Components.utils.reportError("FeedManager already defined.");
-
-  loadExtension();
 
   this.type = TYPE;
 
@@ -124,7 +114,7 @@ function FeedPlugin(feedManager, messageService) {
         Utils.openUrlInBrowser(confirmUrl);
       }
 
-      if (RemoteUriCodeSource.isValidUri(commandsUrl)) {
+      if (UrlUtils.isRemote(commandsUrl)) {
         var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                   .createInstance(Ci.nsIXMLHttpRequest);
         req.mozBackgroundRequest = true;
@@ -143,39 +133,15 @@ function FeedPlugin(feedManager, messageService) {
   };
 
   this.makeFeed = function DFP_makeFeed(baseFeedInfo, hub) {
-    var timeout = Application.prefs.getValue(REMOTE_URI_TIMEOUT_PREF, 10);
-    return new Feed(baseFeedInfo, hub, messageService, timeout);
+    return new Feed(baseFeedInfo, hub);
   };
 
   feedManager.registerPlugin(this);
 }
 
-function makeCodeSource(feedInfo, timeoutInterval) {
-  var codeSource;
-
-  if (RemoteUriCodeSource.isValidUri(feedInfo.srcUri)) {
-    if (feedInfo.canAutoUpdate) {
-      codeSource = new RemoteUriCodeSource(feedInfo, timeoutInterval);
-    } else
-      codeSource = new StringCodeSource(feedInfo.getCode(),
-                                        feedInfo.srcUri.spec);
-  } else if (LocalUriCodeSource.isValidUri(feedInfo.srcUri)) {
-    codeSource = new LocalUriCodeSource(feedInfo.srcUri.spec);
-  } else {
-    throw new Error("Don't know how to make code source for " +
-                    feedInfo.srcUri.spec);
-  }
-
-  return codeSource;
-}
-
-function Feed(feedInfo, hub, messageService, timeoutInterval) {
-  if (LocalUriCodeSource.isValidUri(feedInfo.srcUri))
+function Feed(feedInfo, hub) {
+  if (UrlUtils.isLocal(feedInfo.srcUri))
     this.canAutoUpdate = true;
-
-  let codeSource = makeCodeSource(feedInfo, timeoutInterval);
-
-  var codeCache = null;
 
   let self = this;
 
@@ -183,49 +149,14 @@ function Feed(feedInfo, hub, messageService, timeoutInterval) {
   self.commands = [];
   self.pageLoadFuncs = [];
 
-  this.getCodeSource = function getCodeSource() {
-    return codeSource;
-  };
-
   this.refresh = function refresh() {
-    let code = codeSource.getCode();
-    if (code != codeCache) {
-      codeCache = code;
-      hub.notifyListeners("feed-change", feedInfo.uri);
-      if (!wasLoadExtensionCalled) {
-        // If we're just starting up, delay the loading of the extension
-        // by a bit, so that we don't thrash as lots of feed-change
-        // events are fired at startup.
-        if (extensionTimerID !== null)
-          Utils.clearTimeout(extensionTimerID);
-        extensionTimerID = Utils.setTimeout(loadExtension, 1000);
-      }
-    }
   };
 
   this.checkForManualUpdate = function checkForManualUpdate(cb) {
-    if (LocalUriCodeSource.isValidUri(this.srcUri))
-      cb(false);
-    else {
-      function onSuccess(data) {
-        if (data != self.getCode()) {
-          var confirmUrl = (CONFIRM_URL +
-                            "?url=" +
-                            encodeURIComponent(self.uri.spec) +
-                            "&sourceUrl=" +
-                            encodeURIComponent(self.srcUri.spec) +
-                            "&updateCode=" +
-                            encodeURIComponent(data));
-          cb(true, confirmUrl);
-        } else
-          cb(false);
-      };
-      // TODO: We should call the callback w/ a false value or some kind
-      // of error value if the Ajax request fails.
-      jQuery.ajax({url: this.srcUri.spec,
-                   dataType: "text",
-                   success: onSuccess});
-    }
+  };
+
+  this.broadcastChangeEvent = function broadcastChangeEvent() {
+    hub.notifyListeners("feed-change", feedInfo.uri);
   };
 
   this.__proto__ = feedInfo;

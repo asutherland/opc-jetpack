@@ -83,11 +83,10 @@ var JetpackRuntime = {
     var sandboxFactory = new jsm.SandboxFactory(makeGlobals);
     jsm = null;
 
-    var codeSource = feed.getCodeSource();
-    var code = codeSource.getCode();
+    var code = feed.getCode();
     var urlFactory = new UrlFactory(feed.uri.spec);
     var jetpackNamespace = new JetpackNamespace(urlFactory);
-    var sandbox = sandboxFactory.makeSandbox(codeSource);
+    var sandbox = sandboxFactory.makeSandbox({id: feed.srcUri.spec});
 
     // We would add the stub for this in makeGlobals(), but it's a getter,
     // so it wouldn't get copied over properly to the sandbox.
@@ -105,7 +104,7 @@ var JetpackRuntime = {
 
     try {
       var codeSections = [{length: code.length,
-                           filename: codeSource.id,
+                           filename: feed.srcUri.spec,
                            lineNumber: 1}];
       sandboxFactory.evalInSandbox(code, sandbox, codeSections);
     } catch (e) {
@@ -169,14 +168,98 @@ var JetpackRuntime = {
     this.contexts = [];
   },
 
-  refreshJetpacks: function refreshJetpacks() {
-    var feeds = this.FeedPlugin.FeedManager.getSubscribedFeeds();
-    feeds.forEach(
-      function(feed) {
-        if (feed.type == "jetpack") {
-          feed.refresh();
+  _feedUpdates: {},
+
+  FEED_UPDATE_REMOTE_TIMEOUT: 5000,
+
+  FEED_UPDATE_INTERVAL: 5000,
+
+  _getLocalFeed: function _getLocalFeed(feed) {
+    var self = this;
+    var req = new XMLHttpRequest();
+    req.open('GET', feed.srcUri.spec, true);
+    req.overrideMimeType('text/javascript');
+    req.onreadystatechange = function() {
+      if (!feed.uri.spec in self._feedUpdates)
+        return;
+      delete self._feedUpdates[feed.uri.spec];
+      if (req.status == 0 &&
+          req.responseText.length &&
+          req.responseText.indexOf("ERROR:") != 0) {
+        var currCode = feed.getCode();
+        if (currCode != req.responseText) {
+          feed.setCode(req.responseText);
+          feed.broadcastChangeEvent();
         }
-      });
+      } else {
+        // TODO: Log the error?
+      }
+    };
+    req.send(null);
+    return req;
+  },
+
+  _getRemoteFeed: function _getRemoteFeed(feed) {
+    var self = this;
+    return jQuery.ajax(
+      {url: feed.srcUri.spec,
+       timeout: self.FEED_UPDATE_REMOTE_TIMEOUT,
+       dataType: "text",
+       complete: function(xhr, textStatus) {
+         if (feed.uri.spec in self._feedUpdates)
+           delete self._feedUpdates[feed.uri.spec];
+       },
+       error: function(xhr, textStatus, errorThrown) {
+         // TODO: Log the error?
+       },
+       success: function(data) {
+         var currCode = feed.getCode();
+         if (currCode != data) {
+           feed.setCode(data);
+           feed.broadcastChangeEvent();
+         }
+       }});
+  },
+
+  forceFeedUpdate: function forceFeedUpdate(feedOrUrl) {
+    var feed;
+    if (typeof(feedOrUrl) == "string")
+      feed = this.FeedPlugin.FeedManager.getFeedForUrl(feedOrUrl);
+    else
+      feed = feedOrUrl;
+
+    if (!feed)
+      throw new Error("Invalid feed: " + feedOrUrl);
+
+    var UrlUtils = {};
+    Components.utils.import("resource://jetpack/modules/url_utils.js",
+                            UrlUtils);
+
+    if (feed.type == "jetpack" &&
+        !(feed.uri.spec in this._feedUpdates)) {
+      if (UrlUtils.isLocal(feed.srcUri))
+        this._feedUpdates[feed.uri.spec] = this._getLocalFeed(feed);
+      else
+        this._feedUpdates[feed.uri.spec] = this._getRemoteFeed(feed);
+    }
+  },
+
+  cancelFeedUpdate: function cancelFeedUpdate(url) {
+    if (url in this._feedUpdates) {
+      this._feedUpdates[url].abort();
+      delete this._feedUpdates[url];
+    }
+  },
+
+  startFeedUpdateLoop: function startFeedUpdateLoop() {
+    var self = this;
+    window.setInterval(
+      function() {
+        var feeds = self.FeedPlugin.FeedManager.getSubscribedFeeds();
+        feeds.forEach(function(feed) { self.forceFeedUpdate(feed); });
+      },
+      self.FEED_UPDATE_INTERVAL
+    );
   },
 
   loadJetpacks: function loadJetpacks() {
@@ -208,6 +291,7 @@ $(window).ready(
       JetpackCodeEditor.registerFeed(FeedManager);
 
     JetpackRuntime.loadJetpacks();
+    JetpackRuntime.startFeedUpdateLoop();
 
     function maybeReload(eventName, uri) {
       switch (eventName) {

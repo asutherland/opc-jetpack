@@ -215,7 +215,7 @@ $(window).ready(
     window.setInterval(App.tick, 1000);
     $("#reload-editor-code").click(
       function() {
-        JetpackRuntime.refreshJetpacks();
+        JetpackRuntime.forceFeedUpdate(JetpackCodeEditor.url);
       });
     $("#this-page-source-code").click(
       function() {
