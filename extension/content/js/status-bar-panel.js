@@ -76,8 +76,13 @@ StatusBar.prototype = {
 
       // TODO: We may also want to try applying this bg to the
       // entire statusbar.
+
+      // This file used to be at
+      // chrome://global/skin/statusbar-background.gif, but was
+      // removed when 449442 was fixed.
       var url = ("chrome://jetpack-safe/content/" +
                  "old-osx-statusbar-background.gif");
+
       toElement.style.backgroundImage = "url(" + url + ")";
       toElement.style.backgroundColor = "rgb(148, 147, 147)";
     }
