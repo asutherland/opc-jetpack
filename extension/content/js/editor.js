@@ -1,12 +1,17 @@
-var JetpackCodeEditor = {
-  FILENAME: 'jetpack-editor-code.txt',
+function JetpackCodeEditor(filename) {
+  if (!filename)
+    throw new Error("filename must be supplied.");
+  this.filename = filename;
+}
+
+JetpackCodeEditor.prototype = {
   CHARSET: 'utf-8',
 
   _component: null,
 
   get fullPath() {
     var file = DirIO.get('ProfD');
-    file.append(this.FILENAME);
+    file.append(this.filename);
     return file;
   },
 
@@ -14,13 +19,18 @@ var JetpackCodeEditor = {
     return FileIO.path(this.fullPath);
   },
 
-  initUI: function initUI(divId) {
+  initUI: function initUI(divId, window) {
     // Loads and configures the objects that the editor needs
-    this._component = new bespin.editor.Component(divId, {
+    var self = this;
+
+    self._component = new bespin.editor.Component(divId, {
       language: "js",
       loadfromdiv: false
       });
-    this._component.setContent(this.loadData());
+    self._component.setContent(self.loadData());
+    function save() { self.saveData(self._component.getContent()); }
+    window.addEventListener("blur", save, false);
+    window.addEventListener("unload", save, false);
   },
 
   loadData: function loadData() {
@@ -33,8 +43,6 @@ var JetpackCodeEditor = {
   },
 
   saveData: function saveData(data) {
-    if (data === undefined)
-      data = this._component.getContent();
     var file = this.fullPath;
     if (!file.exists())
       FileIO.create(file);

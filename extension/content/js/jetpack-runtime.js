@@ -289,9 +289,6 @@ $(window).ready(
   function() {
     var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
 
-    if (!FeedManager.isSubscribedFeed(JetpackCodeEditor.url))
-      JetpackCodeEditor.registerFeed(FeedManager);
-
     JetpackRuntime.loadJetpacks();
     JetpackRuntime.startFeedUpdateLoop();
 

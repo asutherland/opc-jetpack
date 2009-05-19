@@ -39,10 +39,23 @@ var App = {
     }
   },
 
+  CODE_EDITOR_FILENAME: 'jetpack-editor-code.txt',
+
+  codeEditor: null,
+
   initTabs: function initTabs() {
+    var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
+    var codeEditor = new JetpackCodeEditor(this.CODE_EDITOR_FILENAME);
+    if (!FeedManager.isSubscribedFeed(codeEditor.url))
+      codeEditor.registerFeed(FeedManager);
+    JetpackRuntime.forceFeedUpdate(codeEditor.url);
+    App.codeEditor = codeEditor;
+
+    var self= this;
     function showEditor() {
       var iframe = $('<iframe id="the-editor"></iframe>');
-      iframe.attr('src', 'editor.html');
+      iframe.attr('src', 'editor.html#' +
+                  encodeURI(self.CODE_EDITOR_FILENAME));
       iframe.addClass('editor-widget');
       $("#editor-widget-container").append(iframe);
     }
@@ -215,7 +228,7 @@ $(window).ready(
     window.setInterval(App.tick, 1000);
     $("#reload-editor-code").click(
       function() {
-        JetpackRuntime.forceFeedUpdate(JetpackCodeEditor.url);
+        JetpackRuntime.forceFeedUpdate(App.codeEditor.url);
       });
     $("#this-page-source-code").click(
       function() {

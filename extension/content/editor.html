@@ -9,10 +9,9 @@
 <script src="js/editor.js"></script>
 <script>
 dojo.addOnLoad(function() {
-  JetpackCodeEditor.initUI('editor');
-  function save() { JetpackCodeEditor.saveData(); }
-  window.addEventListener("blur", save, false);
-  window.addEventListener("unload", save, false);
+  var filename = decodeURI(window.location.hash.slice(1));
+  var editor = new JetpackCodeEditor(filename);
+  editor.initUI('editor', window);
 });
 </script>
 <div id="editor" style="height: 300px;"></div>
