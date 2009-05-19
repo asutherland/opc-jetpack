@@ -239,8 +239,10 @@ var JetpackRuntime = {
         !(feed.uri.spec in this._feedUpdates)) {
       if (UrlUtils.isLocal(feed.srcUri))
         this._feedUpdates[feed.uri.spec] = this._getLocalFeed(feed);
-      else
+      else if (UrlUtils.isRemote(feed.srcUri) &&
+               feed.canAutoUpdate) {
         this._feedUpdates[feed.uri.spec] = this._getRemoteFeed(feed);
+      }
     }
   },
 
@@ -253,13 +255,12 @@ var JetpackRuntime = {
 
   startFeedUpdateLoop: function startFeedUpdateLoop() {
     var self = this;
-    window.setInterval(
-      function() {
-        var feeds = self.FeedPlugin.FeedManager.getSubscribedFeeds();
-        feeds.forEach(function(feed) { self.forceFeedUpdate(feed); });
-      },
-      self.FEED_UPDATE_INTERVAL
-    );
+    function updateAllFeeds() {
+      var feeds = self.FeedPlugin.FeedManager.getSubscribedFeeds();
+      feeds.forEach(function(feed) { self.forceFeedUpdate(feed); });
+    }
+    window.setInterval(updateAllFeeds, self.FEED_UPDATE_INTERVAL);
+    updateAllFeeds();
   },
 
   loadJetpacks: function loadJetpacks() {
