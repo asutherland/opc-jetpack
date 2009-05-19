@@ -56,40 +56,7 @@
   <!-- DEVELOP -->
   
   <div id="develop">
-    <p id="old-firefox-version" class="warning">You appear to be running
-    Firefox 3 or earlier, which means that any logging messages or
-    errors produced by your Jetpacks will reference the wrong line numbers.
-    This makes debugging Jetpacks difficult; please consider using <a
-    href="http://www.mozilla.com/en-US/firefox/all-beta.html">Firefox 3.5
-    Beta</a>.</p>
-    <p id="firebug-not-found" class="warning">You either don't have the
-    latest version of Firebug installed, or you don't have it enabled for
-    this page, so all logging messages will appear in the <span
-    class="logging-source"></span>. If you get <a
-    href="http://getfirebug.com/releases/index.html">Firebug 1.4 Alpha</a>
-    and enable it for this page, and then reload this page, all logging
-    messages will be logged to the Firebug Console, where it's much easier
-    to debug problems and inspect live objects.</p>
-    <div id="firebug-caveats" class="warning">You appear to have Firebug
-    installed, which is great, because you'll be able to easily debug
-    problems and inspect live objects in the <span
-    class="logging-source"></span>. However, please note that there's
-    still a few rough edges in Jetpack's Firebug integration that you
-    should be aware of:
-    <ul>
-      <li>Firebug seems to get confused if you have this page and another
-      website with Firebug enabled in the same browser window. The safe
-      and easy way to get around this is to just have this page open
-      in its own browser window.</li>
-      <li>Whenever you inspect live objects in Firebug, Firebug appears
-      to hold on to those objects for the rest of your Firefox session,
-      which means that you'll see object reference counts go up in
-      the Memory Usage area.</li>
-    </ul>
-    We apologize for these inconveniences and will be working with the
-    Firebug team to resolve them soon.
-    </div>
-    
+    <div class="developer-warnings"></div>
     <h2>Developing With Jetpack</h2>
     
     <p>If you want to create a Jetpack feature, use the editor
@@ -184,6 +151,7 @@
   <!-- TUTORIAL -->
   
   <div id="tutorial">
+    <div class="developer-warnings"></div>
     <p>Welcome to the Jetpack API tutorial. By the end of this
     tutorial, you'll have learned how to make a Jetpack Feature that
     removes all embeds &mdash; Flash movies, etc &mdash; from a
@@ -451,7 +419,41 @@ jetpack.statusBar.append({
     <p>There's a lot more coming with Jetpack, so check back often.</p>
   </div>
 </div>
-
+</div>
+<div class="warnings">
+    <p id="old-firefox-version" class="warning">You appear to be running
+    Firefox 3 or earlier, which means that any logging messages or
+    errors produced by your Jetpacks will reference the wrong line numbers.
+    This makes debugging Jetpacks difficult; please consider using <a
+    href="http://www.mozilla.com/en-US/firefox/all-beta.html">Firefox 3.5
+    Beta</a>.</p>
+    <p id="firebug-not-found" class="warning">You either don't have the
+    latest version of Firebug installed, or you don't have it enabled for
+    this page, so all logging messages will appear in the <span
+    class="logging-source"></span>. If you get <a
+    href="http://getfirebug.com/releases/index.html">Firebug 1.4 Alpha</a>
+    and enable it for this page, and then reload this page, all logging
+    messages will be logged to the Firebug Console, where it's much easier
+    to debug problems and inspect live objects.</p>
+    <div id="firebug-caveats" class="warning">You appear to have Firebug
+    installed, which is great, because you'll be able to easily debug
+    problems and inspect live objects in the <span
+    class="logging-source"></span>. However, please note that there's
+    still a few rough edges in Jetpack's Firebug integration that you
+    should be aware of:
+    <ul>
+      <li>Firebug seems to get confused if you have this page and another
+      website with Firebug enabled in the same browser window. The safe
+      and easy way to get around this is to just have this page open
+      in its own browser window.</li>
+      <li>Whenever you inspect live objects in Firebug, Firebug appears
+      to hold on to those objects for the rest of your Firefox session,
+      which means that you'll see object reference counts go up in
+      the Memory Usage area.</li>
+    </ul>
+    We apologize for these inconveniences and will be working with the
+    Firebug team to resolve them soon.
+    </div>
 </div>
 
 <!-- Jetpack Platform Foundation -->

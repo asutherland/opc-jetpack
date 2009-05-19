@@ -227,20 +227,20 @@ $(window).ready(
       function() { $("#sample-code").slideToggle(); }
     );
 
+    if (App.isFirefoxOld)
+      $(".developer-warnings").append($("#old-firefox-version"));
+
     if (window.console.isFirebug) {
-      $("#firebug-caveats").show();
+      $(".developer-warnings").append($("#firebug-caveats"));
       $(".logging-source").text("Firebug Console");
       $(".logging-source").addClass("buttony");
       $(".logging-source").click(App.openFirebugConsole);
     } else {
-      $("#firebug-not-found").show();
+      $(".developer-warnings").append($("#firebug-not-found"));
       $(".logging-source").click(App.openJsErrorConsole);
       $(".logging-source").addClass("buttony");
       $(".logging-source").text("JS Error Console");
     }
-
-    if (App.isFirefoxOld)
-      $("#old-firefox-version").show();
 
     JetpackRuntime.FeedPlugin.FeedManager.getSubscribedFeeds().forEach(
       function (feed) {

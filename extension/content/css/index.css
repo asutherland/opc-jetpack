@@ -24,8 +24,11 @@ a {
     color: black;
 }
 
-.warning {
+.warnings {
     display: none;
+}
+
+.warning {
     background-color: orange;
     padding: 0.5em;
 }
