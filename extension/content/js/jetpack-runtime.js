@@ -149,6 +149,7 @@ var JetpackRuntime = {
   },
 
   removeJetpack: function removeJetpack(context) {
+    this.cancelFeedUpdate(context.url);
     var index = this.contexts.indexOf(context);
     this.contexts.splice(index, 1);
     context.unload();
