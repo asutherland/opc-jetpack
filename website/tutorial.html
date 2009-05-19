@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<title>Mozilla Labs Jetpack</title>
+	<link rel="stylesheet" type="text/css" media="all" href="css/screen.css" />
+	
+	<link type="text/css" rel="stylesheet" href="css/SyntaxHighlighter.css"></link>
+	<script language="javascript" src="js/shCore.js"></script>
+	<script language="javascript" src="js/shBrushJScript.js"></script>
+	<script language="javascript" src="js/shBrushCss.js"></script>
+
+	<script language="javascript">
+window.onload = function () {
+    dp.SyntaxHighlighter.ClipboardSwf = '/flash/clipboard.swf';
+    dp.SyntaxHighlighter.HighlightAll('code');
+}
+</script>
+
+</head>
+<body>
+
+		<div class="container">
+		
+		<div class="sidebar"><div>
+		
+		<div class="header"></div>
+		
+		<div class="introBg">
+		
+		<a href="index.html">&laquo; Return to Jetpack home</a> 
+		
+		</div>
+		
+		<div class="whiteBg">
+
+		<h5>Jetpack Tutorial</h5>
+				
+				
+		<p>Welcome to the Jetpack API tutorial. By the end of this tutorial, you'll have learned how to make a Jetpack Feature that removes all embeds &mdash; Flash movies, etc &mdash; from a particular page or all websites. The code required is never more lines than a polydactylic man can count on both hands.
+
+		<br><br><h4>Chapter 0: Get going</h4>
+		
+		<p>One of the primary goals of Jetpack is to have development be a real-time adventure. We know that tight feedback loops, a good debugger, and instant gratification makes for happy coders. That's why refreshing a Jetpack Feature is literally as simple as refreshing a webpage, and why we try to have all errors be reported sensibly and with line number!
+		
+		<p>Let's get going.
+		
+		<p>There are two ways of getting started. If you are reading this inside of Jetpack, then you can play with the code live. Otherwise, go to <a href="about:jetpack">about:jetpack</a> and type in the code examples.
+		
+		
+		<br><br><h4>Chapter 1: The boom stick</h4>
+		
+		<p>Admit it. Have you always wanted a button in your browser that let's you make things go boom. I know I have. So that's the first thing that we are going to make. Let's begin by adding a widget to the status bar that contains the prophetic message "Boom!":
+		
+		<pre name="code" class="jscript">
+
+		
+		jetpack.statusBar.append({
+		  html: "Boom<i>!</i>"
+		});
+		
+		</pre>
+		
+		<p>Click the install button, and there it is, large as life in the status bar. Notice the conspicuous lack of restarts! As you can see, <code>statusBar.append</code> takes an options object. Instead of passing in html, you can use the <code>url</code> keyword and pass it a relative url.
+		
+		<p>Right now the widget is probably way too wide &mdash; that's because we haven't yet added the auto-sizing feature to Jetpack. For now, you'll have to pass in the width.
+		
+		<pre name="code" class="jscript">
+		
+		jetpack.statusBar.append({
+		  html: "Boom<i>!</i>",
+		  width: 45
+		});
+		
+		</pre>
+		
+		<p>That's nice, but just having a "Boom!" in your status bar isn't all that exciting. Let's make it <i>do</i> something.
+		
+		<pre name="code" class="jscript">
+		
+		jetpack.statusBar.append({
+		  html: "Boom<i>!</i>",
+		  width: 45,
+		  onReady: function(widget){
+			$(widget).click(function(){
+			  console.log( jetpack.tabs );
+			});
+		  }
+		});
+		
+		</pre>
+		
+		<p>Now, whenever you click on the widget, it logs the <code>jetpack.tabs</code> object to the Firebug console. Instead of reinventing the wheel, to debug Jetpack Features we've made Firebug the tool of choice. It's easy to introspect to learn more &mdash; for instance by delving in, you'll quickly find the <code>jetpack.tabs.focused</code> object, which gives you access to the currently active tab.
+		
+		<p>You can also see that we've automatically included jQuery by default. In the future, we hope to include other libraries. Feel free to fiddle around with the code, and see what you come up with.
+		
+		<p>Let's make our little Boom! widget do something more fun:
+		
+		<pre name="code" class="jscript">
+		
+		jetpack.statusBar.append({
+		  html: "Boom!",
+		  width: 45,
+		  onReady: function(widget){
+			$(widget).click(function(){
+			  jetpack.notifications.show( "Booming!" );
+			  $(jetpack.tabs.focused.contentDocument)
+				.find("body")
+				.css({backgroundColor:"red"})
+				.animate({opacity:.5});
+			});
+		  }
+		});
+		
+		</pre>
+		
+		<p>Give it a go and see what it does. Every <code>tab</code> object has a wealth of possible event listeners, and properties. Take a look via Firebug or check out the <a href="#">documentation</a>. Just like an iframe, one of the properties is <code>contentDocument</code>, which gives you access to the the equivalent of the document for the page in the specified tab. Alternatively, you can use <code>contentWindow</code> to get access to the object which houses the page's <code>.alert()</code> function, etc.
+		
+		<p>When you want a light-weight way to inform your users of a bit of information, <code>jetpack.notifications.show()</code> may be the way to go. On Windows and Linux, these show up as <a href="http://en.wikipedia.org/wiki/Toast_(computing)">toast notifications</a> and on OS X as <a href="http://growl.info/">Growl notifications</a>.
+		
+		<p>Let's turn away from our new-found ability to make pages blush, and instead to the ability to remove embeds from a page. It's one line of jQuery goodness.
+		
+		<pre name="code" class="jscript">
+		
+		jetpack.statusBar.append({
+		  html: "Boom!",
+		  width: 45,
+		  onReady: function(widget){
+			$(widget).click(function(){
+			  var doc = jetpack.tabs.focused.contentDocument;
+			  $(doc).find("embed").remove();
+			});
+		  }
+		});
+		
+		</pre>
+		
+		<p>Pretty good, huh? Less than ten lines of code gets us an on-demand embed killer.
+		
+		
+		<br><br><h4>Chapter 2: The automatic boom</h4>
+		
+		<p>We can now get rid of embeds on demand, but that requires clicking the Boom! button on every page. What if we instead wanted to to enable/disable the functionality for all sites? That's where the magic of <code>jetpack.tabs.onReady</code> comes in. It allows you to code on every navigation action, just a new page loads but before iframes, images, and scripts are fetched. To wait until everything is loaded, you can use <code>jetpack.tabs.onLoad</code>. Jetpack takes care of all the difficult edge cases, like dealing with multiple windows and new tabs. Jetpack also handles removing event handlers when you reload a Jetpack Feature, so that you never have to restart Firefox due to errant event handlers.
+		
+		<pre name="code" class="jscript">
+		
+		function removeEmbeds(doc){
+		  $(doc).find("embed").remove();
+		}
+		
+		jetpack.statusBar.append({
+		  html: "Boom?<input type='checkbox'>",
+		  width: 70,
+		  onReady: function(widget){
+			$("input", widget).click(function(){
+			  if( this.checked ){
+				jetpack.tabs.onReady( removeEmbeds );
+				removeEmbeds(jetpack.tabs.focused.contentDocument);
+			  }
+			  else jetpack.tabs.onReady.unbind( removeEmbeds );
+			});
+		  }
+		});
+		
+		</pre>
+		
+		<p>One of the neat additions we've mad is how you remove an event handler. Instead of passing in a string, you just call the unbind function which is an property of the event handling function.
+		
+		<br><br><h4>Chapter 3: Libraries</h4>
+		
+		<p>Reusable code is at the heart of any good API. That's why Jetpack includes a "standard library" of common web APIs. At the moment, we've only implemented a Twitter library. In the future, there should be many more, including the ability to import libraries not included with Jetpack by default. (And for developers to contribute their APIs for others to use.)
+		
+		<p>Here's a simple Jetpack Feature that shows the Twitter library in use. It allows you to be notified of someone's latest Tweet.
+		
+		<pre name="code" class="jscript">
+		
+		var twitter = jetpack.lib.twitter
+		var oldTweet = null;
+		
+		function getTweet(){
+		  twitter.getTwitLatestStatus( "osunick", function(tweet){
+			var newTweet = tweet.text;
+			if( oldTweet != newTweet ){
+			  jetpack.notifications.show( newTweet );
+			  oldTweet = newTweet;
+			}
+		  });
+		}
+		
+		getTweet();
+		setInterval( getTweet, 1000*60 );
+		
+		</pre>
+		
+		<p>Jetpack is smart enough to clear any <code>setInterval</code>'s or <cde>setTimeout</code>'s that you use when you refresh your Jetpack.
+		
+		<p>For now, the easiest way to get documentation on the Twitter library is to read the <a href="#">commented source</a>.
+		
+		<br><br><h4>Chapter 4: The future</h4>
+		
+		<p>There's a lot more coming with Jetpack, so check back often.
+					
+		<p><br><br><a href="index.html">&laquo; Return to Jetpack home</a>
+					
+		</div>
+
+
+		</div>
+		
+		<div class="footer"><a href="http://labs.mozilla.com/"><img class="moz" src="images/moz.png" border="0"></a>Copyright &copy; 2005–2009 Mozilla. All rights reserved. </div>
+		
+		
+
+</body>
+</html>
+
