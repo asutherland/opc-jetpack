@@ -29,7 +29,7 @@
 
 <h2>Chapter 1: The boom stick</h2>
 
-<p>Admit it. Have you always wanted a button in your browser that let's you make things go boom. I know I have. So that's the first thing that we are going to make. Let's begin by adding a widget to the status bar that contains the prophetic message "Boom!":</p>
+<p>Admit it. Have you always wanted a button in your browser that let's you make things go boom? I know I have. So that's the first thing that we are going to make. Let's begin by adding a widget to the status bar that contains the prophetic message "Boom!":</p>
 
 <pre class="example">jetpack.statusBar.append({
   html: "Boom<i>!</i>"
@@ -76,7 +76,7 @@
   }
 });</pre>
 
-<p>Give it a go and see what it does. Every <code>tab</code> object has a wealth of possible event listeners, and properties. Take a look via Firebug or check out the <a href="#">documentation</a>. Just like an iframe, one of the properties is <code>contentDocument</code>, which gives you access to the the equivalent of the document for the page in the specified tab. Alternatively, you can use <code>contentWindow</code> to get access to the object which houses the page's <code>.alert()</code> function, etc.</p>
+<p>Give it a go and see what it does. Every <code>tab</code> object has a wealth of possible event listeners, and properties. Take a look via Firebug or check out the <a href="file.html#index.html">documentation</a>. Just like an iframe, one of the properties is <code>contentDocument</code>, which gives you access to the the equivalent of the document for the page in the specified tab. Alternatively, you can use <code>contentWindow</code> to get access to the object which houses the page's <code>.alert()</code> function, and so forth.</p>
 
 <p>When you want a light-weight way to inform your users of a bit of information, <code>jetpack.notifications.show()</code> may be the way to go. On Windows and Linux, these show up as <a href="http://en.wikipedia.org/wiki/Toast_(computing)">toast notifications</a> and on OS X as <a href="http://growl.info/">Growl notifications</a>.</p>
 
@@ -119,7 +119,7 @@ jetpack.statusBar.append({
   }
 });</pre>
 
-<p>One of the neat additions we've mad is how you remove an event handler. Instead of passing in a string, you just call the unbind function which is an property of the event handling function.</p>
+<p>One of the neat additions we've mad is how you remove an event handler. Instead of passing in a string, you just call the <code>unbind</code> function which is an property of the event handling function.</p>
 
 <h2>Chapter 3: Libraries</h2>
 
@@ -146,7 +146,7 @@ setInterval( getTweet, 1000*60 );
 
 <p>Jetpack is smart enough to clear any <code>setInterval</code>'s or <code>setTimeout</code>'s that you use when you refresh your Jetpack.</p>
 
-<p>For now, the easiest way to get documentation on the Twitter library is to read the <a href="#">commented source</a>.</p>
+<p>For now, the easiest way to get documentation on the Twitter library is to read the <a href="file.html#index.html#content/js/twitter.js">commented source</a>.</p>
 
 <h2>Chapter 4: Email Notifier</h2>
 
@@ -214,6 +214,12 @@ jetpack.statusBar.append({
 </div>
 
 <!-- Jetpack Platform Foundation -->
+<script>
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+
+Components.utils.import("resource://jetpack/modules/track.js");
+</script>
 <script src="js/ext/jquery.js"></script>
 <script src="js/jquery-setup.js"></script>
 <!-- Code Editor -->
