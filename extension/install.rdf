@@ -19,7 +19,7 @@
    
     <!-- Front End MetaData -->
     <em:name>Jetpack</em:name>
-    <em:description>An extension that allows for the use of dynamic commands in Firefox.</em:description>
+    <em:description>Extending the browser made simple.</em:description>
     <em:creator>Mozilla Corporation</em:creator>
     <em:iconURL>chrome://jetpack/content/gfx/jetpack_icon.png</em:iconURL>
     <em:homepageURL>http://jetpack.mozillalabs.com/</em:homepageURL>
