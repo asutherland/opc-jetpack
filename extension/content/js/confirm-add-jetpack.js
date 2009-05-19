@@ -37,8 +37,11 @@
  * ***** END LICENSE BLOCK ***** */
 
 Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
-Components.utils.import("resource://jetpack/ubiquity-modules/codesource.js");
 Components.utils.import("resource://jetpack/modules/setup.js");
+
+var UrlUtils = {};
+Components.utils.import("resource://jetpack/modules/url_utils.js",
+                        UrlUtils);
 
 function getUrlParams() {
   var urlFragments = document.URL.split("?")[1];
@@ -100,10 +103,16 @@ function displayCode(data) {
 }
 
 function fetchSource(uri, onSuccess) {
-  if (LocalUriCodeSource.isValidUri(uri)) {
+  if (UrlUtils.isLocal(uri)) {
     $("#autoupdate-widget").hide();
-    var codeSource = new LocalUriCodeSource(uri);
-    onSuccess(codeSource.getCode());
+    var req = new XMLHttpRequest();
+    req.open('GET', url, true);
+    req.overrideMimeType('text/javascript');
+    req.onreadystatechange = function() {
+      if (req.status == 0)
+        onSuccess(req.responseText);
+    };
+    req.send(null);
   } else {
     jQuery.ajax({url: uri,
                  dataType: "text",
