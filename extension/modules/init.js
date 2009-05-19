@@ -42,11 +42,22 @@ const Ci = Components.interfaces;
 var extensions = {};
 var sessionStorage = {};
 
+const URL_SYNONYMS = {
+  "about:jetpack": "chrome://jetpack/content/index.html"
+  };
+
 function log(msg) {
   //Components.utils.reportError(msg);
 }
 
+function canonicalize(url) {
+  if (url in URL_SYNONYMS)
+    return URL_SYNONYMS[url];
+  return url;
+}
+
 function load(url, parentElement) {
+  url = canonicalize(url);
   if (!extensions[url]) {
     if (!parentElement)
       parentElement = Cc["@mozilla.org/appshell/appShellService;1"]
@@ -62,7 +73,7 @@ function load(url, parentElement) {
 }
 
 function onExtensionUnload(event) {
-  var url = event.originalTarget.location.href;
+  var url = canonicalize(event.originalTarget.location.href);
   if (extensions[url] == event.originalTarget.defaultView) {
     log("Extension at " + url + " is unloading.");
     delete extensions[url];
@@ -72,7 +83,7 @@ function onExtensionUnload(event) {
 }
 
 function set(window) {
-  var url = window.location.href;
+  var url = canonicalize(window.location.href);
   if (extensions[url] == window)
     return;
 
