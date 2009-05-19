@@ -106,7 +106,7 @@ function fetchSource(uri, onSuccess) {
   if (UrlUtils.isLocal(uri)) {
     $("#autoupdate-widget").hide();
     var req = new XMLHttpRequest();
-    req.open('GET', url, true);
+    req.open('GET', uri, true);
     req.overrideMimeType('text/javascript');
     req.onreadystatechange = function() {
       if (req.status == 0)
