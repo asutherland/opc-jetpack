@@ -13,13 +13,8 @@ var JetpackRuntimeTests = {
     var fakeFeed = {
       uri: fakeUri("http://www.foo.com/blah.html"),
       srcUri: fakeUri("http://www.foo.com/blah.js"),
-      getCodeSource: function() {
-        return {
-          getCode: function() {
-            return "console.log('hallo');";
-          },
-          id: "http://www.foo.com/blah.js"
-        };
+      getCode: function() {
+        return "console.log('hallo');";
       }
     };
     var context = new JetpackRuntime.Context(fakeFeed, fakeConsole);
