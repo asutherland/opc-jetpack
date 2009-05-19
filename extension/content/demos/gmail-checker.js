@@ -5,6 +5,7 @@ function GmailNotifier(doc){
     this.update(doc);
   }, 60*1000 );
 }
+
 GmailNotifier.prototype = {
   goToInbox: function(){
     Jetpack.tabs.open("http://mail.google.com");
@@ -31,10 +32,17 @@ GmailNotifier.prototype = {
 Jetpack.statusBar.append({
   html: <>
     <img src="http://mail.google.com/mail/images/favicon.ico"/>
-      <span id="count" style="position:absolute;left:4px;top:8px;font-size:10px;cursor: pointer;background-color:rgba(255,255,255, .8);"></span>
+    <span id="count"></span>
   </>,
   onReady: function(doc){
     var gmail = new GmailNotifier(doc);
+    $("#count", doc).css({
+      position: "absolute",
+      left: 4, top: 8,
+      fontSize: "10px",
+      cursor: "pointer",
+      backgroundColor: "rgba(255,255,255,.8)"
+    });
   },
   width: 20
 });

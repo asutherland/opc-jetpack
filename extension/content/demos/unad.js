@@ -1,8 +1,8 @@
-Blacklist = function(url) {
+Blocklist = function(url) {
   this._getRules(url);
 };
 
-Blacklist.prototype = {
+Blocklist.prototype = {
   _rules: [],
 
   _ruleToRegExp: function(text){
@@ -55,14 +55,14 @@ Blacklist.prototype = {
   }
 };
 
-var blacklist = new Blacklist("http://easylist.adblockplus.org/easylist.txt");
+var blocklist = new Blocklist("http://easylist.adblockplus.org/easylist.txt");
 
 function removeAds(doc) {
   if (doc.location.protocol == "http:" ||
       doc.location.protocol == "https:")
     $(doc).find("[src]").filter(function(){
       var el = $(this);
-      if( el && blacklist.match(el.attr("src")) )
+      if( blocklist.match(el.attr("src")) )
         el.remove();
       });
 }
