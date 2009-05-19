@@ -29,8 +29,10 @@ var JetpackCodeEditor = {
 
   loadData: function loadData() {
     var file = this.fullPath;
-    if (!file.exists())
+    if (!file.exists()) {
+      this.saveData("");
       return "";
+    }
     return FileIO.read(file, this.CHARSET);
   },
 
@@ -42,6 +44,9 @@ var JetpackCodeEditor = {
   },
 
   registerFeed: function registerFeed(feedManager) {
+    // At least make sure the file exists before
+    // subscribing to it.
+    this.loadData();
     feedManager.addSubscribedFeed({url: this.url,
                                    type: "jetpack",
                                    sourceUrl: this.url,
