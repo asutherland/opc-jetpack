@@ -33,7 +33,11 @@ function JetpackNamespace(urlFactory) {
   jetpack.json.decode = function decode(string) {
     var json = Cc["@mozilla.org/dom/json;1"]
                .createInstance(Ci.nsIJSON);
-    return json.decode(string);
+    try {
+      return json.decode(string);
+    } catch (e) {
+      throw new Error("Invalid JSON: " + string);
+    }
   };
 
   // Add jetpack.sessionStorage.
