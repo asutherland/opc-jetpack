@@ -24,6 +24,18 @@ function JetpackNamespace(urlFactory) {
     MemoryTracking.track.apply(MemoryTracking, newArgs);
   };
 
+  jetpack.json = {};
+  jetpack.json.encode = function encode(object) {
+    var json = Cc["@mozilla.org/dom/json;1"]
+               .createInstance(Ci.nsIJSON);
+    return json.encode(object);
+  };
+  jetpack.json.decode = function decode(string) {
+    var json = Cc["@mozilla.org/dom/json;1"]
+               .createInstance(Ci.nsIJSON);
+    return json.decode(string);
+  };
+
   // Add jetpack.sessionStorage.
   if (!Extension.Manager.sessionStorage.jetpacks)
     Extension.Manager.sessionStorage.jetpacks = {};
