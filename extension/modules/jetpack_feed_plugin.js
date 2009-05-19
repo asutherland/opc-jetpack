@@ -42,6 +42,9 @@ Components.utils.import("resource://jetpack/ubiquity-modules/codesource.js");
 var Extension = {};
 Components.utils.import("resource://jetpack/modules/init.js", Extension);
 
+var Cc = Components.classes;
+var Ci = Components.interfaces;
+
 const CONFIRM_URL = "chrome://jetpack/content/confirm-add-jetpack.html";
 const TYPE = "jetpack";
 const TRUSTED_DOMAINS_PREF = "extensions.jetpack.trustedDomains";
@@ -118,9 +121,17 @@ function FeedPlugin(feedManager, messageService) {
       }
 
       if (RemoteUriCodeSource.isValidUri(commandsUrl)) {
-        webJsm.jQuery.ajax({url: commandsUrl,
-                            dataType: "text",
-                            success: onSuccess});
+        var req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                  .createInstance(Ci.nsIXMLHttpRequest);
+        req.mozBackgroundRequest = true;
+        req.open('GET', commandsUrl, true);
+        req.overrideMimeType("text/plain");
+        req.onreadystatechange = function() {
+          if (req.readyState == 4 &&
+              req.status == 200)
+            onSuccess(req.responseText);
+        };
+        req.send(null);
       } else
         onSuccess("");
     } else
