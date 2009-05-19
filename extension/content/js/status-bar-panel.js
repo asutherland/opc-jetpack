@@ -74,7 +74,20 @@ StatusBar.prototype = {
     this._BG_PROPS.forEach(
       function(name) {
         toElement.style[name] = style[name];
+        console.log(name, style[name]);
       });
+    if (toElement.style.backgroundImage == "none") {
+      // Due to the fixing of bug 449442, it's very hard for us to
+      // copy the background of the status bar on OS X, but here's
+      // a shot.
+
+      // TODO: We may also want to try applying this bg to the
+      // entire statusbar.
+      var url = ("chrome://jetpack-safe/content/" +
+                 "old-osx-statusbar-background.gif");
+      toElement.style.backgroundImage = "url(" + url + ")";
+      toElement.style.backgroundColor = "rgb(148, 147, 147)";
+    }
   },
 
   _injectPanelWindowFunctions: function _injectPanelWindowFunctions(iframe) {
