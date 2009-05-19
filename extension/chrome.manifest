@@ -1,5 +1,6 @@
 resource jetpack ./
 content jetpack content/
+content jetpack-safe safe-content/ contentaccessible=yes
 overlay chrome://firebug/content/firebugOverlay.xul chrome://jetpack/content/firebugOverlay.xul
 overlay chrome://browser/content/browser.xul chrome://jetpack/content/browser.xul
 overlay chrome://global/content/console.xul chrome://jetpack/content/console.xul
