@@ -15,16 +15,12 @@ var JetpackCodeEditor = {
   },
 
   initUI: function initUI(divId) {
-    var self = this;
     // Loads and configures the objects that the editor needs
-    self._component = new bespin.editor.Component(divId, {
+    this._component = new bespin.editor.Component(divId, {
       language: "js",
       loadfromdiv: false
       });
-    self._component.setContent(self.loadData());
-    self._component.onchange(function() {
-      self.saveData(self._component.getContent());
-      });
+    this._component.setContent(this.loadData());
   },
 
   loadData: function loadData() {
@@ -37,6 +33,8 @@ var JetpackCodeEditor = {
   },
 
   saveData: function saveData(data) {
+    if (data === undefined)
+      data = this._component.getContent();
     var file = this.fullPath;
     if (!file.exists())
       FileIO.create(file);

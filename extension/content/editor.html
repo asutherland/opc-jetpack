@@ -9,8 +9,11 @@
 <script src="js/editor.js"></script>
 <script>
 dojo.addOnLoad(function() {
-  JetpackCodeEditor.initUI('editor')
-  });
+  JetpackCodeEditor.initUI('editor');
+  function save() { JetpackCodeEditor.saveData(); }
+  window.addEventListener("blur", save, false);
+  window.addEventListener("unload", save, false);
+});
 </script>
 <div id="editor" style="height: 300px;"></div>
 </body>
