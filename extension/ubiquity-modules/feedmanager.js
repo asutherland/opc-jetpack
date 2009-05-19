@@ -265,9 +265,10 @@ FMgrProto.installToWindow = function FMgr_installToWindow(window) {
   var self = this;
 
   function onPageWithCommands(plugin, pageUrl, commandsUrl, document,
-                              mimetype) {
+                              mimetype, name) {
     if (!self.isSubscribedFeed(pageUrl))
-      self.showNotification(plugin, document, commandsUrl, mimetype);
+      self.showNotification(plugin, document, commandsUrl, mimetype,
+                            name);
   }
 
   // Watch for any tags of the form <link rel="commands">
@@ -285,7 +286,8 @@ FMgrProto.installToWindow = function FMgr_installToWindow(window) {
                        pageUrl,
                        event.target.href,
                        event.target.ownerDocument,
-                       event.target.type);
+                       event.target.type,
+                       event.target.getAttribute("name"));
   }
 
   window.addEventListener("DOMLinkAdded", onLinkAdded, false);
@@ -298,7 +300,7 @@ FMgrProto.installToWindow = function FMgr_installToWindow(window) {
 };
 
 // TODO: Add Documentation for this
-FMgrProto.showNotification = function showNotification(plugin, targetDoc, commandsUrl, mimetype, notify_message) {
+FMgrProto.showNotification = function showNotification(plugin, targetDoc, commandsUrl, mimetype, name, notify_message) {
 
   var Cc = Components.classes;
   var Ci = Components.interfaces;
@@ -326,11 +328,11 @@ FMgrProto.showNotification = function showNotification(plugin, targetDoc, comman
       box.removeNotification(oldNotification);
 
     function onSubscribeClick(notification, button) {
-      plugin.onSubscribeClick(targetDoc, commandsUrl, mimetype);
+      plugin.onSubscribeClick(targetDoc, commandsUrl, mimetype, name);
     }
 
     if(!notify_message){
-      var notify_message = ("This page contains a Jetpack feature. " +
+      notify_message = ("This page contains a Jetpack feature. " +
        "If you'd like to install it, please " +
        "click the button to the right.");
     }

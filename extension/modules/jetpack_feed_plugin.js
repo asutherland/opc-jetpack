@@ -74,12 +74,16 @@ function FeedPlugin(feedManager, messageService) {
 
   this.onSubscribeClick = function DFP_onSubscribeClick(targetDoc,
                                                         commandsUrl,
-                                                        mimetype) {
+                                                        mimetype,
+                                                        name) {
     // Clicking on "subscribe" takes them to the warning page:
+    if (!name)
+      name = targetDoc.title;
+
     var confirmUrl = (CONFIRM_URL + "?url=" +
                       encodeURIComponent(targetDoc.location.href) +
                       "&sourceUrl=" + encodeURIComponent(commandsUrl) +
-                      "&title=" + encodeURIComponent(targetDoc.title));
+                      "&title=" + encodeURIComponent(name));
 
     function isTrustedUrl(commandsUrl, mimetype) {
       // Even if the command feed resides on a trusted host, if the
@@ -112,7 +116,7 @@ function FeedPlugin(feedManager, messageService) {
     if (isTrustedUrl(commandsUrl, mimetype)) {
       function onSuccess(data) {
         feedManager.addSubscribedFeed({url: targetDoc.location.href,
-                                       title: targetDoc.title,
+                                       title: name,
                                        sourceUrl: commandsUrl,
                                        canAutoUpdate: true,
                                        sourceCode: data,
