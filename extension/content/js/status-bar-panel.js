@@ -16,20 +16,14 @@ var WebContentFunctions = {
     Components.utils.evalInSandbox(codeLines.join('\n'), sandbox);
   },
 
-  // Inject the source code of the given functions into the given webpage.
-  evalIntoWindow: function evalIntoWindow(functions, window) {
+  // Inject the source code of the given function into the given
+  // window and call it, passing it the window as its argument.
+  evalIntoWindow: function evalIntoWindow(func, window) {
     var sandbox = Components.utils.Sandbox(window);
-    var codeLines = [];
-
-    for (name in functions)
-      if (typeof(functions[name]) == "function")
-        codeLines.push("window." + name + " = " +
-                       functions[name].toString() + ";");
-
     sandbox.window = window.wrappedJSObject;
-
-    Components.utils.evalInSandbox(codeLines.join('\n'), sandbox);
-  }
+    Components.utils.evalInSandbox("(" + func.toString() + ")(window);",
+                                   sandbox);
+  },
 };
 
 function UrlFactory(baseUrl) {
@@ -74,7 +68,6 @@ StatusBar.prototype = {
     this._BG_PROPS.forEach(
       function(name) {
         toElement.style[name] = style[name];
-        console.log(name, style[name]);
       });
     if (toElement.style.backgroundImage == "none") {
       // Due to the fixing of bug 449442, it's very hard for us to
@@ -98,6 +91,37 @@ StatusBar.prototype = {
     };
 
     WebContentFunctions.importIntoWindow(functions, iframe.contentWindow);
+
+    // Add apologizers for stuff that will eventually be available
+    // to status bar panel windows but isn't yet.
+    WebContentFunctions.evalIntoWindow(
+      function(window) {
+        function apologize(name) {
+          throw new Error("Sorry, window." + name +
+                          " is not yet available " +
+                          "to Jetpack status bar panels!");
+        }
+
+        function apologizeForProperty(name) {
+          if (name in window)
+            delete window[name];
+
+          window.__defineGetter__(name,
+                                  function() { apologize(name); });
+          window.__defineSetter__(name,
+                                  function() { apologize(name); });
+        }
+
+        function apologizeForFunc(name) {
+          window[name] = function() { apologize(name); };
+        }
+
+        apologizeForFunc("open");
+        apologizeForProperty("jetpack");
+        apologizeForProperty("console");
+      },
+      iframe.contentWindow
+    );
   },
 
   _addPanelToWindow: function _addPanelToWindow(window, url, width) {
