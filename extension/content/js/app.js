@@ -461,6 +461,7 @@ $(window).ready(
     $(".tab-link").addClass("buttony");
     $(".tab-link").click(
       function() {
+        window.scroll(0, 0);
         $("#container").triggerTab($(this).attr('name'));
       });
 
