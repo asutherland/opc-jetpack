@@ -1,3 +1,3 @@
 pref("extensions.jetpack.trustedDomains",
-     "ubiquity.mozilla.com");
+     "jetpack.mozillalabs.com");
 pref("extensions.jetpack.remoteUriTimeout", 60000);
