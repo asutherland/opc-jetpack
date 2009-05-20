@@ -168,9 +168,9 @@
     thing that we are going to make. Let's begin by adding a widget to
     the status bar that contains the prophetic message "Boom!":</p>
 
-    <pre class="example">jetpack.statusBar.append({
+    <div class="example">jetpack.statusBar.append({
   html: "Boom<i>!</i>"
-});</pre>
+});</div>
 
     <p>Click the install button, and there it is, large as life in the
     status bar. Notice the conspicuous lack of restarts! As you can
@@ -182,15 +182,15 @@
     because we haven't yet added the auto-sizing feature to
     Jetpack. For now, you'll have to pass in the width.</p>
 
-    <pre class="example">jetpack.statusBar.append({
+    <div class="example">jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45
-});</pre>
+});</div>
 
     <p>That's nice, but just having a "Boom!" in your status bar isn't
     all that exciting. Let's make it <i>do</i> something.</p>
 
-    <pre class="example">jetpack.statusBar.append({
+    <div class="example">jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
@@ -198,7 +198,7 @@
       console.log( jetpack.tabs );
     });
   }
-});</pre>
+});</div>
 
     <p>Now, whenever you click on the widget, it logs the
     <code>jetpack.tabs</code> object to the Firebug console. Instead
@@ -215,7 +215,7 @@
 
     <p>Let's make our little Boom! widget do something more fun:</p>
 
-    <pre class="example">jetpack.statusBar.append({
+    <div class="example">jetpack.statusBar.append({
   html: "Boom!",
   width: 45,
   onReady: function(widget){
@@ -227,7 +227,7 @@
         .animate({opacity:.5});
     });
   }
-});</pre>
+});</div>
 
     <p>Give it a go and see what it does. Every <code>tab</code>
     object has a wealth of possible event listeners, and
@@ -251,7 +251,7 @@
     and instead to the ability to remove embeds from a page. It's one
     line of jQuery goodness.</p>
 
-    <pre class="example">jetpack.statusBar.append({
+    <div class="example">jetpack.statusBar.append({
   html: "Boom!",
   width: 45,
   onReady: function(widget){
@@ -260,7 +260,7 @@
       $(doc).find("embed").remove();
     });
   }
-});</pre>
+});</div>
 
 
     <p>Pretty good, huh? Less than ten lines of code gets us an
@@ -282,12 +282,12 @@
     a Jetpack Feature, so that you never have to restart Firefox due
     to errant event handlers.</p>
 
-    <pre class="example">function removeEmbeds(doc){
+    <div class="example">function removeEmbeds(doc){
   $(doc).find("embed").remove();
 }
 
 jetpack.statusBar.append({
-  html: "Boom?<input type='checkbox'>",
+  html: 'Boom?<input type="checkbox">',
   width: 70,
   onReady: function(widget){
     $("input", widget).click(function(){
@@ -298,11 +298,11 @@ jetpack.statusBar.append({
       else jetpack.tabs.onReady.unbind( removeEmbeds );
     });
   }
-});</pre>
+});</div>
 
     <p>One of the neat additions we've mad is how you remove an event
     handler. Instead of passing in a string, you just call the
-    <code>unbind</code> function which is an property of the event
+    <code>unbind</code> function which is a property of the event
     handling function.</p>
 
     <h2>Chapter 3: Libraries</h2>
@@ -318,7 +318,7 @@ jetpack.statusBar.append({
     in use. It allows you to be notified of someone's latest
     Tweet.</p>
 
-    <pre class="example">var twitter = jetpack.lib.twitter
+    <div class="example">var twitter = jetpack.lib.twitter
 var oldTweet = null;
 
 function getTweet(){
@@ -333,7 +333,7 @@ function getTweet(){
 
 getTweet();
 setInterval( getTweet, 1000*60 );
-</pre>
+</div>
 
     <p>Jetpack is smart enough to clear any <code>setInterval</code>'s
     or <code>setTimeout</code>'s that you use when you refresh your
@@ -352,7 +352,7 @@ setInterval( getTweet, 1000*60 );
     <code>jetpack.tabs.open(url)</code> and
     <code>tab.focus()</code>.</p>
 
-    <pre class="example">function GmailNotifier(doc){
+    <div class="example">function GmailNotifier(doc){
   $(doc).click( this.goToInbox );
   this.update( doc );
   setInterval( function(){
@@ -399,7 +399,7 @@ jetpack.statusBar.append({
     });
   },
   width: 20
-});</pre>
+});</div>
 
     <h2>Chapter 5: The future</h2>
 

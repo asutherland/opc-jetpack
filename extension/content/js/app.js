@@ -70,6 +70,7 @@ var App = {
        },
        onClick: function(tabLink, content, hiddenContent) {
          $(hiddenContent).find("#editor-widget-container").empty();
+         self.hideTutorialEditor();
        }
       });
 
@@ -233,6 +234,69 @@ var App = {
     $("#extension-weakrefs").empty().append(newRows);
     bins = null;
     newRows = null;
+  },
+
+  TUTORIAL_FILENAME: "jetpack-tutorial-code.txt",
+
+  tutorialEditor: null,
+
+  currTutorialElement: null,
+
+  hideTutorialEditor: function hideTutorialEditor() {
+    if (this.currTutorialElement) {
+      $(this.currTutorialElement).empty();
+      $(this.currTutorialElement).addClass('example');
+      var code = this.tutorialEditor.loadData();
+      $(this.currTutorialElement).text(code);
+      this.currTutorialElement = null;
+    }
+  },
+
+  enableTutorialHacking: function enableTutorialHacking() {
+    var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
+    var editor = new JetpackCodeEditor(this.TUTORIAL_FILENAME);
+    editor.saveData('');
+    if (!FeedManager.isSubscribedFeed(editor.url))
+      editor.registerFeed(FeedManager);
+    JetpackRuntime.forceFeedUpdate(editor.url);
+    App.tutorialEditor = editor;
+
+    var self= this;
+
+    function showEditor(element) {
+      var iframe = $('<iframe></iframe>');
+      iframe.attr('src', 'editor.html#' +
+                  encodeURI(self.TUTORIAL_FILENAME));
+      iframe.addClass('editor-widget');
+      var button = $('#reload-editor-code').clone();
+      button.click(
+        function() {
+          JetpackRuntime.forceFeedUpdate(App.tutorialEditor.url);
+        });
+      $(element).removeClass('example');
+      $(element).empty().append(iframe).append('<p></p>');
+      $(element).append(button);
+      self.currTutorialElement = element;
+    }
+
+    // Clicking on an example code snippet enables the user
+    // to edit it.
+    $(".example").click(
+      function(event) {
+        self.hideTutorialEditor();
+        var code = $(this).text();
+        editor.saveData(code);
+        JetpackRuntime.forceFeedUpdate(editor.url);
+        showEditor(this);
+      });
+
+    // Some of the tutorial snippets don't have proper HTML-escaping,
+    // which is okay b/c it improves their readability when viewing
+    // their source; we'll properly escape them here.
+    $(".example").each(
+      function() {
+        $(this).text($(this).html());
+      });
   }
 };
 
@@ -301,5 +365,6 @@ $(window).ready(
     watcher.add("unsubscribe", onFeedEvent);
     watcher.add("purge", onFeedEvent);
 
+    App.enableTutorialHacking();
     App.forceGC();
   });

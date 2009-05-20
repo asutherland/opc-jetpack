@@ -187,3 +187,8 @@ a {
     height: 300px;
     overflow: hidden;
 }
+
+.example {
+    white-space: pre;
+    font-family: monospace;
+}
