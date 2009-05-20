@@ -179,7 +179,8 @@
     thing that we are going to make. Let's begin by adding a widget to
     the status bar that contains the prophetic message "Boom!":</p>
 
-    <div class="example">jetpack.statusBar.append({
+    <div class="example">
+jetpack.statusBar.append({
   html: "Boom<i>!</i>"
 });</div>
 
@@ -193,7 +194,8 @@
     because we haven't yet added the auto-sizing feature to
     Jetpack. For now, you'll have to pass in the width.</p>
 
-    <div class="example">jetpack.statusBar.append({
+    <div class="example">
+jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45
 });</div>
@@ -201,7 +203,8 @@
     <p>That's nice, but just having a "Boom!" in your status bar isn't
     all that exciting. Let's make it <i>do</i> something.</p>
 
-    <div class="example">jetpack.statusBar.append({
+    <div class="example">
+jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
@@ -226,7 +229,8 @@
 
     <p>Let's make our little Boom! widget do something more fun:</p>
 
-    <div class="example">jetpack.statusBar.append({
+    <div class="example">
+jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
@@ -262,7 +266,8 @@
     and instead to the ability to remove embeds from a page. It's one
     line of jQuery goodness.</p>
 
-    <div class="example">jetpack.statusBar.append({
+    <div class="example">
+jetpack.statusBar.append({
   html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
@@ -293,7 +298,8 @@
     a Jetpack Feature, so that you never have to restart Firefox due
     to errant event handlers.</p>
 
-    <div class="example">function removeEmbeds(doc){
+    <div class="example">
+function removeEmbeds(doc){
   $(doc).find("embed").remove();
 }
 
@@ -329,7 +335,8 @@ jetpack.statusBar.append({
     in use. It allows you to be notified of someone's latest
     Tweet.</p>
 
-    <div class="example">var twitter = jetpack.lib.twitter
+    <div class="example">
+var twitter = jetpack.lib.twitter
 var oldTweet = null;
 
 function getTweet(){
@@ -363,7 +370,8 @@ setInterval( getTweet, 1000*60 );
     <code>jetpack.tabs.open(url)</code> and
     <code>tab.focus()</code>.</p>
 
-    <div class="example">function GmailNotifier(doc){
+    <div class="example">
+function GmailNotifier(doc){
   $(doc).click( this.goToInbox );
   this.update( doc );
   setInterval( function(){

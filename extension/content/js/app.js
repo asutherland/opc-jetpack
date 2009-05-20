@@ -288,7 +288,7 @@ var App = {
       color: "white",
       padding: "5px",
     });
-    
+
     $(".example").hover(
       function(event) {
         if( this.className == "example" ) $(this).after( edit );
@@ -306,7 +306,7 @@ var App = {
         editor.saveData(code);
         JetpackRuntime.forceFeedUpdate(editor.url);
         showEditor(this);
-        edit.remove();        
+        edit.remove();
       });
 
     // Some of the tutorial snippets don't have proper HTML-escaping,
@@ -314,7 +314,7 @@ var App = {
     // their source; we'll properly escape them here.
     $(".example").each(
       function() {
-        $(this).text($(this).html());
+        $(this).text(jQuery.trim($(this).html()));
       });
   }
 };
