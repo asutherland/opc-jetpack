@@ -202,6 +202,32 @@ a {
   cursor: pointer;
 }
 
-#api-reference {
+#raw-api-documentation {
     display: none;
+}
+
+.documentation {
+}
+
+.documentation .heading {
+    font-family: monospace;
+    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.documentation .properties {
+    padding-left: 2em;
+}
+
+.documentation em {
+    cursor: pointer;
+}
+
+.documentation .overlay {
+    position: absolute;
+    padding: 1em;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    width: 20em;
 }

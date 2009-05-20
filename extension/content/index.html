@@ -25,6 +25,7 @@
     <li><a href="#memory"><span>Memory Usage</span></a></li>
     <li><a href="#tests"><span>Test Suite</span></a></li>      
     <li><a href="#tutorial"><span>Tutorial</span></a></li>
+    <li><a href="#api"><span>API Reference</span></a></li>
   </ul>  
   
   <!-- WELCOME TAB -->
@@ -421,6 +422,12 @@ jetpack.statusBar.append({
 
     <p>There's a lot more coming with Jetpack, so check back often.</p>
   </div>
+
+  <!-- API REFERENCE TAB -->
+
+  <div id="api">
+    <h2>API Reference</h2>
+  </div>
 </div>
 </div>
 
@@ -473,18 +480,32 @@ jetpack.statusBar.append({
     </div>
 </div>
 
-<!-- API REFERENCE -->
+<!-- RAW API DOCUMENTATION -->
 
-<div id="api-reference">
-  <div name="jetpack" class="singleton">
+<div id="raw-api-documentation">
+  <div name="jetpack" class="property">
     The <tt>jetpack</tt> namespace is available to all Jetpack
     Features, and is the main point of contact for Features with the
     rest of Firefox. The API is intended as a lightweight
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    <div name="tabs" class="property">
+      <tt>jetpack.tabs</tt> is a <em>live array</em> with special
+      tab-related properties.
+      <div name="focused" class="property">
+        The currently focused/active tab as a <tt>Tab</tt> object.
+        <p>
+        The following example displays the name of the currently
+        focused tab.
+        <div class="example">
+jetpack.notifications.show(jetpack.tabs.focused.url);
+        </div>
+      </div>
+      <a name="onReady" class="property" href="#tab-onReady"></a>
+    </div>
   </div>
-  <div name="live-array" class="glossary">
+  <div name="live array" class="glossary">
     A <em>live array</em> is an <tt>Array</tt> that represents some
     aspect of system state and has no mutator methods, and is
     effectively "read-only".  In particular, this includes
@@ -496,38 +517,43 @@ jetpack.statusBar.append({
     While it's technically possible for the array indices of an
     <em>live array</em> to be modified, they shouldn't be.
   </div>
-  <div name="jetpack-tabs" class="singleton">
-    <tt>jetpack.tabs</tt> is an <em>live array</em> with special
-    tab-related properties.
-    <div name="focused" class="property">
-      The currently focused/active tab as a <tt>Tab</tt> object.
-    </div>
-    <div name="onReady" class="function">
-      A <em>live event binder</em> that is triggered whenever a
-      <tt>Tab</tt> object's containing <em>HTML document</em>, or one
-      of its sub-documents (e.g., an <tt>iframe</tt>), has finished
-      loading its DOM.  At a purely technical level, this is triggered
-      when the target document's <tt>DOMContentLoaded</tt> event is
-      fired.
-      <p>
-      This binder method is available on <tt>Tab</tt> objects and the
-      <tt>jetpack.tabs</tt> <em>live array</em>.
-      <p>
-      <em>Event handlers</em> registered with this event binder are
-      passed the <em>HTML Document</em> of the object that triggered
-      the event.
-      <p>
-      The following example code uses the <tt>jetpack.tabs.onReady</tt>
-      handler to display a notification message the next time the
-      user visits a page.
-      <div class="example">
+  <div name="tab-onReady" class="function">
+    A <em>live event binder</em> that is triggered whenever a
+    <tt>Tab</tt> object's containing <em>HTML document</em>, or one
+    of its sub-documents (e.g., an <tt>iframe</tt>), has finished
+    loading its DOM.  At a purely technical level, this is triggered
+    when the target document's <tt>DOMContentLoaded</tt> event is
+    fired.
+    <p>
+    This binder method is available on <tt>Tab</tt> objects and the
+    <tt>jetpack.tabs</tt> <em>live array</em>.
+    <p>
+    <em>Event handlers</em> registered with this event binder are
+    passed the <em>HTML document</em> of the object that triggered
+    the event.
+    <p>
+    The following example code uses the <tt>jetpack.tabs.onReady</tt>
+    handler to display a notification message the next time the
+    user visits a page.
+   <div class="example">
 jetpack.tabs.onReady(function onNextPage(doc) {
   if (!doc.defaultView.frameElement) {
     jetpack.notifications.show("Loaded " + doc.location.href);
     jetpack.tabs.onReady.unbind(onNextPage);
   }});
-      </div>
     </div>
+  </div>
+  <div name="html document" class="glossary">
+    This is the standard DOM document object, which is commonly
+    known within web pages as the <tt>document</tt> variable. If
+    you need to access the web page's <tt>window</tt> object through
+    its <tt>document</tt>, use <tt>document.defaultView</tt>.
+  </div>
+  <div name="event handlers" class="glossary">
+    An <em>event handler</em> is just a function that is called
+    whenever a particular event occurs. It's usually passed a single
+    argument that contains specific information about the event that
+    was triggered.
   </div>
   <div name="live event binder" class="glossary">
     A <em>live event binder</em> is a method of a parent object,
