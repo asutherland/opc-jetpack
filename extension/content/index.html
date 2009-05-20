@@ -465,6 +465,80 @@ jetpack.statusBar.append({
     </div>
 </div>
 
+<!-- API REFERENCE -->
+
+<div id="api-reference">
+  <div name="jetpack" class="singleton">
+    The <tt>jetpack</tt> namespace is available to all Jetpack
+    Features, and is the main point of contact for Features with the
+    rest of Firefox. The API is intended as a lightweight
+    backwards-compatible facade to the underlying Mozilla platform,
+    which means that if you write a Feature using the Jetpack library,
+    you won't have to change your code as Firefox continues to evolve.
+  </div>
+  <div name="live-array" class="glossary">
+    A <em>live array</em> is an <tt>Array</tt> that represents some
+    aspect of system state and has no mutator methods, and is
+    effectively "read-only".  In particular, this includes
+    <tt>Array.pop()</tt>, <tt>Array.push()</tt>,
+    <tt>Array.reverse()</tt>, <tt>Array.shift()</tt>,
+    <tt>Array.sort()</tt>, <tt>Array.splice()</tt>, and
+    <tt>Array.unshift()</tt>.
+    <p>
+    While it's technically possible for the array indices of an
+    <em>live array</em> to be modified, they shouldn't be.
+  </div>
+  <div name="jetpack-tabs" class="singleton">
+    <tt>jetpack.tabs</tt> is an <em>live array</em> with special
+    tab-related properties.
+    <div name="focused" class="property">
+      The currently focused/active tab as a <tt>Tab</tt> object.
+    </div>
+    <div name="onReady" class="function">
+      A <em>live event binder</em> that is triggered whenever a
+      <tt>Tab</tt> object's containing <em>HTML document</em>, or one
+      of its sub-documents (e.g., an <tt>iframe</tt>), has finished
+      loading its DOM.  At a purely technical level, this is triggered
+      when the target document's <tt>DOMContentLoaded</tt> event is
+      fired.
+      <p>
+      This binder method is available on <tt>Tab</tt> objects and the
+      <tt>jetpack.tabs</tt> <em>live array</em>.
+      <p>
+      <em>Event handlers</em> registered with this event binder are
+      passed the <em>HTML Document</em> of the object that triggered
+      the event.
+      <p>
+      The following example code uses the <tt>jetpack.tabs.onReady</tt>
+      handler to display a notification message the next time the
+      user visits a page.
+      <div class="example">
+jetpack.tabs.onReady(function onNextPage(doc) {
+  if (!doc.defaultView.frameElement) {
+    jetpack.notifications.show("Loaded " + doc.location.href);
+    jetpack.tabs.onReady.unbind(onNextPage);
+  }});
+      </div>
+    </div>
+  </div>
+  <div name="live event binder" class="glossary">
+    A <em>live event binder</em> is a method of a parent object,
+    usually beginning with the prefix <tt>on</tt>, which allows a
+    client to be notified, via a callback function, whenever an event
+    occurs on the parent object.
+    <p>
+    If the parent object is a <em>live array</em>, then the client is
+    notified whenever the relevant event is fired on any member of the
+    live array, <i>even if the member wasn't in the live array when
+    the event binding was created</i>. For an example of this, see
+    <tt>jetpack.tabs.onReady</tt>.
+    <p>
+    Every live event binder method itself has a method called
+    <tt>unbind</tt>, which can be passed a callback to unbind. For an
+    example, see <tt>jetpack.tabs.onReady</tt>.
+  </div>
+</div>
+
 <!-- CODE -->
 
 <!-- Jetpack Platform Foundation -->

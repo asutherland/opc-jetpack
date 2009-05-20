@@ -201,3 +201,7 @@ a {
   color: #cc6600;
   cursor: pointer;
 }
+
+#api-reference {
+    display: none;
+}
