@@ -4,7 +4,7 @@
      xmlns:em="http://www.mozilla.org/2004/em-rdf#">
   <Description about="urn:mozilla:install-manifest">
     <em:id>jetpack@labs.mozilla.com</em:id>
-    <em:version>0.1pre</em:version>
+    <em:version>0.1</em:version>
     <em:type>2</em:type>
 
     <!-- Target Application this extension can install into, 
@@ -19,7 +19,8 @@
    
     <!-- Front End MetaData -->
     <em:name>Jetpack</em:name>
-    <em:description>Extending the browser made simple.</em:description>
+    <em:description>Exploring new ways to extend and personalize the
+    web.</em:description>
     <em:creator>Mozilla Corporation</em:creator>
     <em:iconURL>chrome://jetpack/content/gfx/jetpack_icon.png</em:iconURL>
     <em:homepageURL>http://jetpack.mozillalabs.com/</em:homepageURL>
