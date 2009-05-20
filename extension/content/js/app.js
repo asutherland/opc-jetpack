@@ -261,7 +261,7 @@ var App = {
       var name = $(this).text().toLowerCase();
       var entry = $(data).find(".glossary[name='" + name + "']");
       if (entry.length) {
-        var overlay = $('<div class="overlay"></div>');
+        var overlay = $('<div class="overlay fixed"></div>');
         overlay.append(entry.clone());
         overlay.css({left: $(this).position().left});
         $(this).after(overlay);
@@ -353,14 +353,7 @@ var App = {
     }
 
     // Hovering over an example shows instructions on how to edit.
-    var edit = $("<div>Click to run and edit the code.</div>");
-
-    edit.css({
-      position: "absolute",
-      backgroundColor: "rgba(0,0,0,.8)",
-      color: "white",
-      padding: "5px"
-    });
+    var edit = $(".messages .click-to-edit").clone().addClass("overlay");
 
     $(".example").hover(
       function(event) {
