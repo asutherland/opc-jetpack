@@ -26,6 +26,11 @@ FBL.ns(
         shouldNotCreateContext: function(win, uri) {
         },
         initContext: function(context) {
+          var msg = ("Thanks for using Jetpack with Firebug! Please note " +
+                     "that if you want to see your Jetpack's logging " +
+                     "messages, you'll have to switch to the Firebug " +
+                     "panel on the about:jetpack tab.");
+          Firebug.Console.logFormatted([msg], context, 'log', false, null);
         },
         showContext: function(browser, context) {
           if (browser.contentWindow.location.href == JETPACK_URL) {
@@ -97,7 +102,7 @@ FBL.ns(
       Firebug.registerModule(JetpackModule);
 
       Firebug.isJetpackSupported = true;
-      
+
       // TODO: We should totally use this for something.
       //
       // function JetpackPanel() {}
