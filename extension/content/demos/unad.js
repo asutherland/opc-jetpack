@@ -78,6 +78,9 @@ function toggleState() {
     jetpack.tabs.onReady.unbind(removeAds);
     state = "off";
   }
+  
+  // This is a temporary way of keeping all browser window states
+  // in sync. We are working on a better API for this.  
   widgets.forEach(function(widget) {
     widget.defaultView.wrappedJSObject.setState(state);
   });
@@ -86,6 +89,8 @@ function toggleState() {
 jetpack.statusBar.append({
   url: "unad.html",
   onReady: function(widget) {
+    // This is a temporary way of keeping all browser window states
+    // in sync. We are working on a better API for this.
     widgets.push(widget);
     widget.defaultView.wrappedJSObject.setState(state);
     $(widget).click(toggleState);

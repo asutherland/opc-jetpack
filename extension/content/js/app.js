@@ -279,6 +279,24 @@ var App = {
       self.currTutorialElement = element;
     }
 
+    // Hovering over an example shows instructions on how to edit.
+    var edit = $("<div>Click to run/edit the code.</div>");
+
+    edit.css({
+      position: "absolute",
+      backgroundColor: "rgba(0,0,0,.8)",
+      color: "white",
+      padding: "5px",
+    });
+    
+    $(".example").hover(
+      function(event) {
+        if( this.className == "example" ) $(this).after( edit );
+      },
+      function(event) {
+          edit.remove();
+      });
+
     // Clicking on an example code snippet enables the user
     // to edit it.
     $(".example").click(
@@ -288,6 +306,7 @@ var App = {
         editor.saveData(code);
         JetpackRuntime.forceFeedUpdate(editor.url);
         showEditor(this);
+        edit.remove();        
       });
 
     // Some of the tutorial snippets don't have proper HTML-escaping,

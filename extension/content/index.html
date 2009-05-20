@@ -216,7 +216,7 @@
     <p>Let's make our little Boom! widget do something more fun:</p>
 
     <div class="example">jetpack.statusBar.append({
-  html: "Boom!",
+  html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
     $(widget).click(function(){
@@ -252,7 +252,7 @@
     line of jQuery goodness.</p>
 
     <div class="example">jetpack.statusBar.append({
-  html: "Boom!",
+  html: "Boom<i>!</i>",
   width: 45,
   onReady: function(widget){
     $(widget).click(function(){
@@ -300,7 +300,7 @@ jetpack.statusBar.append({
   }
 });</div>
 
-    <p>One of the neat additions we've mad is how you remove an event
+    <p>One of the neat additions we've made is how you remove an event
     handler. Instead of passing in a string, you just call the
     <code>unbind</code> function which is a property of the event
     handling function.</p>
@@ -384,10 +384,7 @@ GmailNotifier.prototype = {
 }
 
 jetpack.statusBar.append({
-  html: <>
-    <img src="http://mail.google.com/mail/images/favicon.ico"/>
-    <span id="count"></span>
-  </>,
+  html: '<img src="http://mail.google.com/mail/images/favicon.ico"/><span id="count"></span>',
   onReady: function(doc){
     var gmail = new GmailNotifier(doc);
     $("#count", doc).css({

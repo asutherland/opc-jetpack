@@ -191,4 +191,13 @@ a {
 .example {
     white-space: pre;
     font-family: monospace;
+    background-color: #DDD;
+    color: #000;
+    padding: 10px;
+    padding-left: 15px;
+}
+
+.example:hover{
+  color: #cc6600;
+  cursor: pointer;
 }
