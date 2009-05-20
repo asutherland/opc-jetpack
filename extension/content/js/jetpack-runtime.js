@@ -189,7 +189,7 @@ var JetpackRuntime = {
 
   FEED_UPDATE_REMOTE_TIMEOUT: 5000,
 
-  FEED_UPDATE_INTERVAL: 5000,
+  FEED_UPDATE_INTERVAL: 60 * 60 * 1000,
 
   _getLocalFeed: function _getLocalFeed(feed) {
     var self = this;
