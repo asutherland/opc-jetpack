@@ -201,7 +201,7 @@ var JetpackRuntime = {
         return;
       delete self._feedUpdates[feed.uri.spec];
       if (req.status == 0 &&
-          req.responseText.length &&
+          typeof(req.responseText) == "string" &&
           req.responseText.indexOf("ERROR:") != 0) {
         var currCode = feed.getCode();
         if (currCode != req.responseText) {
