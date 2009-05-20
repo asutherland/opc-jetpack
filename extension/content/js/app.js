@@ -236,6 +236,79 @@ var App = {
     newRows = null;
   },
 
+  buildApiReference: function buildApiReference() {
+    var output = $("#api");
+    var data = $("#raw-api-documentation");
+    var fakeUri = {spec: "http://jetpack.mozillalabs.com/"};
+    var fakeFeed = {uri: fakeUri,
+                    srcUri: fakeUri,
+                    getCode: function() { return ""; }};
+
+    var context = new JetpackRuntime.Context(fakeFeed);
+
+    function getLinkedDocs(link) {
+      var name = link.attr("href").slice(1);
+      var result = data.find("[name='" + name + "']");
+      if (result.length) {
+        return result;
+      } else {
+        console.warn("Couldn't find linked documentation for", name);
+        return $('<div></div>');
+      }
+    }
+
+    function glossaryMouseOverHandler(event) {
+      var name = $(this).text().toLowerCase();
+      var entry = $(data).find(".glossary[name='" + name + "']");
+      if (entry.length) {
+        var overlay = $('<div class="overlay"></div>');
+        overlay.append(entry.clone());
+        overlay.css({left: $(this).position().left});
+        $(this).after(overlay);
+        var self = this;
+        $(this).mouseout(
+          function onOut() {
+            overlay.remove();
+            $(self).unbind("mouseout", onOut);
+          });
+      } else {
+        console.warn("No glossary entry for", name);
+      }
+    }
+
+    function generateDocs(nameParts, object, data, output) {
+      if (nameParts.length) {
+        var heading = $('<div class="heading"></div>');
+        heading.text($(output).attr("name"));
+        if (data.get(0).nodeName == "A")
+          data = getLinkedDocs(data);
+        var objDocs = data.clone();
+        objDocs.find(".property").remove();
+        objDocs.find("em").mouseover(glossaryMouseOverHandler);
+        var properties = $('<div class="properties"></div>');
+        $(output).append(heading).append(objDocs).append(properties);
+        output = properties;
+      }
+      for (name in object) {
+        var result = data.find(".property[name='" + name + "']");
+        if (result.length) {
+          var newOutput = $('<div class="documentation">');
+          var newNameParts = nameParts.slice();
+          newNameParts.push(name);
+          newOutput.attr("name", newNameParts.join("."));
+          generateDocs(newNameParts, object[name], result, newOutput);
+          output.append(newOutput);
+        } else {
+          //console.warn("Undocumented token", name);
+        }
+      }
+    }
+
+    generateDocs([], context.sandbox, data, output);
+
+    context.unload();
+  },
+
   TUTORIAL_FILENAME: "jetpack-tutorial-code.txt",
 
   tutorialEditor: null,
@@ -286,7 +359,7 @@ var App = {
       position: "absolute",
       backgroundColor: "rgba(0,0,0,.8)",
       color: "white",
-      padding: "5px",
+      padding: "5px"
     });
 
     $(".example").hover(
@@ -384,6 +457,7 @@ $(window).ready(
     watcher.add("unsubscribe", onFeedEvent);
     watcher.add("purge", onFeedEvent);
 
+    App.buildApiReference();
     App.enableTutorialHacking();
     App.forceGC();
   });
