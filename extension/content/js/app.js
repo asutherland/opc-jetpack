@@ -280,7 +280,7 @@ var App = {
     }
 
     // Hovering over an example shows instructions on how to edit.
-    var edit = $("<div>Click to run/edit the code.</div>");
+    var edit = $("<div>Click to run and edit the code.</div>");
 
     edit.css({
       position: "absolute",
