@@ -16,6 +16,12 @@ var Extension = {
 
   Manager: {},
 
+  get OS() {
+    var xulr = Cc["@mozilla.org/xre/app-info;1"]
+               .getService(Ci.nsIXULRuntime);
+    return xulr.OS;
+  },
+
   addUnloadMethod: function addUnloadMethod(obj, unloader) {
     function unloadWrapper() {
       window.removeEventListener("unload", unloadWrapper, true);

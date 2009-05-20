@@ -70,7 +70,8 @@ StatusBar.prototype = {
         toElement.style[name] = style[name];
       });
     if (toElement.style.backgroundImage == "none" &&
-        toElement.style.backgroundColor == "transparent") {
+        toElement.style.backgroundColor == "transparent" &&
+        Extension.OS == "Darwin") {
       // Due to the fixing of bug 449442, it's very hard for us to
       // copy the background of the status bar on OS X, but here's
       // a shot.
