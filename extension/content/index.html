@@ -508,6 +508,14 @@ jetpack.statusBar.append({
         single argument, <tt>message</tt>, which is either a string or an
         object with properties <tt>title</tt>, <tt>icon</tt>, and
         <tt>body</tt>. If <tt>icon</tt> is supplied, it should be URL.
+        <p>
+        The following example displays a message with a title, icon,
+        and body.
+        <div class="example">
+jetpack.notifications.show({title: 'hai2u',
+                            body: 'o hai.',
+                            icon: 'http://www.mozilla.org/favicon.ico'});
+         </div>
       </div>
     </div>
     <div name="tabs" class="property">
@@ -531,6 +539,11 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
     <tt>log</tt>, <tt>info</tt>, <tt>warn</tt>, and <tt>error</tt> to log
     messages of varying importance. All of these methods can take any
     number of arguments; all of the arguments are logged.
+    <p>
+    The following example logs some information to the console.
+    <div class="example">
+console.log('Hello from the Jetpack feature', this, '.');
+    </div>
   </div>
   <div name="setInterval" class="property">
     This function works just like the Web's <a
@@ -556,6 +569,9 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
     This is jQuery, a lightweight JavaScript library. For
     convenience, it's also available as the <tt>$</tt> function.
     <p>
+    All Ajax requests made using jQuery are done using a cross-site
+    <tt>XMLHttpRequest</tt> object.
+    </p>
     For more information on jQuery, please consult the <a
     href="http://docs.jquery.com/Main_Page">jQuery Documentation</a>.
   </div>
