@@ -374,6 +374,9 @@ var App = {
     // to edit it.
     $(".example").click(
       function(event) {
+        if (self.currTutorialElement == this)
+          // We've already got an editor embedded in us, just leave.
+          return;
         self.hideTutorialEditor();
         var code = $(this).text();
         editor.saveData(code);
