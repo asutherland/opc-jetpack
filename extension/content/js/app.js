@@ -459,5 +459,12 @@ $(window).ready(
 
     App.buildApiReference();
     App.enableTutorialHacking();
+
+    $(".tab-link").addClass("buttony");
+    $(".tab-link").click(
+      function() {
+        $("#container").triggerTab($(this).attr('name'));
+      });
+
     App.forceGC();
   });
