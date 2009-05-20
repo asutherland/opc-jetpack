@@ -24,6 +24,10 @@ a {
     color: black;
 }
 
+.messages {
+    display: none;
+}
+
 .warnings {
     display: none;
 }

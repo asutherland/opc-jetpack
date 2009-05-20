@@ -78,7 +78,20 @@ var App = {
       showEditor();
   },
 
+  updateInstalledJetpackCount: function updateInstalledJetpackCount() {
+    var count = $("#installed-jetpacks").children().length;
+    var messages = $(".messages .installed-jetpacks");
+    var node;
+    if (count > 1) {
+      node = messages.find(".has-many");
+      node.find(".installed-count").text(count);
+    } else
+      node = messages.find(".has-" + count);
+    $("#installed .summary").empty().append(node.clone());
+  },
+
   removeLinkForJetpack: function removeLinkForJetpack(url) {
+    var self = this;
     if (url in this._jetpackLinks) {
       this._jetpackLinks[url].slideUp(
         function() {
@@ -87,6 +100,7 @@ var App = {
           me.remove();
           if (myParent.children('.jetpack').length == 0)
             myParent.slideUp();
+          self.updateInstalledJetpackCount();
         });
       delete this._jetpackLinks[url];
     }
@@ -96,6 +110,7 @@ var App = {
     if (feed.isBuiltIn)
       return;
 
+    var self = this;
     var url = feed.uri.spec;
 
     // Assume that we're either switching subscribed/unsubscribed
@@ -127,7 +142,7 @@ var App = {
     if (parent.children('.jetpack').length == 0)
       parent.slideDown();
     parent.append(div);
-    div.slideDown();
+    div.slideDown(function() { self.updateInstalledJetpackCount(); });
 
     this._jetpackLinks[url] = div;
   },

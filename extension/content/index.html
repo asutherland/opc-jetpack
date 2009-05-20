@@ -100,13 +100,13 @@
   
   <div id="installed">
     <h2>Your Jetpack Features</h2>
+    <div class="summary"></div>
     <div id="installed-jetpacks" class="jetpack-list">
-      <p>These are the Jetpack Features that are currently installed.</p>
     </div>
     <div id="uninstalled-jetpacks" class="jetpack-list">
-      <p>These are recently-uninstalled Jetpack Features. You can reinstall
-      them easily from here, or you can purge them from this list so they
-      no longer clutter this page.</p>
+      <p>These are your recently-uninstalled Jetpack Features. You can
+      reinstall them easily from here, or you can purge them from this
+      list so they no longer clutter this page.</p>
     </div>
   </div>
 
@@ -406,6 +406,14 @@ jetpack.statusBar.append({
     <p>There's a lot more coming with Jetpack, so check back often.</p>
   </div>
 </div>
+</div>
+<div class="messages">
+  <div class="installed-jetpacks">
+    <p class="has-many">You have <span class="installed-count"></span>
+    installed Jetpack Features.</p>
+    <p class="has-1">You have one installed Jetpack Feature.</p>
+    <p class="has-0">You have no installed Jetpack Features.</p>
+  </div>
 </div>
 <div class="warnings">
     <p id="old-firefox-version" class="warning">You appear to be running
