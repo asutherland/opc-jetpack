@@ -1,4 +1,5 @@
 <html>
+
 <head>
   <base href="chrome://jetpack/content/"/>
   <base target="_blank"/>
@@ -6,11 +7,16 @@
         href="css/index.css" />
   <title>I am Jetpack.</title>
 </head>
+
 <body>
-  
 <div id="content">
+
+<!-- MASTHEAD -->
+
 <img src="gfx/jetpack.png"/><br/>  
-  
+
+<!-- TABS -->
+
 <div id="container">
   <ul>
     <li><a href="#welcome"><span>Welcome</span></a></li>
@@ -21,24 +27,29 @@
     <li><a href="#tutorial"><span>Tutorial</span></a></li>
   </ul>  
   
-  <!-- WELCOME -->
+  <!-- WELCOME TAB -->
+
   <div id="welcome">
     <h1>I am Jetpack. Welcome.</h1>
     <p><i>Exploring new ways to extend &amp; personalize the Web.</i></p>
     
-    <p>The <a href="https://addons.mozilla.org">add-ons community for Firefox</a>
-      is arguably one of the largest, most vibrant sources for innovation on the Web today.
-      If you want to affect people, to reach them and make a difference in their daily lives,
-      the Firefox <a href="https://developer.mozilla.org/En/Developing_add-ons">add-ons platform</a>
-      is hard to beat, with over
-      <a href="http://blog.mozilla.com/addons/2008/11/19/1-billion-add-on-downloads/">one billion installs
-      of Firefox add-ons to date</a>.
+    <p>The <a href="https://addons.mozilla.org">add-ons community for
+      Firefox</a> is arguably one of the largest, most vibrant sources
+      for innovation on the Web today.  If you want to affect people,
+      to reach them and make a difference in their daily lives, the
+      Firefox <a
+      href="https://developer.mozilla.org/En/Developing_add-ons">add-ons
+      platform</a> is hard to beat, with over
+    <a
+      href="http://blog.mozilla.com/addons/2008/11/19/1-billion-add-on-downloads/">one
+      billion installs of Firefox add-ons to date</a>.
     </p>
 
     <p>However, we've only scratched the surface of its potential.</p>
 
-    <p>Jetpack lets you build Firefox (and more!) extensions with the same skill-set you already know
-      from building on the open Web: Javascript, HTML, and CSS. We've even got jQuery included by
+    <p>Jetpack lets you build Firefox (and more!) extensions with the
+      same skill-set you already know from building on the open Web:
+      Javascript, HTML, and CSS. We've even got jQuery included by
       default to ease you into it.</p>
       
     <p>Make sure to visit the <a href="https://jetpack.mozillalabs.com/">Jetpack website</a>!</p>
@@ -53,7 +64,7 @@
   </div>
   
   
-  <!-- DEVELOP -->
+  <!-- DEVELOP TAB -->
   
   <div id="develop">
     <div class="developer-warnings"></div>
@@ -96,7 +107,7 @@
   </div>
   
   
-  <!-- INSTALLED -->
+  <!-- INSTALLED FEATURES TAB -->
   
   <div id="installed">
     <h2>Your Jetpack Features</h2>
@@ -110,7 +121,7 @@
     </div>
   </div>
 
-  <!-- MEMORY -->
+  <!-- MEMORY USAGE TAB -->
   
   <div id="memory">
     <h2>Memory Usage</h2>
@@ -123,7 +134,7 @@
     </p>
   </div>
     
-  <!-- TESTS -->
+  <!-- TEST SUITE TAB -->
   
   <div id="tests">
     <h2>Test Suites</h2>
@@ -135,7 +146,7 @@
     class="logging-source"></span>.</p>    
   </div>
 
-  <!-- TUTORIAL -->
+  <!-- TUTORIAL TAB -->
   
   <div id="tutorial">
     <div class="developer-warnings"></div>
@@ -404,6 +415,9 @@ jetpack.statusBar.append({
   </div>
 </div>
 </div>
+
+<!-- MESSAGES -->
+
 <div class="messages">
   <div class="installed-jetpacks">
     <p class="has-many">You have <span class="installed-count"></span>
@@ -412,6 +426,9 @@ jetpack.statusBar.append({
     <p class="has-0">You have no installed Jetpack Features.</p>
   </div>
 </div>
+
+<!-- WARNINGS -->
+
 <div class="warnings">
     <p id="old-firefox-version" class="warning">You appear to be running
     Firefox 3 or earlier, which means that any logging messages or
@@ -448,6 +465,8 @@ jetpack.statusBar.append({
     </div>
 </div>
 
+<!-- CODE -->
+
 <!-- Jetpack Platform Foundation -->
 <script src="js/init-extension.js"></script>
 <script src="js/ext/jquery.js"></script>
@@ -473,5 +492,6 @@ jetpack.statusBar.append({
 <!-- Code Editor -->
 <script src="js/ext/io.js"></script>
 <script src="js/editor.js"></script>
+
 </body>
 </html>
