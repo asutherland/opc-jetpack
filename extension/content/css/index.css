@@ -224,10 +224,13 @@ a {
     cursor: pointer;
 }
 
-.documentation .overlay {
+.overlay {
     position: absolute;
-    padding: 1em;
+    padding: 5px;
     background-color: rgba(0, 0, 0, 0.8);
     color: white;
+}
+
+.overlay.fixed {
     width: 20em;
 }
