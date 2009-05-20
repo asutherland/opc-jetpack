@@ -108,13 +108,12 @@ StatusBar.prototype = {
         }
 
         function apologizeForProperty(name) {
-          if (name in window)
-            delete window[name];
-
-          window.__defineGetter__(name,
-                                  function() { apologize(name); });
-          window.__defineSetter__(name,
-                                  function() { apologize(name); });
+          try {
+            window.__defineGetter__(name,
+                                    function() { apologize(name); });
+            window.__defineSetter__(name,
+                                    function() { apologize(name); });
+          } catch (e) {}
         }
 
         function apologizeForFunc(name) {
