@@ -22,13 +22,38 @@ JetpackCodeEditor.prototype = {
   initUI: function initUI(divId, window) {
     // Loads and configures the objects that the editor needs
     var self = this;
+    var useBespin = false;
+    var save;
 
-    self._component = new bespin.editor.Component(divId, {
-      language: "js",
-      loadfromdiv: false
-      });
-    self._component.setContent(self.loadData());
-    function save() { self.saveData(self._component.getContent()); }
+    // Bespin currently only supports clipboard copy/paste on
+    // OS X, so we'll only enable it on that platform; otherwise,
+    // a vanilla text area widget provides a better user
+    // experience. :(
+    if (window.navigator &&
+        window.navigator.oscpu.indexOf("Mac OS X") != -1)
+      useBespin = true;
+
+    if (useBespin) {
+      self._component = new bespin.editor.Component(
+        divId,
+        {language: "js",
+         loadfromdiv: false});
+      self._component.setContent(self.loadData());
+      save = function() { self.saveData(self._component.getContent()); };
+    } else {
+      var element = window.document.getElementById(divId);
+      var editor = window.document.createElement('textarea');
+      element.appendChild(editor);
+      editor.style.width = "100%";
+      editor.style.height = element.style.height;
+      editor.style.border = "none";
+      editor.style.color = "#bdae98";
+      editor.style.backgroundColor = "#2a211c";
+      editor.style.padding = "0.5em";
+      editor.value = self.loadData();
+      save = function() { self.saveData(editor.value); };
+    }
+
     window.addEventListener("blur", save, false);
     window.addEventListener("unload", save, false);
   },
