@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<title>Mozilla Labs Jetpack</title>
+	<link rel="stylesheet" type="text/css" media="all" href="css/screen.css" />
+	
+	<link type="text/css" rel="stylesheet" href="css/SyntaxHighlighter.css"></link>
+	<script language="javascript" src="js/shCore.js"></script>
+	<script language="javascript" src="js/shBrushJScript.js"></script>
+	<script language="javascript" src="js/shBrushCss.js"></script>
+	<style>
+  .documentation {
+  }
+
+  .documentation .heading {
+      font-family: monospace;
+      font-weight: bold;
+      margin-top: 1em;
+      margin-bottom: 1em;
+  }
+
+  .documentation .properties {
+      padding-left: 2em;
+  }
+
+  .documentation em {
+      /*cursor: pointer;*/
+  }
+
+  .overlay {
+      position: absolute;
+      padding: 5px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+  }
+
+  .overlay.fixed {
+      width: 20em;
+  }
+  
+  #raw-api-documentation{
+    display: none;
+  }
+  
+  .example {
+      white-space: pre;
+      font-family: monospace;
+      background-color: #DDD;
+      color: #000;
+      padding: 10px;
+      padding-left: 15px;
+  }
+  
+	
+	</style>
+
+	<script language="javascript">
+window.onload = function () {
+    dp.SyntaxHighlighter.ClipboardSwf = '/flash/clipboard.swf';
+    dp.SyntaxHighlighter.HighlightAll('code');
+}
+</script>
+
+</head>
+<body>
+
+		<div class="container">
+		
+		<div class="sidebar"><div>
+		
+		<div class="header"></div>
+		
+		<div class="introBg">
+		
+		<a href="index.html">&laquo; Return to Jetpack home</a> 
+		
+		</div>
+		
+		<div class="whiteBg">
+
+
+        <h2>API Reference</h2>
+
+        <p>The following are available to all Jetpack features at the
+        global scope.</p>
+      <div name="clearInterval" class="documentation"><div class="heading">clearInterval</div><div name="clearInterval" class="property">
+        This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearInterval"><tt>window.clearInterval</tt></a>
+        function.
+      </div><div class="properties"></div></div><div name="clearTimeout" class="documentation"><div class="heading">clearTimeout</div><div name="clearTimeout" class="property">
+        This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearTimeout"><tt>window.clearTimeout</tt></a>
+        function.
+      </div><div class="properties"></div></div><div name="console" class="documentation"><div class="heading">console</div><div name="console" class="property">
+        This object is used to log messages to the <span class="logging-source buttony">Firebug Console</span> for debugging purposes. Use the methods
+        <tt>log</tt>, <tt>info</tt>, <tt>warn</tt>, and <tt>error</tt> to log
+        messages of varying importance. All of these methods can take any
+        number of arguments; all of the arguments are logged.
+        <p>
+        The following example logs some information to the console.
+        </p><div class="example">console.log('Hello from the Jetpack feature', this, '.');</div>
+      </div><div class="properties"></div></div><div name="jQuery" class="documentation"><div class="heading">jQuery</div><div name="jQuery" class="property">
+        This is jQuery, a lightweight JavaScript library. For
+        convenience, it's also available as the <tt>$</tt> function.
+        <p>
+        All Ajax requests made using jQuery are done using a cross-site
+        <tt>XMLHttpRequest</tt> object.
+        </p>
+        For more information on jQuery, please consult the <a href="http://docs.jquery.com/Main_Page">jQuery Documentation</a>.
+      </div><div class="properties"></div></div><div name="jetpack" class="documentation"><div class="heading">jetpack</div><div name="jetpack" class="property">
+        The <tt>jetpack</tt> namespace is available to all Jetpack
+        Features, and is the main point of contact for Features with the
+        rest of Firefox. The API is intended as a lightweight
+        backwards-compatible facade to the underlying Mozilla platform,
+        which means that if you write a Feature using the Jetpack library,
+        you won't have to change your code as Firefox continues to evolve.
+
+
+      </div><div class="properties"><div name="jetpack.notifications" class="documentation"><div class="heading">jetpack.notifications</div><div name="notifications" class="property">
+          Eventually, this object will be the end-all be-all of easy
+          communication with your users. Notification bars, transparent
+          messages, Growls, doorknob messages, and so forth will all go
+          through here. For now, it just has simple notifications.
+
+        </div><div class="properties"><div name="jetpack.notifications.show" class="documentation"><div class="heading">jetpack.notifications.show</div><div name="show" class="property">
+            This function displays a simple notification message. On Windows
+            and Linux it's a toaster notification, and on OS X it's a
+            Growl message (if Growl is installed).  This function takes a
+            single argument, <tt>message</tt>, which is either a string or an
+            object with properties <tt>title</tt>, <tt>icon</tt>, and
+            <tt>body</tt>. If <tt>icon</tt> is supplied, it should be URL.
+            <p>
+            The following example displays a message with a title, icon,
+            and body.
+            </p><div class="example">jetpack.notifications.show({title: 'hai2u',
+                                body: 'o hai.',
+                                icon: 'http://www.mozilla.org/favicon.ico'});</div>
+          </div><div class="properties"></div></div></div></div><div name="jetpack.tabs" class="documentation"><div class="heading">jetpack.tabs</div><div name="tabs" class="property">
+          <tt>jetpack.tabs</tt> is a <em>live array</em> with special
+          tab-related properties.
+
+
+        </div><div class="properties"><div name="jetpack.tabs.focused" class="documentation"><div class="heading">jetpack.tabs.focused</div><div name="focused" class="property">
+            The currently focused/active tab as a <tt>Tab</tt> object.
+            <p>
+            The following example displays the name of the currently
+            focused tab.
+            </p><div class="example">jetpack.notifications.show(jetpack.tabs.focused.url);</div>
+          </div><div class="properties"></div></div><div name="jetpack.tabs.onReady" class="documentation"><div class="heading">jetpack.tabs.onReady</div><div name="tab-onReady" class="function">
+        A <em>live event binder</em> that is triggered whenever a
+        <tt>Tab</tt> object's containing <em>HTML document</em>, or one
+        of its sub-documents (e.g., an <tt>iframe</tt>), has finished
+        loading its DOM.  At a purely technical level, this is triggered
+        when the target document's <tt>DOMContentLoaded</tt> event is
+        fired.
+        <p>
+        This binder method is available on <tt>Tab</tt> objects and the
+        <tt>jetpack.tabs</tt> <em>live array</em>.
+        </p><p>
+        <em>Event handlers</em> registered with this event binder are
+        passed the <em>HTML document</em> of the object that triggered
+        the event.
+        </p><p>
+        The following example code uses the <tt>jetpack.tabs.onReady</tt>
+        handler to display a notification message the next time the
+        user visits a page.
+       </p><div class="example">jetpack.tabs.onReady(function onNextPage(doc) {
+      if (!doc.defaultView.frameElement) {
+        jetpack.notifications.show("Loaded " + doc.location.href);
+        jetpack.tabs.onReady.unbind(onNextPage);
+      }});</div>
+      </div><div class="properties"></div></div></div></div></div></div><div name="location" class="documentation"><div class="heading">location</div><div name="location" class="property">
+        This string contains the URL representing the source code of
+        the feature.
+        <p>
+        The following example logs the location to the console.
+        </p><div class="example">console.log(location);</div>
+      </div><div class="properties"></div></div><div name="setInterval" class="documentation"><div class="heading">setInterval</div><div name="setInterval" class="property">
+        This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setInterval"><tt>window.setInterval</tt></a>
+        function.
+      </div><div class="properties"></div></div><div name="setTimeout" class="documentation"><div class="heading">setTimeout</div><div name="setTimeout" class="property">
+        This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setTimeout"><tt>window.setTimeout</tt></a>
+        function.
+      </div><div class="properties"></div></div>			
+					
+		<p><br><br><a href="index.html">&laquo; Return to Jetpack home</a>
+					
+		</div>
+
+
+		</div>
+		
+		<div class="footer"><a href="http://labs.mozilla.com/"><img class="moz" src="images/moz.png" border="0"></a>Copyright &copy; 2005–2009 Mozilla. All rights reserved. </div>
+		
+		
+
+</body>
+</html>
+
+
+
+
