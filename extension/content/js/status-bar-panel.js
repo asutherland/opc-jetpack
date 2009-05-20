@@ -69,7 +69,8 @@ StatusBar.prototype = {
       function(name) {
         toElement.style[name] = style[name];
       });
-    if (toElement.style.backgroundImage == "none") {
+    if (toElement.style.backgroundImage == "none" &&
+        toElement.style.backgroundColor == "transparent") {
       // Due to the fixing of bug 449442, it's very hard for us to
       // copy the background of the status bar on OS X, but here's
       // a shot.
@@ -85,6 +86,7 @@ StatusBar.prototype = {
 
       toElement.style.backgroundImage = "url(" + url + ")";
       toElement.style.backgroundColor = "rgb(148, 147, 147)";
+      toElement.style.backgroundRepeat = "repeat-x";
     }
   },
 
@@ -161,6 +163,8 @@ StatusBar.prototype = {
             self._injectPanelWindowFunctions(iframe);
             self._copyBackground(iframe.parentNode,
                                  iframe.contentDocument.body);
+            iframe.style.marginLeft = "4px";
+            iframe.style.marginRight = "4px";
             iframe.contentDocument.body.style.padding = 0;
             iframe.contentDocument.body.style.margin = 0;
           }
