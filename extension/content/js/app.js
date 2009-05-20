@@ -289,7 +289,9 @@ var App = {
         $(output).append(heading).append(objDocs).append(properties);
         output = properties;
       }
-      for (name in object) {
+      var names = [name for (name in object)];
+      names.sort();
+      for each (name in names) {
         var result = data.find(".property[name='" + name + "']");
         if (result.length) {
           var newOutput = $('<div class="documentation">');
@@ -299,7 +301,7 @@ var App = {
           generateDocs(newNameParts, object[name], result, newOutput);
           output.append(newOutput);
         } else {
-          //console.warn("Undocumented token", name);
+          //console.warn("Undocumented property", name);
         }
       }
     }
@@ -410,18 +412,6 @@ $(window).ready(
     if (App.isFirefoxOld)
       $(".developer-warnings").append($("#old-firefox-version"));
 
-    if (window.console.isFirebug) {
-      $(".developer-warnings").append($("#firebug-caveats"));
-      $(".logging-source").text("Firebug Console");
-      $(".logging-source").addClass("buttony");
-      $(".logging-source").click(App.openFirebugConsole);
-    } else {
-      $(".developer-warnings").append($("#firebug-not-found"));
-      $(".logging-source").click(App.openJsErrorConsole);
-      $(".logging-source").addClass("buttony");
-      $(".logging-source").text("JS Error Console");
-    }
-
     JetpackRuntime.FeedPlugin.FeedManager.getSubscribedFeeds().forEach(
       function (feed) {
         if (feed.type == "jetpack")
@@ -455,6 +445,18 @@ $(window).ready(
 
     App.buildApiReference();
     App.enableTutorialHacking();
+
+    if (window.console.isFirebug) {
+      $(".developer-warnings").append($("#firebug-caveats"));
+      $(".logging-source").text("Firebug Console");
+      $(".logging-source").addClass("buttony");
+      $(".logging-source").click(App.openFirebugConsole);
+    } else {
+      $(".developer-warnings").append($("#firebug-not-found"));
+      $(".logging-source").click(App.openJsErrorConsole);
+      $(".logging-source").addClass("buttony");
+      $(".logging-source").text("JS Error Console");
+    }
 
     $(".tab-link").addClass("buttony");
     $(".tab-link").click(

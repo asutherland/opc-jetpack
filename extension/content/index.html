@@ -428,6 +428,8 @@ jetpack.statusBar.append({
   <div id="api">
     <h2>API Reference</h2>
     <div class="developer-warnings"></div>
+    <p>The following are available to all Jetpack features at the
+    global scope.</p>
   </div>
 </div>
 </div>
@@ -492,6 +494,20 @@ jetpack.statusBar.append({
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    <div name="notifications" class="property">
+      Eventually, this object will be the end-all be-all of easy
+      communication with your users. Notification bars, transparent
+      messages, Growls, doorknob messages, and so forth will all go
+      through here. For now, it just has simple notifications.
+      <div name="show" class="property">
+        This function displays a simple notification message. On Windows
+        and Linux it's a toaster notification, and on OS X it's a
+        Growl message (if Growl is installed).  This function takes a
+        single argument, <tt>message</tt>, which is either a string or an
+        object with properties <tt>title</tt>, <tt>icon</tt>, and
+        <tt>body</tt>. If <tt>icon</tt> is supplied, it should be URL.
+      </div>
+    </div>
     <div name="tabs" class="property">
       <tt>jetpack.tabs</tt> is a <em>live array</em> with special
       tab-related properties.
@@ -505,6 +521,49 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
         </div>
       </div>
       <a name="onReady" class="property" href="#tab-onReady"></a>
+    </div>
+  </div>
+  <div name="console" class="property">
+    This object is used to log messages to the <span
+    class="logging-source"></span> for debugging purposes. Use the methods
+    <tt>log</tt>, <tt>info</tt>, <tt>warn</tt>, and <tt>error</tt> to log
+    messages of varying importance. All of these methods can take any
+    number of arguments; all of the arguments are logged.
+  </div>
+  <div name="setInterval" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.setInterval"><tt>window.setInterval</tt></a>
+    function.
+  </div>
+  <div name="clearInterval" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.clearInterval"><tt>window.clearInterval</tt></a>
+    function.
+  </div>
+  <div name="setTimeout" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.setTimeout"><tt>window.setTimeout</tt></a>
+    function.
+  </div>
+  <div name="clearTimeout" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.clearTimeout"><tt>window.clearTimeout</tt></a>
+    function.
+  </div>
+  <div name="jQuery" class="property">
+    This is jQuery, a lightweight JavaScript library. For
+    convenience, it's also available as the <tt>$</tt> function.
+    <p>
+    For more information on jQuery, please consult the <a
+    href="http://docs.jquery.com/Main_Page">jQuery Documentation</a>.
+  </div>
+  <div name="location" class="property">
+    This string contains the URL representing the source code of
+    the feature.
+    <p>
+    The following example logs the location to the console.
+    <div class="example">
+console.log(location);
     </div>
   </div>
   <div name="live array" class="glossary">
