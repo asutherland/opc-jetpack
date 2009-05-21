@@ -496,6 +496,38 @@ jetpack.statusBar.append({
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    <div name="statusBar" class="property">
+      This object contains methods relevant to the status bar that
+      appears at the bottom of the browser window. Note that the user
+      has the option to disable the display of the status bar in
+      Firefox's "View" menu.
+      <div name="append" class="property">
+        This function adds a new panel to the status bar of all
+        open browser windows. When any new browser windows open,
+        the panel is automatically added to them as well.
+        <p>
+        Technically speaking, the status bar panel is an
+        <tt>iframe</tt> element. While this comes at a relatively high
+        resource cost, it also enables the full breadth of
+        generativity that the Web has to offer. In the future, we may
+        add additional parameters to this function allowing the
+        addition of simpler, less resource-intensive elements such as
+        static text labels and images.
+        <p>
+        The following example embeds an icon into the status bar that,
+        when clicked, displays a notification message to the user.
+        <div class="example">
+jetpack.statusBar.append({
+  html: '<img src="http://www.mozilla.org/favicon.ico">',
+  width: 16,
+  onReady: function(doc) {
+    $(doc).find("img").click(function() {
+      jetpack.notifications.show("hai2u");
+      });
+  }});
+        </div>
+      </div>
+    </div>
     <div name="notifications" class="property">
       Eventually, this object will be the end-all be-all of easy
       communication with your users. Notification bars, transparent
