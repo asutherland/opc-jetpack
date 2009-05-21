@@ -237,6 +237,18 @@ var Logging = {
     warnings.forEach(
       function(objects) { console.warn.apply(console, objects); }
     );
+  },
+
+  ErrorAtCaller: function ErrorAtCaller(message, numFrames) {
+    var frame = Components.stack.caller.caller;
+
+    if (numFrames !== undefined)
+      for (var i = 0; i < numFrames; i++)
+        frame = frame.caller;
+
+    this.fileName = frame.filename;
+    this.lineNumber = frame.lineNumber;
+    this.__proto__ = new Error(message);
   }
 };
 

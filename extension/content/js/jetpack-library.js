@@ -107,7 +107,7 @@ function EventListenerMixIn(options) {
 
   options.mixInto[options.name] = function bind(cb) {
     if (typeof(cb) != "function")
-      throw new Error("Callback must be a function.");
+      throw new Logging.ErrorAtCaller("Callback must be a function.");
     if (listeners)
       listeners.push(cb);
   };

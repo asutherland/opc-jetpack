@@ -36,7 +36,7 @@ function JetpackNamespace(urlFactory) {
     try {
       return json.decode(string);
     } catch (e) {
-      throw new Error("Invalid JSON: " + string);
+      throw new Logging.ErrorAtCaller("Invalid JSON: " + string);
     }
   };
 
