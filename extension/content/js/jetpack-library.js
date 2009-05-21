@@ -49,6 +49,8 @@ function ImmutableArray(baseArray) {
       };
     });
 
+  self.toString = function() { return "[ImmutableArray]"; };
+
   self.__proto__ = baseArray;
 }
 
@@ -169,6 +171,9 @@ function JetpackLibrary() {
       // TODO: What to do if we have no focused window?
       // make a new one?
       return browserWindow.addTab(url);
+    },
+    toString: function toString() {
+      return "[Tabs]";
     }
   };
 
