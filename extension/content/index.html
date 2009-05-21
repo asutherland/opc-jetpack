@@ -524,17 +524,18 @@ jetpack.statusBar.append({
       has the option to disable the display of the status bar in
       Firefox's "View" menu.
       <div name="append" class="property">
+        <div class="argument options" name="options">
+          <span class="string" name="html">The initial HTML contents
+          of the new status bar panel.</span>
+          <span class="url" name="url">The URL of the status bar
+          panel's HTML contents.</span>
+          <span class="function" name="onReady">The callback function
+          to invoke when the new panel is created on a status
+          bar.</span>
+        </div>
         This function adds a new panel to the status bar of all
         open browser windows. When any new browser windows open,
         the panel is automatically added to them as well.
-        <p>
-        Technically speaking, the status bar panel is an
-        <tt>iframe</tt> element. While this comes at a relatively high
-        resource cost, it also enables the full breadth of
-        generativity that the Web has to offer. In the future, we may
-        add additional parameters to this function allowing the
-        addition of simpler, less resource-intensive elements such as
-        static text labels and images.
         <p>
         The following example embeds an icon into the status bar that,
         when clicked, displays a notification message to the user.
@@ -548,6 +549,14 @@ jetpack.statusBar.append({
       });
   }});
         </div>
+        <p>
+        Technically speaking, the status bar panel is an
+        <tt>iframe</tt> element. While this comes at a relatively high
+        resource cost, it also enables the full breadth of
+        generativity that the Web has to offer. In the future, we may
+        add additional parameters to this function allowing the
+        addition of simpler, less resource-intensive elements such as
+        static text labels and images.
       </div>
     </div>
     <div name="notifications" class="property">
@@ -556,12 +565,16 @@ jetpack.statusBar.append({
       messages, Growls, doorknob messages, and so forth will all go
       through here. For now, it just has simple notifications.
       <div name="show" class="property">
-        This function displays a simple notification message. On Windows
-        and Linux it's a toaster notification, and on OS X it's a
-        Growl message (if Growl is installed).  This function takes a
-        single argument, <tt>message</tt>, which is either a string or an
-        object with properties <tt>title</tt>, <tt>icon</tt>, and
-        <tt>body</tt>. If <tt>icon</tt> is supplied, it should be URL.
+        <div class="argument options" name="options">
+          <span class="string" name="title">The title of the notification.</span>
+          <span class="url" name="icon">The URL to the notification's icon.</span>
+          <span class="string" name="body">The body of the notification.</span>
+        </div>
+        This function displays a simple notification message. On
+        Windows and Linux it's a toaster notification, and on OS X
+        it's a Growl message (if Growl is installed).  Instead of
+        passing in an <tt>options</tt> object, the caller can simply
+        pass in a string, which is used as the <tt>body</tt> argument.
         <p>
         The following example displays a message with a title, icon,
         and body.
@@ -650,7 +663,9 @@ console.log(location);
     While it's technically possible for the array indices of an
     <em>live array</em> to be modified, they shouldn't be.
   </div>
-  <div name="tab-onReady" class="function">
+  <div name="tab-onReady" class="property">
+    <div class="argument function" name="callback">The callback to
+    call when the event is triggered.</div>
     A <em>live event binder</em> that is triggered whenever a
     <tt>Tab</tt> object's containing <em>HTML document</em>, or one
     of its sub-documents (e.g., an <tt>iframe</tt>), has finished

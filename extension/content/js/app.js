@@ -278,12 +278,35 @@ var App = {
 
     function generateDocs(nameParts, object, data, output) {
       if (nameParts.length) {
-        var heading = $('<div class="heading"></div>');
-        heading.text($(output).attr("name"));
         if (data.get(0).nodeName == "A")
           data = getLinkedDocs(data);
         var objDocs = data.clone();
+        // Remove all information about properties of the object,
+        // we'll deal with that later.
         objDocs.find(".property").remove();
+
+        // Compose the heading that contains the property/function name.
+        var heading = $('<div class="heading"></div>');
+        heading.text($(output).attr("name"));
+
+        // Compose the function signature, if we're a function.
+        var args = objDocs.find(".argument");
+        var argDocs = $('<div class="argument-documentation"></div>');
+        if (typeof(object) == "function" ||
+            args.length) {
+          heading.append(document.createTextNode("("));
+          args.each(
+            function(i) {
+              var name = $(this).attr("name");
+              if (i > 0)
+                heading.append(document.createTextNode(","));
+              heading.append(document.createTextNode(name));
+            });
+          heading.append(document.createTextNode(")"));
+        }
+        // TODO: Create documentation for arguments.
+        args.remove();
+
         objDocs.find("em").mouseover(glossaryMouseOverHandler);
         var properties = $('<div class="properties"></div>');
         $(output).append(heading).append(objDocs).append(properties);
