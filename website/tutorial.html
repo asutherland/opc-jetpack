@@ -39,7 +39,7 @@ window.onload = function () {
 		<h5>Jetpack Tutorial</h5>
 				
 				
-		<p>Welcome to the Jetpack API tutorial. By the end of this tutorial, you'll have learned how to make a Jetpack Feature that removes all embeds &mdash; Flash movies, etc &mdash; from a particular page or all websites. You'll also learn how to use the Twitter library, and how to make an email notifier. Most examples aren't longer than a dozen lines of code.
+		<p>Welcome to the Jetpack API tutorial. By the end of this tutorial, you'll have learned how to make a Jetpack Feature that removes all embeds &mdash; Flash movies, etc &mdash; from a particular page or all websites. You'll also learn how to use the Twitter library, how to make an email notifier, and how to distribute your new Jetpack feature. Most examples aren't longer than a dozen lines of code.
 		  
 		  <p style="color: #550000">To get the most up-to-date version of the tutorial (and for a better experience, where you can install and edit the examples in-line) go to the "Tutorial" tab on about:jetpack. To get there, you'll have to first <a href="https://addons.mozilla.org/en-US/firefox/downloads/latest/12025/addon-12025-latest.xpi"><b>install Jetpack</b></a>.</p>
 
@@ -160,8 +160,22 @@ window.onload = function () {
           <p>Pretty good, huh? Less than ten lines of code gets us an
           on-demand embed killer.</p>
 
+          <h4>Chapter 2: Distributing the boom</h4>
+            
+          <p>So you've got your feature written and you want to release it to the
+          world. It's very easy to do &mdash; there's no special build step,
+          or odd file format. All you need to do is drop the code in a file,
+          let's call it "boom.js". Then in any page you want the feature to be
+          installable, you add:</p>
 
-          <h4>Chapter 2: The automatic boom</h3>
+          <p><code>&lt;link rel="jetpack" href="boom.js" name="Boom!"/&gt;</code>
+          </p>
+
+          <p>to the header. That's it. When you navigate to the page, a notification bar will
+          drop down with the option to install the feature.</p>
+          
+
+          <h4>Chapter 3: The automatic boom</h4>
 
           <p>We can now get rid of embeds on demand, but that requires
           clicking the Boom! button on every page. What if we instead wanted
@@ -238,7 +252,7 @@ setInterval( getTweet, 1000*60 );
           href="http://hg.mozilla.org/labs/jetpack/file/tip/extension/content/js/twitter.js">commented
           source</a>.</p>
 
-          <h4>Chapter 4: Email Notifier</h4>
+          <h4>Chapter 5: Email Notifier</h4>
 
           <p>Putting it all together, you should now be able to be able to
           read through the following example, which displays the number of
@@ -292,7 +306,7 @@ jetpack.statusBar.append({
   width: 20
 });</pre>
 
-          <h4>Chapter 5: The future</h4>
+          <h4>Chapter 6: The future</h4>
 
           <p>There's a lot more coming with Jetpack, so check back often.</p>
 					
