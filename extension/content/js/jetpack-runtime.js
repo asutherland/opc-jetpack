@@ -112,8 +112,9 @@ var JetpackRuntime = {
       function() {
         if (!wasJetpackDeprecationShown) {
           wasJetpackDeprecationShown = true;
-          console.warn("The 'Jetpack' namespace is deprecated; " +
-                       "please use 'jetpack' instead.");
+          console.logFromCaller(
+            ["The 'Jetpack' namespace is deprecated; " +
+             "please use 'jetpack' instead."], 'warn');
         }
         return sandbox.jetpack;
       });

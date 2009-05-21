@@ -102,6 +102,26 @@ var Logging = {
       } else
         this.report(e, 'errorFlag', 1);
     };
+    this.logFromCaller = function logFromCaller(args, className,
+                                                numFrames) {
+      var flag;
+      switch (className) {
+      case 'warn':
+        flag = 'warningFlag';
+        break;
+      case 'error':
+        flag = 'errorFlag';
+        break;
+      }
+
+      if (numFrames === undefined)
+        numFrames = 2;
+
+      if (!flag)
+        logStringMessage.apply(this, args);
+      else
+        report(stringifyArgs(arguments), flag, numFrames);
+    };
   },
 
   _onFirebugConsoleInjected: function _onFirebugConsoleInjected() {
@@ -130,6 +150,18 @@ var Logging = {
     ["log", "info", "warn", "error"].forEach(
       function(className) { self[className] = wrapFirebugLogger(className); }
     );
+
+    self.logFromCaller = function logFromCaller(args, className,
+                                                numFrames) {
+      var frame = Components.stack.caller.caller;
+
+      if (numFrames !== undefined)
+        for (var i = 0; i < numFrames; i++)
+          frame = frame.caller;
+
+      Firebug.Console.logFormatted(args, context, className, false,
+                                   FBL.getFrameSourceLink(frame));
+    };
 
     self.exception = function exception(e) {
       if (e.location) {
