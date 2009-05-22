@@ -1,3 +1,11 @@
+var JetpackNamespaceFactory = {
+  create: function create(context) {
+    var namespace = new JetpackNamespace(context.urlFactory);
+    context.sandbox.jetpack = namespace.jetpack;
+    return namespace;
+  }
+};
+
 function JetpackNamespace(urlFactory) {
   var self = this;
   var jetpack = new JetpackLibrary();
@@ -66,15 +74,15 @@ var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
-  contextLibs: [],
+  libFactories: [JetpackNamespaceFactory],
 
   contexts: [],
 
-  Context: function JetpackContext(feed, console, contextLibs) {
+  Context: function JetpackContext(feed, console, libFactories) {
     MemoryTracking.track(this);
 
-    if (!contextLibs)
-      contextLibs = JetpackRuntime.contextLibs;
+    if (!libFactories)
+      libFactories = JetpackRuntime.libFactories;
 
     var timers = new Timers(window);
 
@@ -85,8 +93,6 @@ var JetpackRuntime = {
     jsm = null;
 
     var code = feed.getCode();
-    var urlFactory = new UrlFactory(feed.uri.spec);
-    var jetpackNamespace = new JetpackNamespace(urlFactory);
     var sandbox = sandboxFactory.makeSandbox({});
 
     sandbox.location = feed.srcUri.spec;
@@ -94,14 +100,15 @@ var JetpackRuntime = {
     this.sandbox = sandbox;
     this.url = feed.uri.spec;
     this.srcUrl = feed.srcUri.spec;
+    this.urlFactory = new UrlFactory(feed.uri.spec);
 
+    var libs = [];
     var self = this;
-    contextLibs.forEach(function (lib) { lib.loadInto(this); });
+    libFactories.forEach(function (lf) { libs.push(lf.create(self)); });
 
     sandbox.console = console;
     sandbox.$ = jQuery;
     sandbox.jQuery = jQuery;
-    sandbox.jetpack = jetpackNamespace.jetpack;
     timers.addMethodsTo(sandbox);
 
     // Add stubs for deprecated/obsolete functions.
@@ -137,13 +144,11 @@ var JetpackRuntime = {
     Extension.addUnloadMethod(
       this,
       function() {
-        contextLibs.forEach(function(lib) { lib.unloadFrom(self); });
+        libs.forEach(function(lib) { lib.unload(); });
 
         // Some of this unloading will call code in the jetpack, so we want
         // to be careful to make sure not to remove core components of
         // the jetpack's environment until the last possible moment.
-        jetpackNamespace.unload();
-        jetpackNamespace = null;
         delete sandbox['$'];
         delete sandbox['jQuery'];
         timers.unload();
