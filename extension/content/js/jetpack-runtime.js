@@ -76,15 +76,24 @@ var JetpackRuntime = {
 
   libFactories: {
     "jetpack": [JetpackNamespaceFactory]
-    },
+  },
+
+  globals: {
+    "console": console,
+    "jQuery": jQuery,
+    "$": jQuery,
+    "jetpack.lib.twitter": Twitter
+  },
 
   contexts: [],
 
-  Context: function JetpackContext(feed, console, libFactories) {
+  Context: function JetpackContext(feed, libFactories, globals) {
     MemoryTracking.track(this);
 
     if (!libFactories)
       libFactories = JetpackRuntime.libFactories;
+    if (!globals)
+      globals = JetpackRuntime.globals;
 
     var timers = new Timers(window);
 
@@ -104,31 +113,50 @@ var JetpackRuntime = {
     this.srcUrl = feed.srcUri.spec;
     this.urlFactory = new UrlFactory(feed.uri.spec);
 
-    var libs = [];
+    var unloaders = [];
     var self = this;
 
     var names = [name for (name in libFactories)];
     names.sort();
 
-    for each (name in names) {
-      var parts = name.split(".");
-      var obj = sandbox;
-      for each (part in parts) {
-        if (part) {
-          if (!obj[part])
-            obj[part] = new Object();
-          obj = obj[part];
+    names.forEach(
+      function(name) {
+        var parts = name.split(".");
+        var obj = sandbox;
+        for each (part in parts) {
+          if (part) {
+            if (!obj[part])
+              obj[part] = new Object();
+            obj = obj[part];
+          }
         }
-      }
-      libFactories[name].forEach(
-        function(libFactory) {
-          libs.push(libFactory.importInto(obj, self));
-        });
-    }
 
-    sandbox.console = console;
-    sandbox.$ = jQuery;
-    sandbox.jQuery = jQuery;
+        function doImport(libFactory) {
+          unloaders.push(libFactory.importInto(obj, self));
+        }
+        libFactories[name].forEach(doImport);
+      });
+
+    names = [name for (name in globals)];
+    names.sort();
+
+    names.forEach(
+      function(name) {
+        var parts = name.split(".");
+        var propName = parts.slice(-1)[0];
+        parts = parts.slice(0, -1);
+        var obj = sandbox;
+        for each (part in parts) {
+          if (part) {
+            if (!obj[part])
+              obj[part] = new Object();
+            obj = obj[part];
+          }
+        }
+        obj[propName] = globals[name];
+        unloaders.push({unload: function() { delete obj[propName]; }});
+      });
+
     timers.addMethodsTo(sandbox);
 
     try {
@@ -145,13 +173,8 @@ var JetpackRuntime = {
     Extension.addUnloadMethod(
       this,
       function() {
-        libs.forEach(function(lib) { lib.unload(); });
-
-        // Some of this unloading will call code in the jetpack, so we want
-        // to be careful to make sure not to remove core components of
-        // the jetpack's environment until the last possible moment.
-        delete sandbox['$'];
-        delete sandbox['jQuery'];
+        unloaders.forEach(function(obj) { obj.unload(); });
+        unloaders = null;
         timers.unload();
       });
   },
@@ -168,7 +191,7 @@ var JetpackRuntime = {
     var self = this;
     var feed = JetpackRuntime.FeedPlugin.FeedManager.getFeedForUrl(url);
     if (feed && feed.isSubscribed && feed.type == "jetpack")
-      self.contexts.push(new self.Context(feed, console));
+      self.contexts.push(new self.Context(feed));
     else
       throw new Error("Not a subscribed jetpack feed: " + uri);
   },
@@ -297,7 +320,7 @@ var JetpackRuntime = {
     feeds.forEach(
       function(feed) {
         if (feed.type == "jetpack") {
-          self.contexts.push(new self.Context(feed, console));
+          self.contexts.push(new self.Context(feed));
         }
       });
     feeds = null;
