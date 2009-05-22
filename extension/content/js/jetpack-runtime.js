@@ -1,4 +1,4 @@
-var JetpackNamespaceFactory = {
+var JetpackNamespaceImporter = {
   importInto: function importInto(obj, context) {
     var namespace = new JetpackNamespace(obj, context.urlFactory);
     return namespace;
@@ -67,7 +67,7 @@ function JetpackNamespace(root, urlFactory) {
     });
 }
 
-var TimersFactory = {
+var TimersImporter = {
   importInto: function importInto(obj, context) {
     var timers = new Timers(window);
     timers.addMethodsTo(obj);
@@ -79,9 +79,9 @@ var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
-  libFactories: {
-    "": [TimersFactory],
-    "jetpack": [JetpackNamespaceFactory]
+  importers: {
+    "": [TimersImporter],
+    "jetpack": [JetpackNamespaceImporter]
   },
 
   globals: {
@@ -93,11 +93,11 @@ var JetpackRuntime = {
 
   contexts: [],
 
-  Context: function JetpackContext(feed, libFactories, globals) {
+  Context: function JetpackContext(feed, importers, globals) {
     MemoryTracking.track(this);
 
-    if (!libFactories)
-      libFactories = JetpackRuntime.libFactories;
+    if (!importers)
+      importers = JetpackRuntime.importers;
     if (!globals)
       globals = JetpackRuntime.globals;
 
@@ -120,7 +120,7 @@ var JetpackRuntime = {
     var unloaders = [];
     var self = this;
 
-    var names = [name for (name in libFactories)];
+    var names = [name for (name in importers)];
     names.sort();
 
     names.forEach(
@@ -135,10 +135,10 @@ var JetpackRuntime = {
           }
         }
 
-        function doImport(libFactory) {
-          unloaders.push(libFactory.importInto(obj, self));
+        function doImport(importer) {
+          unloaders.push(importer.importInto(obj, self));
         }
-        libFactories[name].forEach(doImport);
+        importers[name].forEach(doImport);
       });
 
     names = [name for (name in globals)];
