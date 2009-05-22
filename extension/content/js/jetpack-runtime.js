@@ -131,25 +131,6 @@ var JetpackRuntime = {
     sandbox.jQuery = jQuery;
     timers.addMethodsTo(sandbox);
 
-    // Add stubs for deprecated/obsolete functions.
-    sandbox.addStatusBarPanel = function() {
-      throw new Error("addStatusBarPanel() has been moved to " +
-                      "Jetpack.statusBar.append().");
-    };
-
-    var wasJetpackDeprecationShown = false;
-    sandbox.__defineGetter__(
-      "Jetpack",
-      function() {
-        if (!wasJetpackDeprecationShown) {
-          wasJetpackDeprecationShown = true;
-          console.logFromCaller(
-            ["The 'Jetpack' namespace is deprecated; " +
-             "please use 'jetpack' instead."], 'warn');
-        }
-        return sandbox.jetpack;
-      });
-
     try {
       var codeSections = [{length: code.length,
                            filename: feed.srcUri.spec,
