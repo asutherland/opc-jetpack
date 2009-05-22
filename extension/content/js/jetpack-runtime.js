@@ -73,39 +73,30 @@ var JetpackRuntime = {
 
     var timers = new Timers(window);
 
-    function makeGlobals(codeSource) {
-      var globals = {
-        location: codeSource.id,
-        console: console,
-        $: jQuery,
-        jQuery: jQuery,
-        jetpack: jetpackNamespace.jetpack
-      };
-
-      timers.addMethodsTo(globals);
-
-      // Add stubs for deprecated/obsolete functions.
-      globals.addStatusBarPanel = function() {
-        throw new Error("addStatusBarPanel() has been moved to " +
-                        "Jetpack.statusBar.append().");
-      };
-
-      return globals;
-    }
-
     var jsm = {};
     Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
                             jsm);
-    var sandboxFactory = new jsm.SandboxFactory(makeGlobals);
+    var sandboxFactory = new jsm.SandboxFactory({});
     jsm = null;
 
     var code = feed.getCode();
     var urlFactory = new UrlFactory(feed.uri.spec);
     var jetpackNamespace = new JetpackNamespace(urlFactory);
-    var sandbox = sandboxFactory.makeSandbox({id: feed.srcUri.spec});
+    var sandbox = sandboxFactory.makeSandbox({});
 
-    // We would add the stub for this in makeGlobals(), but it's a getter,
-    // so it wouldn't get copied over properly to the sandbox.
+    sandbox.location = feed.srcUri.spec;
+    sandbox.console = console;
+    sandbox.$ = jQuery;
+    sandbox.jQuery = jQuery;
+    sandbox.jetpack = jetpackNamespace.jetpack;
+    timers.addMethodsTo(sandbox);
+
+    // Add stubs for deprecated/obsolete functions.
+    sandbox.addStatusBarPanel = function() {
+      throw new Error("addStatusBarPanel() has been moved to " +
+                      "Jetpack.statusBar.append().");
+    };
+
     var wasJetpackDeprecationShown = false;
     sandbox.__defineGetter__(
       "Jetpack",
