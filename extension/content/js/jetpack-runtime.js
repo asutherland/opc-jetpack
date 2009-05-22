@@ -14,9 +14,6 @@ function JetpackNamespace(root, urlFactory) {
 
   jetpack.notifications = new Notifications();
 
-  jetpack.lib = {};
-  jetpack.lib.twitter = Twitter;
-
   var statusBar = new StatusBar(urlFactory);
 
   jetpack.statusBar = {};
