@@ -211,17 +211,67 @@ a {
 
 .documentation .heading {
     font-family: monospace;
+    font-size: 12pt;
     font-weight: bold;
     margin-top: 1em;
     margin-bottom: 1em;
 }
 
+.documentation h2 {
+    font-size: 9pt;
+}
+
 .documentation .properties {
-    padding-left: 2em;
+    padding-left: 1em;
 }
 
 .documentation em {
     cursor: pointer;
+}
+
+.documentation .arguments {
+    margin-bottom: -0.5em;
+    padding-left: 1em;
+}
+
+.documentation .argument .name {
+    display: block;
+    float: left;
+    font-family: monospace;
+    width: 10em;
+}
+
+.documentation .argument .types {
+}
+
+.documentation .argument .types .type {
+    font-style: italic;
+    cursor: pointer;
+}
+
+.documentation .argument .description {
+    display: block;
+    clear: left;
+    color: gray;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+}
+
+.documentation .argument .option .name {
+    color: black;
+    width: 9em;
+}
+
+.documentation .argument .option .types {
+    color: black;
+}
+
+.documentation .argument .option {
+    padding-left: 1em;
+}
+
+.documentation > .description {
+    padding-left: 1em;
 }
 
 .overlay {
@@ -234,3 +284,4 @@ a {
 .overlay.fixed {
     width: 20em;
 }
+

@@ -565,7 +565,7 @@ jetpack.statusBar.append({
       messages, Growls, doorknob messages, and so forth will all go
       through here. For now, it just has simple notifications.
       <div name="show" class="property">
-        <div class="argument options" name="options">
+        <div class="argument options string" name="options">
           <span class="string" name="title">The title of the notification.</span>
           <span class="url" name="icon">The URL to the notification's icon.</span>
           <span class="string" name="body">The body of the notification.</span>
@@ -655,10 +655,10 @@ console.log(location);
     A <em>live array</em> is an <tt>Array</tt> that represents some
     aspect of system state and has no mutator methods, and is
     effectively "read-only".  In particular, this includes
-    <tt>Array.pop()</tt>, <tt>Array.push()</tt>,
-    <tt>Array.reverse()</tt>, <tt>Array.shift()</tt>,
-    <tt>Array.sort()</tt>, <tt>Array.splice()</tt>, and
-    <tt>Array.unshift()</tt>.
+    <tt>pop()</tt>, <tt>push()</tt>,
+    <tt>reverse()</tt>, <tt>shift()</tt>,
+    <tt>sort()</tt>, <tt>splice()</tt>, and
+    <tt>unshift()</tt>.
     <p>
     While it's technically possible for the array indices of an
     <em>live array</em> to be modified, they shouldn't be.
@@ -690,6 +690,27 @@ jetpack.tabs.onReady(function onNextPage(doc) {
     jetpack.tabs.onReady.unbind(onNextPage);
   }});
     </div>
+  </div>
+  <div name="url" class="glossary">
+    A JavaScript string representing a URL. For example,
+    <tt>"http:///www.imdb.com"</tt>.
+  </div>
+  <div name="string" class="glossary">
+    A standard immutable JavaScript string. For example,
+    <tt>"hai2u"</tt>.
+  </div>
+  <div name="options object" class="glossary">
+    A JavaScript Object representing the arguments to a
+    function, where each property of the object represents
+    the name and value of an argument.
+    <p>
+    An Options Object is useful when a function takes many arguments
+    whose order would be difficult to remember; it's especially useful
+    when some or all of those arguments are optional.
+  </div>
+  <div name="function" class="glossary">
+    A standard JavaScript function. For example,
+    <tt>function(x) { return x + 1; }</tt>.
   </div>
   <div name="html document" class="glossary">
     This is the standard DOM document object, which is commonly
