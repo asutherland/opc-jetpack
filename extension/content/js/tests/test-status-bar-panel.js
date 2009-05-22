@@ -1,21 +1,3 @@
-var UrlFactoryTests = {
-  testEmpty: function(self) {
-    var uf = new UrlFactory("http://www.google.com");
-    self.assertEqual(uf.makeUrl(""), "http://www.google.com/");
-  },
-
-  testRelative: function(self) {
-    var uf = new UrlFactory("http://www.google.com");
-    self.assertEqual(uf.makeUrl("blarg"), "http://www.google.com/blarg");
-  },
-
-  testAbsolute: function(self) {
-    var uf = new UrlFactory("http://www.google.com");
-    self.assertEqual(uf.makeUrl("http://www.imdb.com"),
-                     "http://www.imdb.com/");
-  }
-};
-
 var StatusBarPanelTests = {
   testStatusBarWorks: function(self) {
     var browserCount = 0;

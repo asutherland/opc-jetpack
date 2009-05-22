@@ -9,7 +9,7 @@ function JetpackNamespace(root, urlFactory) {
   var jetpack = root;
   var self = this;
 
-  var tabs = new JetpackLibrary();
+  var tabs = new Tabs();
   jetpack.tabs = tabs.tabs;
 
   jetpack.notifications = new Notifications();

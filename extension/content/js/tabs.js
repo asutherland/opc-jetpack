@@ -86,7 +86,7 @@ function EventListenerMixIn(options) {
     });
 }
 
-function JetpackLibrary() {
+function Tabs() {
   MemoryTracking.track(this);
   var trackedWindows = new Dictionary();
   var trackedTabs = new Dictionary();
