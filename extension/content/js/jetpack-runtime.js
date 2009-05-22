@@ -70,11 +70,20 @@ function JetpackNamespace(root, urlFactory) {
     });
 }
 
+var TimersFactory = {
+  importInto: function importInto(obj, context) {
+    var timers = new Timers(window);
+    timers.addMethodsTo(obj);
+    return timers;
+  }
+};
+
 var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
   libFactories: {
+    "": [TimersFactory],
     "jetpack": [JetpackNamespaceFactory]
   },
 
@@ -94,8 +103,6 @@ var JetpackRuntime = {
       libFactories = JetpackRuntime.libFactories;
     if (!globals)
       globals = JetpackRuntime.globals;
-
-    var timers = new Timers(window);
 
     var jsm = {};
     Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
@@ -157,8 +164,6 @@ var JetpackRuntime = {
         unloaders.push({unload: function() { delete obj[propName]; }});
       });
 
-    timers.addMethodsTo(sandbox);
-
     try {
       var codeSections = [{length: code.length,
                            filename: feed.srcUri.spec,
@@ -175,7 +180,6 @@ var JetpackRuntime = {
       function() {
         unloaders.forEach(function(obj) { obj.unload(); });
         unloaders = null;
-        timers.unload();
       });
   },
 
