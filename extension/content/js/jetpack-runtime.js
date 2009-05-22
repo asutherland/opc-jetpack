@@ -66,10 +66,15 @@ var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
+  contextLibs: [],
+
   contexts: [],
 
-  Context: function JetpackContext(feed, console) {
+  Context: function JetpackContext(feed, console, contextLibs) {
     MemoryTracking.track(this);
+
+    if (!contextLibs)
+      contextLibs = JetpackRuntime.contextLibs;
 
     var timers = new Timers(window);
 
@@ -85,6 +90,14 @@ var JetpackRuntime = {
     var sandbox = sandboxFactory.makeSandbox({});
 
     sandbox.location = feed.srcUri.spec;
+
+    this.sandbox = sandbox;
+    this.url = feed.uri.spec;
+    this.srcUrl = feed.srcUri.spec;
+
+    var self = this;
+    contextLibs.forEach(function (lib) { lib.loadInto(this); });
+
     sandbox.console = console;
     sandbox.$ = jQuery;
     sandbox.jQuery = jQuery;
@@ -124,6 +137,8 @@ var JetpackRuntime = {
     Extension.addUnloadMethod(
       this,
       function() {
+        contextLibs.forEach(function(lib) { lib.unloadFrom(self); });
+
         // Some of this unloading will call code in the jetpack, so we want
         // to be careful to make sure not to remove core components of
         // the jetpack's environment until the last possible moment.
@@ -133,10 +148,6 @@ var JetpackRuntime = {
         delete sandbox['jQuery'];
         timers.unload();
       });
-
-    this.sandbox = sandbox;
-    this.url = feed.uri.spec;
-    this.srcUrl = feed.srcUri.spec;
   },
 
   getJetpack: function getJetpack(url) {
