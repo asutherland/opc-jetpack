@@ -1,105 +1,17 @@
-var JetpackNamespaceImporter = {
-  importInto: function importInto(obj, context) {
-    var namespace = new JetpackNamespace(obj, context.urlFactory);
-    return namespace;
-  }
-};
-
-function JetpackNamespace(root, urlFactory) {
-  var jetpack = root;
-  var self = this;
-
-  var tabs = new Tabs();
-  jetpack.tabs = tabs.tabs;
-
-  jetpack.notifications = new Notifications();
-
-  var statusBar = new StatusBar(urlFactory);
-
-  jetpack.statusBar = {};
-  jetpack.statusBar.append = function append(options) {
-    return statusBar.append(options);
-  };
-
-  jetpack.track = function() {
-    var newArgs = [];
-    for (var i = 0; i < 2; i++)
-      newArgs.push(arguments[i]);
-    // Make the memory tracker record the stack frame/line number of our
-    // caller, not us.
-    newArgs.push(1);
-    MemoryTracking.track.apply(MemoryTracking, newArgs);
-  };
-
-  jetpack.json = {};
-  jetpack.json.encode = function encode(object) {
-    var json = Cc["@mozilla.org/dom/json;1"]
-               .createInstance(Ci.nsIJSON);
-    return json.encode(object);
-  };
-  jetpack.json.decode = function decode(string) {
-    var json = Cc["@mozilla.org/dom/json;1"]
-               .createInstance(Ci.nsIJSON);
-    try {
-      return json.decode(string);
-    } catch (e) {
-      throw new Logging.ErrorAtCaller("Invalid JSON: " + string);
-    }
-  };
-
-  // Add jetpack.sessionStorage.
-  if (!Extension.Manager.sessionStorage.jetpacks)
-    Extension.Manager.sessionStorage.jetpacks = {};
-  var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
-  var id = urlFactory.makeUrl("");
-  if (!sessionStorage[id])
-    sessionStorage[id] = {};
-  jetpack.sessionStorage = sessionStorage[id];
-
-  Extension.addUnloadMethod(
-    self,
-    function() {
-      statusBar.unload();
-      tabs.unload();
-      statusBar = null;
-      jetpack.lib = null;
-      jetpack.statusBar = null;
-    });
-}
-
-var TimersImporter = {
-  importInto: function importInto(obj, context) {
-    var timers = new Timers(window);
-    timers.addMethodsTo(obj);
-    return timers;
-  }
-};
-
 var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
-  importers: {
-    "": [TimersImporter],
-    "jetpack": [JetpackNamespaceImporter]
-  },
-
-  globals: {
-    "console": console,
-    "jQuery": jQuery,
-    "$": jQuery,
-    "jetpack.lib.twitter": Twitter
-  },
-
   contexts: [],
 
-  Context: function JetpackContext(feed, importers, globals) {
+  Context: function JetpackContext(feed, environment) {
     MemoryTracking.track(this);
 
-    if (!importers)
-      importers = JetpackRuntime.importers;
-    if (!globals)
-      globals = JetpackRuntime.globals;
+    if (!environment)
+      environment = JetpackEnv;
+
+    var importers = environment.importers;
+    var globals = environment.globals;
 
     var jsm = {};
     Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
@@ -136,7 +48,9 @@ var JetpackRuntime = {
         }
 
         function doImport(importer) {
-          unloaders.push(importer.importInto(obj, self));
+          var unloader = importer(obj, self);
+          if (unloader)
+            unloaders.push(unloader);
         }
         importers[name].forEach(doImport);
       });

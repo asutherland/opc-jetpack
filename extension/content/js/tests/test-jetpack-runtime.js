@@ -17,8 +17,11 @@ var JetpackRuntimeTests = {
         return "console.log('hallo');";
       }
     };
-    var context = new JetpackRuntime.Context(fakeFeed, {},
-                                             {console: fakeConsole});
+    var context = new JetpackRuntime.Context(
+      fakeFeed,
+      {globals: {console: fakeConsole},
+       importers: {}}
+    );
     self.assert(wasLogCalled);
     context.unload();
   }
