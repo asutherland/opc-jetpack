@@ -1,14 +1,16 @@
 var JetpackNamespaceFactory = {
-  create: function create(context) {
-    var namespace = new JetpackNamespace(context.urlFactory);
-    context.sandbox.jetpack = namespace.jetpack;
+  importInto: function importInto(obj, context) {
+    var namespace = new JetpackNamespace(obj, context.urlFactory);
     return namespace;
   }
 };
 
-function JetpackNamespace(urlFactory) {
+function JetpackNamespace(root, urlFactory) {
+  var jetpack = root;
   var self = this;
-  var jetpack = new JetpackLibrary();
+
+  var tabs = new JetpackLibrary();
+  jetpack.tabs = tabs.tabs;
 
   jetpack.notifications = new Notifications();
 
@@ -61,20 +63,20 @@ function JetpackNamespace(urlFactory) {
     self,
     function() {
       statusBar.unload();
-      jetpack.unload();
+      tabs.unload();
       statusBar = null;
       jetpack.lib = null;
       jetpack.statusBar = null;
     });
-
-  self.jetpack = jetpack;
 }
 
 var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
-  libFactories: [JetpackNamespaceFactory],
+  libFactories: {
+    "jetpack": [JetpackNamespaceFactory]
+    },
 
   contexts: [],
 
@@ -104,7 +106,25 @@ var JetpackRuntime = {
 
     var libs = [];
     var self = this;
-    libFactories.forEach(function (lf) { libs.push(lf.create(self)); });
+
+    var names = [name for (name in libFactories)];
+    names.sort();
+
+    for each (name in names) {
+      var parts = name.split(".");
+      var obj = sandbox;
+      for each (part in parts) {
+        if (part) {
+          if (!obj[part])
+            obj[part] = new Object();
+          obj = obj[part];
+        }
+      }
+      libFactories[name].forEach(
+        function(libFactory) {
+          libs.push(libFactory.importInto(obj, self));
+        });
+    }
 
     sandbox.console = console;
     sandbox.$ = jQuery;
