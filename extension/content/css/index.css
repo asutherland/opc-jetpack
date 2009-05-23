@@ -216,6 +216,10 @@ a {
 .documentation {
 }
 
+.documentation .content {
+    padding-left: 1em;
+}
+
 .documentation .heading {
     font-family: monospace;
     font-size: 10pt;
@@ -229,7 +233,6 @@ a {
 }
 
 .documentation .properties {
-
 }
 
 .documentation em {
@@ -238,7 +241,6 @@ a {
 
 .documentation .arguments {
     margin-bottom: -0.5em;
-    padding-left: 1em;
 }
 
 .documentation .argument .name {
@@ -274,10 +276,6 @@ a {
 }
 
 .documentation .argument .option {
-    padding-left: 1em;
-}
-
-.documentation > .description {
     padding-left: 1em;
 }
 

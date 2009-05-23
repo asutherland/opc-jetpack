@@ -379,8 +379,11 @@ var App = {
       var descHeading = argDocs ? $('<h2>Description</h2>') : null;
       objDocs.find("em").mouseover(glossaryMouseOverHandler);
       var properties = $('<div class="properties"></div>');
-      $(output).append(heading, argHeading, argDocs,
-                       descHeading, objDocs, properties);
+
+      var content = $('<div class="content"></div>');
+      content.append(argHeading, argDocs, descHeading, objDocs);
+
+      $(output).append(heading, content, properties);
       output = properties;
 
       var names = [name for (name in object)];
