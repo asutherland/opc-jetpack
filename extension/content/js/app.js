@@ -290,102 +290,99 @@ var App = {
     }
 
     function generateDocs(nameParts, object, data, output) {
-      // TODO: Remove this useless if statement, it's only been
-      // added to make the commit log easier to read.
-      if (true) {
-        if (data.get(0).nodeName == "A")
-          data = getLinkedDocs(data);
-        var objDocs = data.clone();
-        // Remove all information about properties of the object,
-        // we'll deal with that later.
-        objDocs.find(".property").remove();
+      if (data.get(0).nodeName == "A")
+        data = getLinkedDocs(data);
+      var objDocs = data.clone();
+      // Remove all information about properties of the object,
+      // we'll deal with that later.
+      objDocs.find(".property").remove();
 
-        // Compose the heading that contains the property/function name.
-        var heading = null;
-        if (nameParts.length) {
-          heading = $('<div class="heading"></div>');
-          heading.text($(output).attr("name"));
-        }
-
-        const VALID_TYPES = {string: 'String',
-                             options: 'Options Object',
-                             'function': 'Function',
-                             number: 'Number',
-                             url: 'URL'};
-
-        function makeTypes(className) {
-          var types = $('<span class="types"></span>');
-          var classes = className.split(' ');
-          var typesArray = [name for each (name in classes)
-                                 if (name in VALID_TYPES)];
-          jQuery.each(
-            typesArray,
-            function(i) {
-              if (i > 0)
-                types.append(document.createTextNode(' or '));
-              var type = $('<span class="type"></span>');
-              type.text(VALID_TYPES[this]);
-              type.mouseover(glossaryMouseOverHandler);
-              types.append(type);
-            });
-          return types;
-        }
-
-        function makeArgDocs(arg, output, name) {
-          var argDoc = $('<div class="argument"></div>');
-          argDoc.append($('<span class="name"></span>').text(name));
-          argDoc.append(makeTypes(arg.className));
-          var desc = $('<span class="description"></span>');
-          if ($(arg).hasClass("options")) {
-            $(arg).children().each(
-              function() {
-                var row = $('<div class="option">' +
-                            '<span class="name"></span>' +
-                            '<span class="description"></span>' +
-                            '</div>');
-                row.find('.name').text($(this).attr("name"))
-                                 .after(makeTypes(this.className));
-                row.find('.description').append($(this).html());
-                desc.append(row);
-              });
-          } else
-            desc.append($(arg).html());
-          argDoc.append(desc);
-          output.append(argDoc);
-        };
-
-        // Compose the function signature, if we're a function.
-        var args = objDocs.find(".argument");
-        var argHeading = $('<h2>Arguments</h2>');
-        var argDocs = $('<div class="arguments"></div>');
-        if (typeof(object) == "function" ||
-            args.length) {
-          heading.append(document.createTextNode("("));
-          args.each(
-            function(i) {
-              var name = $(this).attr("name");
-              if (i > 0)
-                heading.append(document.createTextNode(","));
-              heading.append(document.createTextNode(name));
-              makeArgDocs(this, argDocs, name);
-            });
-          heading.append(document.createTextNode(")"));
-        }
-        if (!args.length) {
-          argDocs = null;
-          argHeading = null;
-        }
-        args.remove();
-
-        objDocs.addClass('description');
-
-        var descHeading = argDocs ? $('<h2>Description</h2>') : null;
-        objDocs.find("em").mouseover(glossaryMouseOverHandler);
-        var properties = $('<div class="properties"></div>');
-        $(output).append(heading, argHeading, argDocs,
-                         descHeading, objDocs, properties);
-        output = properties;
+      // Compose the heading that contains the property/function name.
+      var heading = null;
+      if (nameParts.length) {
+        heading = $('<div class="heading"></div>');
+        heading.text($(output).attr("name"));
       }
+
+      const VALID_TYPES = {string: 'String',
+                           options: 'Options Object',
+                           'function': 'Function',
+                           number: 'Number',
+                           url: 'URL'};
+
+      function makeTypes(className) {
+        var types = $('<span class="types"></span>');
+        var classes = className.split(' ');
+        var typesArray = [name for each (name in classes)
+                               if (name in VALID_TYPES)];
+        jQuery.each(
+          typesArray,
+          function(i) {
+            if (i > 0)
+              types.append(document.createTextNode(' or '));
+            var type = $('<span class="type"></span>');
+            type.text(VALID_TYPES[this]);
+            type.mouseover(glossaryMouseOverHandler);
+            types.append(type);
+          });
+        return types;
+      }
+
+      function makeArgDocs(arg, output, name) {
+        var argDoc = $('<div class="argument"></div>');
+        argDoc.append($('<span class="name"></span>').text(name));
+        argDoc.append(makeTypes(arg.className));
+        var desc = $('<span class="description"></span>');
+        if ($(arg).hasClass("options")) {
+          $(arg).children().each(
+            function() {
+              var row = $('<div class="option">' +
+                          '<span class="name"></span>' +
+                          '<span class="description"></span>' +
+                          '</div>');
+              row.find('.name').text($(this).attr("name"))
+                               .after(makeTypes(this.className));
+              row.find('.description').append($(this).html());
+              desc.append(row);
+            });
+        } else
+          desc.append($(arg).html());
+        argDoc.append(desc);
+        output.append(argDoc);
+      };
+
+      // Compose the function signature, if we're a function.
+      var args = objDocs.find(".argument");
+      var argHeading = $('<h2>Arguments</h2>');
+      var argDocs = $('<div class="arguments"></div>');
+      if (typeof(object) == "function" ||
+          args.length) {
+        heading.append(document.createTextNode("("));
+        args.each(
+          function(i) {
+            var name = $(this).attr("name");
+            if (i > 0)
+              heading.append(document.createTextNode(","));
+            heading.append(document.createTextNode(name));
+            makeArgDocs(this, argDocs, name);
+          });
+        heading.append(document.createTextNode(")"));
+      }
+      if (!args.length) {
+        argDocs = null;
+        argHeading = null;
+      }
+      args.remove();
+
+      objDocs.addClass('description');
+
+      var descHeading = argDocs ? $('<h2>Description</h2>') : null;
+      objDocs.find("em").mouseover(glossaryMouseOverHandler);
+      var properties = $('<div class="properties"></div>');
+      $(output).append(heading, argHeading, argDocs,
+                       descHeading, objDocs, properties);
+      output = properties;
+
       var names = [name for (name in object)];
       names.sort();
       for each (name in names) {
