@@ -246,6 +246,14 @@ var App = {
 
     var context = new JetpackRuntime.Context(fakeFeed);
 
+    this.buildDocsForObject(output, data, context.sandbox);
+
+    context.unload();
+  },
+
+  buildDocsForObject: function buildDocsForObject(output,
+                                                  data,
+                                                  object) {
     function getLinkedDocs(link) {
       var name = link.attr("href").slice(1);
       var result = data.find("[name='" + name + "']");
@@ -385,9 +393,7 @@ var App = {
       }
     }
 
-    generateDocs([], context.sandbox, data, output);
-
-    context.unload();
+    generateDocs([], object, data, output);
   },
 
   TUTORIAL_FILENAME: "jetpack-tutorial-code.txt",
