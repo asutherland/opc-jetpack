@@ -227,6 +227,13 @@ function Tabs() {
         return null;
       },
 
+      get favicon() {
+        if (chromeTab && chromeTab.image) {
+          return chromeTab.image;
+        }
+        return null;
+      },
+
       get contentWindow() {
         if (browser && browser.contentWindow)
           return browser.contentWindow;
