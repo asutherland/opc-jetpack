@@ -26,8 +26,11 @@ var TabsTests = {
     var tab = tabs.tabs.open("data:text/html,hai2u");
     self.assert(tabs.tabs.focused != tab);
     self.assert(tabs.tabs.length == originalTabCount+1);
+    var onFocusCalled = false;
+    tab.onFocus(function() { onFocusCalled = true; });
     tab.focus();
     self.assert(tabs.tabs.focused == tab);
+    self.assert(onFocusCalled);
     tab.onReady(
       function onReady(document) {
         self.assert(this, tab);

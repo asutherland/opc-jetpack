@@ -123,7 +123,7 @@ function Tabs() {
 
   var tabsMixIns = new EventListenerMixIns(tabs);
   tabsMixIns.add({name: "onReady"});
-  tabsMixIns.add({name: "onFocused"});
+  tabsMixIns.add({name: "onFocus"});
 
   tabs.__proto__ = trackedTabs.values;
 
@@ -220,7 +220,7 @@ function Tabs() {
        }});
 
     mixIns.add(
-      {name: "onFocused",
+      {name: "onFocus",
        observe: chromeTab,
        eventName: "TabSelect",
        useCapture: true,
