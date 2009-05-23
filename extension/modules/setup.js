@@ -40,6 +40,9 @@ Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
 Components.utils.import("resource://jetpack/ubiquity-modules/feedmanager.js");
 Components.utils.import("resource://jetpack/ubiquity-modules/annotation_memory.js");
 
+var Extension = {};
+Components.utils.import("resource://jetpack/modules/init.js", Extension);
+
 var Jetpack = {};
 Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
                         Jetpack);
@@ -124,6 +127,8 @@ let JetpackSetup = {
       var jpfp = new Jetpack.FeedPlugin(feedManager, null);
 
       gServices = {feedManager: feedManager};
+
+      Extension.load("about:jetpack");
 
       this.__setupFinalizer();
     }
