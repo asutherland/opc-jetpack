@@ -124,6 +124,8 @@ function Tabs() {
   var tabsMixIns = new EventListenerMixIns(tabs);
   tabsMixIns.add({name: "onReady"});
   tabsMixIns.add({name: "onFocus"});
+  tabsMixIns.add({name: "onClose"});
+  tabsMixIns.add({name: "onOpen"});
 
   tabs.__proto__ = trackedTabs.values;
 
@@ -162,10 +164,16 @@ function Tabs() {
           break;
         case "TabOpen":
           newBrowserTab(tabbrowser, chromeTab);
+          tabsMixIns.bubble("onOpen",
+                            trackedTabs.get(chromeTab),
+                            true);
           break;
         case "TabMove":
           break;
         case "TabClose":
+          tabsMixIns.bubble("onClose",
+                            trackedTabs.get(chromeTab),
+                            true);
           unloadBrowserTab(chromeTab);
           break;
         }

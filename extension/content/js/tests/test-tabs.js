@@ -23,6 +23,8 @@ var TabsTests = {
   testTabOpenFocusAndClose: function(self) {
     var tabs = new Tabs();
     var originalTabCount = tabs.tabs.length;
+    var onOpenCalled = false;
+    tabs.tabs.onOpen(function() { onOpenCalled = true; });
     var tab = tabs.tabs.open("data:text/html,hai2u");
     self.assert(tabs.tabs.focused != tab);
     self.assert(tabs.tabs.length == originalTabCount+1);
@@ -36,8 +38,12 @@ var TabsTests = {
         self.assert(this, tab);
         tab.onReady.unbind(onReady);
         self.assert($(document).text() == "hai2u");
+        var onCloseCalled = false;
+        tabs.tabs.onClose(function() { self.assert(this == tab);
+                                       onCloseCalled = true; });
         tab.close();
         self.assert(tabs.tabs.length == originalTabCount);
+        self.assert(onCloseCalled);
         tabs.unload();
         self.success();
       });
