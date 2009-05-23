@@ -246,14 +246,19 @@ var App = {
 
     var context = new JetpackRuntime.Context(fakeFeed);
 
-    this.buildDocsForObject(output, data, context.sandbox);
+    this.buildDocsForObject(output, data, context.sandbox,
+                            data.find("[name=globals]"));
+    this.buildDocsForObject(output, data,
+                            context.sandbox.jetpack.tabs.focused,
+                            data.find("[name=Tab]"));
 
     context.unload();
   },
 
   buildDocsForObject: function buildDocsForObject(output,
                                                   data,
-                                                  object) {
+                                                  object,
+                                                  objectData) {
     function getLinkedDocs(link) {
       var name = link.attr("href").slice(1);
       var result = data.find("[name='" + name + "']");
@@ -285,7 +290,9 @@ var App = {
     }
 
     function generateDocs(nameParts, object, data, output) {
-      if (nameParts.length) {
+      // TODO: Remove this useless if statement, it's only been
+      // added to make the commit log easier to read.
+      if (true) {
         if (data.get(0).nodeName == "A")
           data = getLinkedDocs(data);
         var objDocs = data.clone();
@@ -294,8 +301,11 @@ var App = {
         objDocs.find(".property").remove();
 
         // Compose the heading that contains the property/function name.
-        var heading = $('<div class="heading"></div>');
-        heading.text($(output).attr("name"));
+        var heading = null;
+        if (nameParts.length) {
+          heading = $('<div class="heading"></div>');
+          heading.text($(output).attr("name"));
+        }
 
         const VALID_TYPES = {string: 'String',
                              options: 'Options Object',
@@ -393,7 +403,7 @@ var App = {
       }
     }
 
-    generateDocs([], object, data, output);
+    generateDocs([], object, objectData, output);
   },
 
   TUTORIAL_FILENAME: "jetpack-tutorial-code.txt",

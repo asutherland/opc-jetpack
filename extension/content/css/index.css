@@ -206,12 +206,19 @@ a {
     display: none;
 }
 
+#api h3 {
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    padding-top: 1em;
+    padding-bottom: 1em;
+}
+
 .documentation {
 }
 
 .documentation .heading {
     font-family: monospace;
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: bold;
     margin-top: 1em;
     margin-bottom: 1em;
@@ -222,7 +229,7 @@ a {
 }
 
 .documentation .properties {
-    padding-left: 1em;
+
 }
 
 .documentation em {

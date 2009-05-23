@@ -452,8 +452,6 @@ jetpack.statusBar.append({
     is woefully incomplete, and could use some help. We'll be
     mirroring this documentation on a wiki soon to make revising the
     documentation as easy as possible.</div>
-    <p>The following are available to all Jetpack features at the
-    global scope.</p>
   </div>
 </div>
 </div>
@@ -511,6 +509,12 @@ jetpack.statusBar.append({
 <!-- RAW API DOCUMENTATION -->
 
 <div id="raw-api-documentation">
+  <div name="globals">
+    <h3>The Global Namespace</h3>
+    The global namesace of a Jetpack feature is where most of
+    its functionality can be found. Special care has been taken
+    to make this namespace look and function as much like a Web page's
+    global namespace as possible.
   <div name="jetpack" class="property">
     The <tt>jetpack</tt> namespace is available to all Jetpack
     Features, and is the main point of contact for Features with the
@@ -650,6 +654,15 @@ console.log('Hello from the Jetpack feature', this);
     <div class="example">
 console.log(location);
     </div>
+  </div>
+  </div>
+  <div name="Tab">
+    <h3>Tab Objects</h3>
+    A <tt>Tab</tt> represents a tab in a browser window.
+    <div name="url" class="property">
+      The URL that the tab is currently viewing.
+    </div>
+    <a name="onReady" class="property" href="#tab-onReady"></a>
   </div>
   <div name="live array" class="glossary">
     A <em>live array</em> is an <tt>Array</tt> that represents some
