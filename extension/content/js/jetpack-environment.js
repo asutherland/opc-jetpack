@@ -23,14 +23,16 @@ JetpackEnv.addGlobal("$", jQuery);
 JetpackEnv.addGlobal("jetpack.lib.twitter", Twitter);
 JetpackEnv.addGlobal(
   "jetpack.track",
-  function track() {
-    var newArgs = [];
-    for (var i = 0; i < 2; i++)
-      newArgs.push(arguments[i]);
+  function track(obj, name) {
+    if (typeof(obj) != "object")
+      throw new Logging.ErrorAtCaller("Cannot track non-objects.");
+    if (name !== undefined)
+      if (typeof(name) != "string")
+        throw new Logging.ErrorAtCaller("Name must be a string.");
+
     // Make the memory tracker record the stack frame/line number of our
     // caller, not us.
-    newArgs.push(1);
-    MemoryTracking.track.apply(MemoryTracking, newArgs);
+    MemoryTracking.track(obj, name, 1);
   });
 
 JetpackEnv.addImporter(
