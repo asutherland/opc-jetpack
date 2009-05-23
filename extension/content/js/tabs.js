@@ -123,6 +123,7 @@ function Tabs() {
 
   var tabsMixIns = new EventListenerMixIns(tabs);
   tabsMixIns.add({name: "onReady"});
+  tabsMixIns.add({name: "onFocused"});
 
   tabs.__proto__ = trackedTabs.values;
 
@@ -216,6 +217,19 @@ function Tabs() {
        filter: function(event) {
          // Return the document that just loaded.
          return event.originalTarget;
+       }});
+
+    mixIns.add(
+      {name: "onFocused",
+       observe: chromeTab,
+       eventName: "TabSelect",
+       useCapture: true,
+       bubbleTo: tabsMixIns,
+       filter: function(event) {
+         // There's not really much to report here other
+         // than the Tab itself, but that's already the
+         // 'this' variable, so just return true for now.
+         return true;
        }});
 
     this.__proto__ = {
