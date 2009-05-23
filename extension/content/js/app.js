@@ -487,6 +487,11 @@ var App = {
 
 $(window).ready(
   function() {
+    // If we're being loaded in a hidden window, don't even worry about
+    // providing the UI for this page.
+    if (!Extension.isVisible)
+      return;
+
     App.initTabs();
 
     window.setInterval(App.tick, 1000);
