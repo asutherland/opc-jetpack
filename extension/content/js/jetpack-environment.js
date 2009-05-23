@@ -26,8 +26,7 @@ JetpackEnv.addGlobal(
   function track(obj, name) {
     if (typeof(obj) != "object")
       throw new Logging.ErrorAtCaller("Cannot track non-objects.");
-    if (name !== undefined)
-      if (typeof(name) != "string")
+    if (name !== undefined && typeof(name) != "string")
         throw new Logging.ErrorAtCaller("Name must be a string.");
 
     // Make the memory tracker record the stack frame/line number of our
