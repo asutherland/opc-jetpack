@@ -34,47 +34,47 @@ JetpackEnv.addGlobal(
   });
 
 JetpackEnv.addImporter(
-  function importTimers(obj, context) {
+  function importTimers(context) {
     var timers = new Timers(window);
-    timers.addMethodsTo(obj);
-    return timers;
+    timers.addMethodsTo(this);
+    context.addUnloader(timers);
   });
 
 JetpackEnv.addImporter(
   "jetpack",
-  function importTabs(obj, context) {
-    var tabs = new Tabs();
-    obj.tabs = tabs.tabs;
-    return tabs;
+  function importTabs(context) {
+    var tabsContext = new Tabs();
+    this.tabs = tabsContext.tabs;
+    context.addUnloader(tabsContext);
   });
 
 JetpackEnv.addImporter(
   "jetpack",
-  function importNotifications(obj, context) {
-    obj.notifications = new Notifications();
+  function importNotifications(context) {
+    this.notifications = new Notifications();
   });
 
 JetpackEnv.addImporter(
   "jetpack",
-  function importSessionStorage(obj, context) {
+  function importSessionStorage(context) {
     if (!Extension.Manager.sessionStorage.jetpacks)
       Extension.Manager.sessionStorage.jetpacks = {};
     var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
     var id = context.urlFactory.makeUrl("");
     if (!sessionStorage[id])
       sessionStorage[id] = {};
-    obj.sessionStorage = sessionStorage[id];
+    this.sessionStorage = sessionStorage[id];
   });
 
 JetpackEnv.addImporter(
   "jetpack.json",
-  function importJson(obj, context) {
-    obj.encode = function encode(object) {
+  function importJson(context) {
+    this.encode = function encode(object) {
       var json = Cc["@mozilla.org/dom/json;1"]
                  .createInstance(Ci.nsIJSON);
       return json.encode(object);
     };
-    obj.decode = function decode(string) {
+    this.decode = function decode(string) {
       var json = Cc["@mozilla.org/dom/json;1"]
                  .createInstance(Ci.nsIJSON);
       try {
@@ -87,10 +87,10 @@ JetpackEnv.addImporter(
 
 JetpackEnv.addImporter(
   "jetpack.statusBar",
-  function importStatusBar(obj, context) {
+  function importStatusBar(context) {
     var statusBar = new StatusBar(context.urlFactory);
-    obj.append = function append(options) {
+    this.append = function append(options) {
       return statusBar.append(options);
     };
-    return statusBar;
+    context.addUnloader(statusBar);
   });

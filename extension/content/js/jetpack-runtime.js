@@ -24,13 +24,16 @@ var JetpackRuntime = {
 
     sandbox.location = feed.srcUri.spec;
 
+    var unloaders = [];
+    var self = this;
+
     this.sandbox = sandbox;
     this.url = feed.uri.spec;
     this.srcUrl = feed.srcUri.spec;
     this.urlFactory = new UrlFactory(feed.uri.spec);
-
-    var unloaders = [];
-    var self = this;
+    this.addUnloader = function addUnloader(unloader) {
+      unloaders.push(unloader);
+    };
 
     var names = [name for (name in importers)];
     names.sort();
@@ -47,12 +50,7 @@ var JetpackRuntime = {
           }
         }
 
-        function doImport(importer) {
-          var unloader = importer(obj, self);
-          if (unloader)
-            unloaders.push(unloader);
-        }
-        importers[name].forEach(doImport);
+        importers[name].forEach(function(imp) { imp.call(obj, self); });
       });
 
     names = [name for (name in globals)];
