@@ -602,6 +602,7 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
         </div>
       </div>
       <a name="onReady" class="property" href="#tab-onReady"></a>
+      <a name="onFocus" class="property" href="#tab-onFocus"></a>
     </div>
   </div>
   <div name="console" class="property">
@@ -659,14 +660,45 @@ console.log(location);
   <div name="Tab">
     <h3>Tab Objects</h3>
     A <tt>Tab</tt> represents a tab in a browser window.
+    <div name="contentDocument" class="property">
+      The <em>HTML document</em> that the tab is currently displaying.
+      If the tab is closed, this value is <tt>null</tt>.
+    </div>
+    <div name="contentWindow" class="property">
+      The window that the tab is currently displaying (to the
+      Web page in the tab, this is known as <tt>window</tt>). If the tab is
+      closed, this value is <tt>null</tt>.
+    </div>
+    <div name="raw" class="property">
+      The underlying <a href="https://developer.mozilla.org/En/XUL:tab">XUL tab
+      element</a> that this tab represents. Access this as a last
+      resort, since anything done with this object is subject to changes
+      in the Mozilla platform.
+      <p>
+      If the tab is already closed, this value is <tt>null</tt>.
+    </div>
+    <div name="isClosed" class="property">
+      A boolean indicating whether or not the tab is closed. This can
+      be the case if, for instance, your code assigns a variable to
+      a tab and later references it after the tab has been closed.
+    </div>
+    <div name="focus" class="property">
+      Makes the tab the currently selected one.
+    </div>
+    <div name="close" class="property">
+      Closes the tab. If the tab is already closed, this method
+      does nothing.
+    </div>
     <div name="url" class="property">
-      A string representing the URL that the tab is currently viewing.
+      A string representing the URL that the tab is currently viewing. If
+      the tab is closed, this value is <tt>null</tt>.
     </div>
     <div name="favicon" class="property">
       A string representing the URL of the tab's favicon. If the tab
-      has no favicon, this value is <tt>null</tt>.
+      has no favicon or is closed, this value is <tt>null</tt>.
     </div>
     <a name="onReady" class="property" href="#tab-onReady"></a>
+    <a name="onFocus" class="property" href="#tab-onFocus"></a>
   </div>
   <div name="live array" class="glossary">
     A <em>live array</em> is an <tt>Array</tt> that represents some
@@ -679,6 +711,29 @@ console.log(location);
     <p>
     While it's technically possible for the array indices of an
     <em>live array</em> to be modified, they shouldn't be.
+  </div>
+  <div name="tab-onFocus" class="property">
+    <div class="argument function" name="callback">The callback to
+    call when the event is triggered.</div>
+    A <em>live event binder</em> that is triggered whenever a
+    <tt>Tab</tt> object becomes the currently selected tab.
+    <p>
+    This binder method is available on <tt>Tab</tt> objects and the
+    <tt>jetpack.tabs</tt> <em>live array</em>.
+    <p>
+    <em>Event handlers</em> registered with this event binder are
+    currently not passed any arguments. When called, their
+    <tt>this</tt> variable is set to the <tt>Tab</tt> object on
+    which the event was triggered.
+    <p>
+    The following example code uses the <tt>jetpack.tabs.onFocus</tt>
+    handler to display a notification message whenever the user
+    switches to a new tab.
+    <div class="example">
+jetpack.tabs.onFocus(function() {
+  jetpack.notifications.show("You selected " + this.url);
+  });
+    </div>
   </div>
   <div name="tab-onReady" class="property">
     <div class="argument function" name="callback">The callback to
@@ -695,12 +750,13 @@ console.log(location);
     <p>
     <em>Event handlers</em> registered with this event binder are
     passed the <em>HTML document</em> of the object that triggered
-    the event.
+    the event. When called, their <tt>this</tt> variable is set to
+    the <tt>Tab</tt> object on which the event was triggered.
     <p>
     The following example code uses the <tt>jetpack.tabs.onReady</tt>
     handler to display a notification message the next time the
     user visits a page.
-   <div class="example">
+    <div class="example">
 jetpack.tabs.onReady(function onNextPage(doc) {
   if (!doc.defaultView.frameElement) {
     jetpack.notifications.show("Loaded " + doc.location.href);
