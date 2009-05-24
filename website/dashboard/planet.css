@@ -1,0 +1,139 @@
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    line-height: 1.4em;
+    background: white;
+    padding: 0;
+    margin: 0;
+}
+
+#issue {
+    display: none;
+}
+
+#header {
+    /* Too bad font-stretch isn't implemented in Firefox yet... */
+    font-stretch: condensed;
+    font-variant: small-caps;
+    font-weight: bold;
+    font-size: 18pt;
+    margin: 6pt;
+    padding-top: 6pt;
+    padding-bottom: 6pt;
+    color: black;
+}
+
+#body {
+}
+
+.column {
+    background: white;
+    float: left;
+    width: 20em;
+}
+
+.headline {
+    font-weight: bold;
+    height: 3em;
+    padding: 6pt;
+    border-top: 1px dotted gray;
+    border-bottom: 1px dotted gray;
+}
+
+.content {
+}
+
+a {
+    color: black;
+    text-decoration: none;
+    border-bottom: 1px dotted gray;
+}
+
+.blog-item {
+    padding-left: 6pt;
+    padding-right: 6pt;
+    padding-top: 6pt;
+    padding-bottom: 6pt;
+    color: gray;
+}
+
+.blog-item a {
+    border: none;
+    font-style: italic;
+    color: black;
+}
+
+.time-ago-0 {
+    background-color: #ffffff;
+}
+
+.time-ago-1 {
+    background-color: #fafafa;
+}
+
+.time-ago-2 {
+    background-color: #f5f5f5;
+}
+
+.time-ago-3 {
+    background-color: #f0f0f0;
+}
+
+.time-ago-4 {
+    background-color: #eaeaea;
+}
+
+.time-ago-5 {
+    background-color: #e5e5e5;
+}
+
+.time-ago-6 {
+    background-color: #e0e0e0;
+}
+
+.time-ago-7 {
+    background-color: #dadada;
+}
+
+.time-ago-8 {
+    background-color: #d5d5d5;
+}
+
+.time-ago-9 {
+    background-color: #d0d0d0;
+}
+
+#row-labels .content {
+    font-weight: bold;
+}
+
+.build {
+    padding-right: 1em;
+    margin-right: 2pt;
+    opacity: .5;
+}
+
+.build-errors {
+    background-color: #ff0000;
+}
+
+.build-success {
+    background-color: #00ff00;
+}
+
+#footer {
+    clear: both;
+    background-color: black;
+    color: white;
+    width: 100%
+}
+
+.footer-content a {
+    color: white;
+    border: none;
+    text-decoration: underline;
+}
+
+.footer-content {
+    padding: 6pt;
+}
