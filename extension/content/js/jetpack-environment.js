@@ -44,9 +44,19 @@ JetpackEnv.addImporter(
 JetpackEnv.addImporter(
   "jetpack",
   function importTabs(context) {
-    var tabsContext = new Tabs();
-    this.tabs = tabsContext.tabs;
-    context.addUnloader(tabsContext);
+    var tabsContext = null;
+    var self = this;
+    self.__defineGetter__(
+      "tabs",
+      function() {
+        tabsContext = new Tabs();
+        context.addUnloader(tabsContext);
+        delete self.tabs;
+        self.tabs = tabsContext.tabs;
+        self = null;
+        context = null;
+        return tabsContext.tabs;
+      });
   });
 
 JetpackEnv.addImporter(
