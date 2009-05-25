@@ -431,7 +431,7 @@ var App = {
     JetpackRuntime.forceFeedUpdate(editor.url);
     App.exampleEditor = editor;
 
-    var self= this;
+    var self = this;
 
     function showEditor(element) {
       var iframe = $('<iframe></iframe>');
