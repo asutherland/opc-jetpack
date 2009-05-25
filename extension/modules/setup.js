@@ -62,7 +62,7 @@ let JetpackSetup = {
   isNewlyInstalledOrUpgraded: false,
   _wasWelcomePageShownAtStartup: false,
 
-  __getExtDir: function __getExtDir() {
+  getExtensionDirectory: function getExtensionDirectory() {
     let extMgr = Cc["@mozilla.org/extensions/manager;1"]
                  .getService(Components.interfaces.nsIExtensionManager);
     let loc = extMgr.getInstallLocation("jetpack@labs.mozilla.com");
@@ -86,7 +86,7 @@ let JetpackSetup = {
   getBaseUri: function getBaseUri() {
     let ioSvc = Components.classes["@mozilla.org/network/io-service;1"]
                 .getService(Components.interfaces.nsIIOService);
-    let extDir = this.__getExtDir();
+    let extDir = this.getExtensionDirectory();
     let baseUri = ioSvc.newFileURI(extDir).spec;
 
     return baseUri;
@@ -96,7 +96,7 @@ let JetpackSetup = {
     let profileDir = Cc["@mozilla.org/file/directory_service;1"]
                      .getService(Components.interfaces.nsIProperties)
                      .get("ProfD", Components.interfaces.nsIFile);
-    let extDir = this.__getExtDir();
+    let extDir = this.getExtensionDirectory();
     if (profileDir.contains(extDir, false))
       return true;
     return false;
