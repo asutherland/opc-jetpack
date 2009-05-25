@@ -467,18 +467,23 @@ var App = {
       var code = this.exampleEditor.loadData();
       $(this.currExampleElement).text(code);
       this.currExampleElement = null;
+      this.resetExampleEditor();
     }
   },
 
-  enableExampleHacking: function enableExampleHacking() {
+  resetExampleEditor: function resetExampleEditor() {
     var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
-    var editor = new JetpackCodeEditor(this.EXAMPLE_FILENAME);
-    editor.saveData('');
-    if (!FeedManager.isSubscribedFeed(editor.url))
-      editor.registerFeed(FeedManager);
-    JetpackRuntime.forceFeedUpdate(editor.url);
-    App.exampleEditor = editor;
 
+    if (!this.exampleEditor)
+      this.exampleEditor = new JetpackCodeEditor(this.EXAMPLE_FILENAME);
+
+    this.exampleEditor.saveData('');
+    if (!FeedManager.isSubscribedFeed(this.exampleEditor.url))
+      this.exampleEditor.registerFeed(FeedManager);
+    JetpackRuntime.forceFeedUpdate(this.exampleEditor.url);
+  },
+
+  enableExampleHacking: function enableExampleHacking() {
     var self = this;
 
     function showEditor(element) {
@@ -489,7 +494,7 @@ var App = {
       var button = $('#reload-editor-code').clone();
       button.click(
         function() {
-          JetpackRuntime.forceFeedUpdate(App.exampleEditor.url);
+          JetpackRuntime.forceFeedUpdate(self.exampleEditor.url);
         });
       $(element).removeClass('example');
       $(element).empty().append(iframe).append('<p></p>');
@@ -517,8 +522,8 @@ var App = {
           return;
         self.hideExampleEditor();
         var code = $(this).text();
-        editor.saveData(code);
-        JetpackRuntime.forceFeedUpdate(editor.url);
+        self.exampleEditor.saveData(code);
+        JetpackRuntime.forceFeedUpdate(self.exampleEditor.url);
         showEditor(this);
         edit.remove();
       });
@@ -536,6 +541,7 @@ var App = {
 $(window).ready(
   function() {
     App.initCodeEditor();
+    App.resetExampleEditor();
 
     // If we're being loaded in a hidden window, don't even worry about
     // providing the UI for this page.
@@ -609,4 +615,9 @@ $(window).ready(
 
     App.activateDynamicButtons(document);
     App.forceGC();
+
+    $(window).unload(
+      function() {
+        App.hideExampleEditor();
+      });
   });
