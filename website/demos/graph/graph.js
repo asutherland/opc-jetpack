@@ -6,29 +6,35 @@
 	@license: MPL
 */
 
-var tabCountHistory = [jetpack.tabs.length];
+// We keep the history in session storage so that the sparkline
+// is maintained even during development.
+var stash = jetpack.sessionStorage;
+if( !stash.history ) stash.history = [jetpack.tabs.length]
+
 var tabCount = jetpack.tabs.length;
 var data = null;
 var legend = null;
 
 function updateTabCount(){
-  tabCountHistory.push( tabCount );
+  stash.history.push( tabCount );
   
-  if( tabCountHistory.length > 150 )
-    tabCountHistory = tabCountHistory.slice(1);
+  if( stash.history.length > 400 )
+    stash.history = stash.history.slice( 1 );
   
-  data.text( tabCountHistory.join(",") );
+  data.text( stash.history.join(",") );
   legend.text( tabCount );
 }
 
 jetpack.tabs.onOpen(function(){ tabCount++; updateTabCount(); });
 jetpack.tabs.onClose(function(){ tabCount--; updateTabCount(); });
+jetpack.tabs.onFocus(function(){ updateTabCount(); });
 
 jetpack.statusBar.append({
   url: "statusbar.html",
-  width: 105,
+  width: 175,
   onReady: function(widget){
     data = $("#data", widget);
     legend = $("#legend", widget);
+    updateTabCount();    
   }
 })
