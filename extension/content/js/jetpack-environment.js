@@ -6,6 +6,23 @@ var JetpackEnv = {
       throw new Error("Name " + dottedName + " already exists");
     this.globals[dottedName] = value;
   },
+  addLazyLoader: function addLazyLoader(dottedName, factory) {
+    var parts = dottedName.split(".");
+    var name = parts.pop();
+    var namespace = parts.join(".");
+    this.addImporter(
+      namespace,
+      function importer(context) {
+        var self = this;
+        self.__defineGetter__(
+          name,
+          function() {
+            delete self[name];
+            self[name] = factory(context);
+            return self[name];
+          });
+      });
+  },
   addImporter: function addImporter(namespace, importer) {
     if (typeof(namespace) == "function" && !importer) {
       importer = namespace;
@@ -20,7 +37,6 @@ var JetpackEnv = {
 JetpackEnv.addGlobal("console", console);
 JetpackEnv.addGlobal("jQuery", jQuery);
 JetpackEnv.addGlobal("$", jQuery);
-JetpackEnv.addGlobal("jetpack.lib.twitter", Twitter);
 JetpackEnv.addGlobal(
   "jetpack.track",
   function track(obj, name) {
@@ -41,45 +57,34 @@ JetpackEnv.addImporter(
     context.addUnloader(timers);
   });
 
-window.addLazyLoader("js/tabs.js",
-                     "EventListenerMixIns",
-                     "EventListenerMixIn",
-                     "Tabs");
+window.addLazyLoader("js/twitter.js", "Twitter");
+JetpackEnv.addLazyLoader("jetpack.lib.twitter",
+                         function() { return Twitter; });
 
-JetpackEnv.addImporter(
-  "jetpack",
-  function importTabs(context) {
-    var tabsContext = null;
-    var self = this;
-    self.__defineGetter__(
-      "tabs",
-      function() {
-        tabsContext = new Tabs();
-        context.addUnloader(tabsContext);
-        delete self.tabs;
-        self.tabs = tabsContext.tabs;
-        self = null;
-        context = null;
-        return tabsContext.tabs;
-      });
+window.addLazyLoader("js/tabs.js", "EventListenerMixIns",
+                     "EventListenerMixIn", "Tabs");
+JetpackEnv.addLazyLoader(
+  "jetpack.tabs",
+  function(context) {
+    var tabsContext = new Tabs();
+    context.addUnloader(tabsContext);
+    return tabsContext.tabs;
   });
 
-JetpackEnv.addImporter(
-  "jetpack",
-  function importNotifications(context) {
-    this.notifications = new Notifications();
-  });
+window.addLazyLoader("js/notifications.js", "Notifications");
+JetpackEnv.addLazyLoader("jetpack.notifications",
+                         function(context) { return new Notifications(); });
 
-JetpackEnv.addImporter(
-  "jetpack",
-  function importSessionStorage(context) {
+JetpackEnv.addLazyLoader(
+  "jetpack.sessionStorage",
+  function(context) {
     if (!Extension.Manager.sessionStorage.jetpacks)
       Extension.Manager.sessionStorage.jetpacks = {};
     var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
     var id = context.urlFactory.makeUrl("");
     if (!sessionStorage[id])
       sessionStorage[id] = {};
-    this.sessionStorage = sessionStorage[id];
+    return sessionStorage[id];
   });
 
 JetpackEnv.addImporter(
@@ -101,12 +106,15 @@ JetpackEnv.addImporter(
     };
   });
 
-JetpackEnv.addImporter(
+window.addLazyLoader("js/status-bar-panel.js", "StatusBar");
+JetpackEnv.addLazyLoader(
   "jetpack.statusBar",
-  function importStatusBar(context) {
+  function(context) {
     var statusBar = new StatusBar(context.urlFactory);
-    this.append = function append(options) {
-      return statusBar.append(options);
-    };
     context.addUnloader(statusBar);
+    return {
+      append: function append(options) {
+        return statusBar.append(options);
+      }
+    };
   });
