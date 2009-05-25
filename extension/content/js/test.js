@@ -1,4 +1,38 @@
 var Tests = {
+  _hasImportedTestFiles: false,
+
+  _listDir: function _listDir(dir) {
+    var contents = [];
+    var enumer = dir.directoryEntries;
+    while (enumer.hasMoreElements())
+      contents.push(enumer.getNext().QueryInterface(Ci.nsIFile).leafName);
+    return contents;
+  },
+
+  _findTestJsFiles: function _findTestJsFiles() {
+    // TODO: This is yucky because it assumes things about how our
+    // chrome: URIs are mapped to our filesystem.
+    var jsm = {};
+    Components.utils.import("resource://jetpack/modules/setup.js", jsm);
+    var dir = jsm.JetpackSetup.getExtensionDirectory();
+    var pathParts = ["content", "js", "tests"];
+    pathParts.forEach(function(path) { dir.append(path); });
+    var relPaths = this._listDir(dir);
+    var absBase = "chrome://jetpack/" + pathParts.join("/") + "/";
+    return [(absBase + relPath) for each (relPath in relPaths)];
+  },
+
+  _importTestFiles: function _importTestFiles() {
+    if (!this._hasImportedTestFiles) {
+      var loader = Cc["@mozilla.org/moz/jssubscript-loader;1"]
+                   .getService(Ci.mozIJSSubScriptLoader);
+      var files = this._findTestJsFiles();
+      console.log("Found", files.length, "test suites in external files.");
+      files.forEach(function(file) { loader.loadSubScript(file); });
+      this._hasImportedTestFiles = true;
+    }
+  },
+
   _TestFailedAndExceptionLogged: function _TestFailedAndExceptionLogged() {
     this.message = "Test failed and exception logged.";
     this.alreadyLogged = true;
@@ -91,6 +125,8 @@ var Tests = {
     var testSuites = {};
 
     console.log("Now running tests.");
+
+    self._importTestFiles();
 
     // Find any objects whose name ends in "Tests".
     for (name in window) {
