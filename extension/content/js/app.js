@@ -70,7 +70,7 @@ var App = {
        },
        onClick: function(tabLink, content, hiddenContent) {
          $(hiddenContent).find("#editor-widget-container").empty();
-         self.hideTutorialEditor();
+         self.hideExampleEditor();
        }
       });
 
@@ -406,47 +406,47 @@ var App = {
     generateDocs([], object, objectData, output);
   },
 
-  TUTORIAL_FILENAME: "jetpack-tutorial-code.txt",
+  EXAMPLE_FILENAME: "jetpack-example-code.txt",
 
-  tutorialEditor: null,
+  exampleEditor: null,
 
-  currTutorialElement: null,
+  currExampleElement: null,
 
-  hideTutorialEditor: function hideTutorialEditor() {
-    if (this.currTutorialElement) {
-      $(this.currTutorialElement).empty();
-      $(this.currTutorialElement).addClass('example');
-      var code = this.tutorialEditor.loadData();
-      $(this.currTutorialElement).text(code);
-      this.currTutorialElement = null;
+  hideExampleEditor: function hideExampleEditor() {
+    if (this.currExampleElement) {
+      $(this.currExampleElement).empty();
+      $(this.currExampleElement).addClass('example');
+      var code = this.exampleEditor.loadData();
+      $(this.currExampleElement).text(code);
+      this.currExampleElement = null;
     }
   },
 
-  enableTutorialHacking: function enableTutorialHacking() {
+  enableExampleHacking: function enableExampleHacking() {
     var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
-    var editor = new JetpackCodeEditor(this.TUTORIAL_FILENAME);
+    var editor = new JetpackCodeEditor(this.EXAMPLE_FILENAME);
     editor.saveData('');
     if (!FeedManager.isSubscribedFeed(editor.url))
       editor.registerFeed(FeedManager);
     JetpackRuntime.forceFeedUpdate(editor.url);
-    App.tutorialEditor = editor;
+    App.exampleEditor = editor;
 
     var self= this;
 
     function showEditor(element) {
       var iframe = $('<iframe></iframe>');
       iframe.attr('src', 'editor.html#' +
-                  encodeURI(self.TUTORIAL_FILENAME));
+                  encodeURI(self.EXAMPLE_FILENAME));
       iframe.addClass('editor-widget');
       var button = $('#reload-editor-code').clone();
       button.click(
         function() {
-          JetpackRuntime.forceFeedUpdate(App.tutorialEditor.url);
+          JetpackRuntime.forceFeedUpdate(App.exampleEditor.url);
         });
       $(element).removeClass('example');
       $(element).empty().append(iframe).append('<p></p>');
       $(element).append(button);
-      self.currTutorialElement = element;
+      self.currExampleElement = element;
     }
 
     // Hovering over an example shows instructions on how to edit.
@@ -464,10 +464,10 @@ var App = {
     // to edit it.
     $(".example").click(
       function(event) {
-        if (self.currTutorialElement == this)
+        if (self.currExampleElement == this)
           // We've already got an editor embedded in us, just leave.
           return;
-        self.hideTutorialEditor();
+        self.hideExampleEditor();
         var code = $(this).text();
         editor.saveData(code);
         JetpackRuntime.forceFeedUpdate(editor.url);
@@ -475,7 +475,7 @@ var App = {
         edit.remove();
       });
 
-    // Some of the tutorial snippets don't have proper HTML-escaping,
+    // Some of the example snippets don't have proper HTML-escaping,
     // which is okay b/c it improves their readability when viewing
     // their source; we'll properly escape them here.
     $(".example").each(
@@ -505,9 +505,6 @@ $(window).ready(
       });
     $("#force-gc").click(App.forceGC);
     $("#run-tests").click(function() { Tests.run(); });
-    $(".tutorial-link").click(
-      function() { $("#container").triggerTab('tutorial'); }
-    );
 
     if (App.isFirefoxOld)
       $(".developer-warnings").append($("#old-firefox-version"));
@@ -544,7 +541,7 @@ $(window).ready(
     watcher.add("purge", onFeedEvent);
 
     App.buildApiReference();
-    App.enableTutorialHacking();
+    App.enableExampleHacking();
 
     if (window.console.isFirebug) {
       $(".developer-warnings").append($("#firebug-caveats"));
