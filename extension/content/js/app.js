@@ -43,40 +43,48 @@ var App = {
 
   codeEditor: null,
 
-  initTabs: function initTabs() {
+  initCodeEditor: function initCodeEditor() {
     var FeedManager = JetpackRuntime.FeedPlugin.FeedManager;
     var codeEditor = new JetpackCodeEditor(this.CODE_EDITOR_FILENAME);
     if (!FeedManager.isSubscribedFeed(codeEditor.url))
       codeEditor.registerFeed(FeedManager);
     JetpackRuntime.forceFeedUpdate(codeEditor.url);
     App.codeEditor = codeEditor;
+  },
 
-    var self= this;
-    function showEditor() {
-      var iframe = $('<iframe id="the-editor"></iframe>');
-      iframe.attr('src', 'editor.html#' +
-                  encodeURI(self.CODE_EDITOR_FILENAME));
-      iframe.addClass('editor-widget');
-      $("#editor-widget-container").append(iframe);
+  showCodeEditor: function showCodeEditor() {
+    var iframe = $('<iframe id="the-editor"></iframe>');
+    iframe.attr('src', 'editor.html#' +
+                encodeURI(this.CODE_EDITOR_FILENAME));
+    iframe.addClass('editor-widget');
+    $("#editor-widget-container").append(iframe);
+  },
+
+  onShowTab: function onShowTab(tabLink, content, hiddenContent) {
+    if (hiddenContent) {
+      $(hiddenContent).find("#editor-widget-container").empty();
+      this.hideExampleEditor();
     }
+    if ($(content).find("#editor-widget-container").length)
+      this.showCodeEditor();
+  },
+
+  initTabs: function initTabs() {
+    var self= this;
 
     $("#container").tabs(
       {initial: (Extension.Manager.sessionStorage.tab ?
                  Extension.Manager.sessionStorage.tab-1 : 0),
        onShow: function(tabLink, content, hiddenContent) {
-         if ($(content).find("#editor-widget-container").length)
-           showEditor();
          Extension.Manager.sessionStorage.tab = $("#container").activeTab();
-       },
-       onClick: function(tabLink, content, hiddenContent) {
-         $(hiddenContent).find("#editor-widget-container").empty();
-         self.hideExampleEditor();
+         self.onShowTab(tabLink, content, hiddenContent);
        }
       });
 
     // Because onShow isn't triggered for the initially showing tab...
-    if ($("#container .tabs-selected > a").attr("href") == "#develop")
-      showEditor();
+    var tabLink = $("#container .tabs-selected > a");
+    var content = $("#container " + tabLink.attr("href"));
+    self.onShowTab(tabLink, content, null);
   },
 
   updateInstalledJetpackCount: function updateInstalledJetpackCount() {
@@ -487,6 +495,8 @@ var App = {
 
 $(window).ready(
   function() {
+    App.initCodeEditor();
+
     // If we're being loaded in a hidden window, don't even worry about
     // providing the UI for this page.
     if (!Extension.isVisible)
