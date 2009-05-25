@@ -587,6 +587,7 @@ $(window).ready(
     if (!Extension.isVisible)
       return;
 
+    App.activateDynamicButtons(document);
     App.initTabs();
 
     window.setInterval(App.tick, 1000);
