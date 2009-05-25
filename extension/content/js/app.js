@@ -60,13 +60,28 @@ var App = {
     $("#editor-widget-container").append(iframe);
   },
 
-  onShowTab: function onShowTab(tabLink, content, hiddenContent) {
-    if (hiddenContent) {
+  // This is called right before an old tab's content is hidden.
+  onClickTab: function onClickTab(tabLink, content, hiddenContent) {
+    var hiddenTab = $(hiddenContent).attr("id");
+    switch (hiddenTab) {
+    case "develop":
       $(hiddenContent).find("#editor-widget-container").empty();
+      break;
+    case "tutorial":
+    case "api":
       this.hideExampleEditor();
+      break;
     }
-    if ($(content).find("#editor-widget-container").length)
+  },
+
+  // This is called right after a new tab's content is shown.
+  onShowTab: function onShowTab(tabLink, content, hiddenContent) {
+    var shownTab = $(content).attr("id");
+    switch (shownTab) {
+    case "develop":
       this.showCodeEditor();
+      break;
+    }
   },
 
   initTabs: function initTabs() {
@@ -78,6 +93,9 @@ var App = {
        onShow: function(tabLink, content, hiddenContent) {
          Extension.Manager.sessionStorage.tab = $("#container").activeTab();
          self.onShowTab(tabLink, content, hiddenContent);
+       },
+       onClick: function(tabLink, content, hiddenContent) {
+         self.onClickTab(tabLink, content, hiddenContent);
        }
       });
 
