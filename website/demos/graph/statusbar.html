@@ -1,0 +1,29 @@
+<html>
+<head>
+	<title>Mozilla Labs Jetpack - Tab Grapher</title>
+  <script src="resource://jetpack/content/js/ext/jquery.js"></script>
+  <script src="jquery.sparkline.js"></script>
+  <style>
+    #sparkline{ position:relative; top:4px; }
+    #legend{font-size: 8px; position: absolute;right:2px; top: 20%;}
+    #data{ display: none;}
+  </style>
+</head>
+<body>
+
+		<span id="sparkline"></span>
+		<span id="legend"></span>
+		<span id="data"></span>
+		<script>
+		  function updateSparkline(){
+		    var data = $("#data").text().split(",");
+		    $("#sparkline").sparkline( data, {
+		      width: "100px", lineColor: "#444444", fillColor: "#6B6B6B"
+		    });
+		  }
+		
+		  // Whenever new data is added to the data span, update the sparkline.
+		  $("#data").bind( "DOMSubtreeModified", updateSparkline );
+		</script>
+</body>
+</html>
