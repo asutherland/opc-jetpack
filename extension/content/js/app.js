@@ -39,6 +39,17 @@ var App = {
     }
   },
 
+  getLocalFile: function getLocalFile(filename, cb) {
+    var req = new XMLHttpRequest();
+    req.open('GET', filename, true);
+    req.overrideMimeType('text/html');
+    req.onreadystatechange = function() {
+      if (req.readyState == 4 && req.status == 0)
+        cb(req.responseText);
+    };
+    req.send(null);
+  },
+
   CODE_EDITOR_FILENAME: 'jetpack-editor-code.txt',
 
   codeEditor: null,
@@ -80,6 +91,34 @@ var App = {
     switch (shownTab) {
     case "develop":
       this.showCodeEditor();
+      break;
+    case "tutorial":
+      // Generate the tutorial content if we haven't yet.
+      var tutorialContent = $("#tutorial .content");
+      if (!tutorialContent.children().length) {
+        this.getLocalFile(
+          "tutorial.html",
+          function(html) {
+            tutorialContent.html(html);
+            App.enableExampleHacking(tutorialContent);
+            App.activateDynamicButtons(tutorialContent);
+          });
+      }
+      break;
+    case "api":
+      // Generate the API reference content if we haven't yet.
+      var rawApiDocs = $("#raw-api-documentation");
+      var apiContent = $("#api");
+      if (!rawApiDocs.children().length) {
+        this.getLocalFile(
+          "raw-api-documentation.html",
+          function(html) {
+            rawApiDocs.html(html);
+            App.buildApiReference(rawApiDocs, apiContent);
+            App.enableExampleHacking(apiContent);
+            App.activateDynamicButtons(apiContent);
+          });
+      }
       break;
     }
   },
@@ -284,9 +323,7 @@ var App = {
     newRows = null;
   },
 
-  buildApiReference: function buildApiReference() {
-    var output = $("#api");
-    var data = $("#raw-api-documentation");
+  buildApiReference: function buildApiReference(data, output) {
     var fakeUri = {spec: "http://jetpack.mozillalabs.com/"};
     var fakeFeed = {uri: fakeUri,
                     srcUri: fakeUri,
@@ -483,7 +520,7 @@ var App = {
     JetpackRuntime.forceFeedUpdate(this.exampleEditor.url);
   },
 
-  enableExampleHacking: function enableExampleHacking() {
+  enableExampleHacking: function enableExampleHacking(context) {
     var self = this;
 
     function showEditor(element) {
@@ -505,7 +542,9 @@ var App = {
     // Hovering over an example shows instructions on how to edit.
     var edit = $(".messages .click-to-edit").clone().addClass("overlay");
 
-    $(".example").hover(
+    var example = $(".example", context);
+
+    example.hover(
       function(event) {
         if( this.className == "example" ) $(this).after( edit );
       },
@@ -515,7 +554,7 @@ var App = {
 
     // Clicking on an example code snippet enables the user
     // to edit it.
-    $(".example").click(
+    example.click(
       function(event) {
         if (self.currExampleElement == this)
           // We've already got an editor embedded in us, just leave.
@@ -531,7 +570,7 @@ var App = {
     // Some of the example snippets don't have proper HTML-escaping,
     // which is okay b/c it improves their readability when viewing
     // their source; we'll properly escape them here.
-    $(".example").each(
+    example.each(
       function() {
         $(this).text(jQuery.trim($(this).html()));
       });
@@ -606,14 +645,8 @@ $(window).ready(
     watcher.add("unsubscribe", onFeedEvent);
     watcher.add("purge", onFeedEvent);
 
-    // Build the Tutorial/API pages.
-
-    App.buildApiReference();
-    App.enableExampleHacking();
-
     // Finish up.
 
-    App.activateDynamicButtons(document);
     App.forceGC();
 
     $(window).unload(

@@ -1,0 +1,304 @@
+  <div name="globals">
+    <h3>The Global Namespace</h3>
+    The global namesace of a Jetpack feature is where most of
+    its functionality can be found. Special care has been taken
+    to make this namespace look and function as much like a Web page's
+    global namespace as possible.
+  <div name="jetpack" class="property">
+    The <tt>jetpack</tt> namespace is available to all Jetpack
+    Features, and is the main point of contact for Features with the
+    rest of Firefox. The API is intended as a lightweight
+    backwards-compatible facade to the underlying Mozilla platform,
+    which means that if you write a Feature using the Jetpack library,
+    you won't have to change your code as Firefox continues to evolve.
+    <div name="statusBar" class="property">
+      This object contains methods relevant to the status bar that
+      appears at the bottom of the browser window. Note that the user
+      has the option to disable the display of the status bar in
+      Firefox's "View" menu.
+      <div name="append" class="property">
+        <div class="argument options" name="options">
+          <span class="string" name="html">The initial HTML contents
+          of the new status bar panel.</span>
+          <span class="url" name="url">The URL of the status bar
+          panel's HTML contents.</span>
+          <span class="function" name="onReady">The callback function
+          to invoke when the new panel is created on a status
+          bar.</span>
+        </div>
+        This function adds a new panel to the status bar of all
+        open browser windows. When any new browser windows open,
+        the panel is automatically added to them as well.
+        <p>
+        The following example embeds an icon into the status bar that,
+        when clicked, displays a notification message to the user.
+        <div class="example">
+jetpack.statusBar.append({
+  html: '<img src="http://www.mozilla.org/favicon.ico">',
+  width: 16,
+  onReady: function(doc) {
+    $(doc).find("img").click(function() {
+      jetpack.notifications.show("hai2u");
+      });
+  }});
+        </div>
+        <p>
+        Technically speaking, the status bar panel is an
+        <tt>iframe</tt> element. While this comes at a relatively high
+        resource cost, it also enables the full breadth of
+        generativity that the Web has to offer. In the future, we may
+        add additional parameters to this function allowing the
+        addition of simpler, less resource-intensive elements such as
+        static text labels and images.
+      </div>
+    </div>
+    <div name="notifications" class="property">
+      Eventually, this object will be the end-all be-all of easy
+      communication with your users. Notification bars, transparent
+      messages, Growls, doorknob messages, and so forth will all go
+      through here. For now, it just has simple notifications.
+      <div name="show" class="property">
+        <div class="argument options string" name="options">
+          <span class="string" name="title">The title of the notification.</span>
+          <span class="url" name="icon">The URL to the notification's icon.</span>
+          <span class="string" name="body">The body of the notification.</span>
+        </div>
+        This function displays a simple notification message. On
+        Windows and Linux it's a toaster notification, and on OS X
+        it's a Growl message (if Growl is installed).  Instead of
+        passing in an <tt>options</tt> object, the caller can simply
+        pass in a string, which is used as the <tt>body</tt> argument.
+        <p>
+        The following example displays a message with a title, icon,
+        and body.
+        <div class="example">
+jetpack.notifications.show({title: 'hai2u',
+                            body: 'o hai.',
+                            icon: 'http://www.mozilla.org/favicon.ico'});
+         </div>
+      </div>
+    </div>
+    <div name="tabs" class="property">
+      <tt>jetpack.tabs</tt> is a <em>live array</em> with special
+      tab-related properties.
+      <div name="focused" class="property">
+        The currently focused/active tab as a <tt>Tab</tt> object.
+        <p>
+        The following example displays the name of the currently
+        focused tab.
+        <div class="example">
+jetpack.notifications.show(jetpack.tabs.focused.url);
+        </div>
+      </div>
+      <a name="onReady" class="property" href="#tab-onReady"></a>
+      <a name="onFocus" class="property" href="#tab-onFocus"></a>
+    </div>
+  </div>
+  <div name="console" class="property">
+    This object is used to log messages to the <span
+    class="logging-source"></span> for debugging purposes. Use the methods
+    <tt>log</tt>, <tt>info</tt>, <tt>warn</tt>, and <tt>error</tt> to log
+    messages of varying importance. All of these methods can take any
+    number of arguments; all of the arguments are logged.
+    <p>
+    The following example logs some information to the console.
+    <div class="example">
+console.log('Hello from the Jetpack feature', this);
+    </div>
+  </div>
+  <div name="setInterval" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.setInterval"><tt>window.setInterval</tt></a>
+    function.
+  </div>
+  <div name="clearInterval" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.clearInterval"><tt>window.clearInterval</tt></a>
+    function.
+  </div>
+  <div name="setTimeout" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.setTimeout"><tt>window.setTimeout</tt></a>
+    function.
+  </div>
+  <div name="clearTimeout" class="property">
+    This function works just like the Web's <a
+    href="https://developer.mozilla.org/En/Window.clearTimeout"><tt>window.clearTimeout</tt></a>
+    function.
+  </div>
+  <div name="jQuery" class="property">
+    This is jQuery, a lightweight JavaScript library. For
+    convenience, it's also available as the <tt>$</tt> function.
+    <p>
+    All Ajax requests made using jQuery are done using a cross-site
+    <tt>XMLHttpRequest</tt> object.
+    </p>
+    For more information on jQuery, please consult the <a
+    href="http://docs.jquery.com/Main_Page">jQuery Documentation</a>.
+  </div>
+  <div name="location" class="property">
+    This string contains the URL representing the source code of
+    the feature.
+    <p>
+    The following example logs the location to the console.
+    <div class="example">
+console.log(location);
+    </div>
+  </div>
+  </div>
+  <div name="Tab">
+    <h3>Tab Objects</h3>
+    A <tt>Tab</tt> represents a tab in a browser window.
+    <div name="contentDocument" class="property">
+      The <em>HTML document</em> that the tab is currently displaying.
+      If the tab is closed, this value is <tt>null</tt>.
+    </div>
+    <div name="contentWindow" class="property">
+      The window that the tab is currently displaying (to the
+      Web page in the tab, this is known as <tt>window</tt>). If the tab is
+      closed, this value is <tt>null</tt>.
+    </div>
+    <div name="raw" class="property">
+      The underlying <a href="https://developer.mozilla.org/En/XUL:tab">XUL tab
+      element</a> that this tab represents. Access this as a last
+      resort, since anything done with this object is subject to changes
+      in the Mozilla platform.
+      <p>
+      If the tab is already closed, this value is <tt>null</tt>.
+    </div>
+    <div name="isClosed" class="property">
+      A boolean indicating whether or not the tab is closed. This can
+      be the case if, for instance, your code assigns a variable to
+      a tab and later references it after the tab has been closed.
+    </div>
+    <div name="focus" class="property">
+      Makes the tab the currently selected one.
+    </div>
+    <div name="close" class="property">
+      Closes the tab. If the tab is already closed, this method
+      does nothing.
+    </div>
+    <div name="url" class="property">
+      A string representing the URL that the tab is currently viewing. If
+      the tab is closed, this value is <tt>null</tt>.
+    </div>
+    <div name="favicon" class="property">
+      A string representing the URL of the tab's favicon. If the tab
+      has no favicon or is closed, this value is <tt>null</tt>.
+    </div>
+    <a name="onReady" class="property" href="#tab-onReady"></a>
+    <a name="onFocus" class="property" href="#tab-onFocus"></a>
+  </div>
+  <div name="live array" class="glossary">
+    A <em>live array</em> is an <tt>Array</tt> that represents some
+    aspect of system state and has no mutator methods, and is
+    effectively "read-only".  In particular, this includes
+    <tt>pop()</tt>, <tt>push()</tt>,
+    <tt>reverse()</tt>, <tt>shift()</tt>,
+    <tt>sort()</tt>, <tt>splice()</tt>, and
+    <tt>unshift()</tt>.
+    <p>
+    While it's technically possible for the array indices of an
+    <em>live array</em> to be modified, they shouldn't be.
+  </div>
+  <div name="tab-onFocus" class="property">
+    <div class="argument function" name="callback">The callback to
+    call when the event is triggered.</div>
+    A <em>live event binder</em> that is triggered whenever a
+    <tt>Tab</tt> object becomes the currently selected tab.
+    <p>
+    This binder method is available on <tt>Tab</tt> objects and the
+    <tt>jetpack.tabs</tt> <em>live array</em>.
+    <p>
+    <em>Event handlers</em> registered with this event binder are
+    currently not passed any arguments. When called, their
+    <tt>this</tt> variable is set to the <tt>Tab</tt> object on
+    which the event was triggered.
+    <p>
+    The following example code uses the <tt>jetpack.tabs.onFocus</tt>
+    handler to display a notification message whenever the user
+    switches to a new tab.
+    <div class="example">
+jetpack.tabs.onFocus(function() {
+  jetpack.notifications.show("You selected " + this.url);
+  });
+    </div>
+  </div>
+  <div name="tab-onReady" class="property">
+    <div class="argument function" name="callback">The callback to
+    call when the event is triggered.</div>
+    A <em>live event binder</em> that is triggered whenever a
+    <tt>Tab</tt> object's containing <em>HTML document</em>, or one
+    of its sub-documents (e.g., an <tt>iframe</tt>), has finished
+    loading its DOM.  At a purely technical level, this is triggered
+    when the target document's <tt>DOMContentLoaded</tt> event is
+    fired.
+    <p>
+    This binder method is available on <tt>Tab</tt> objects and the
+    <tt>jetpack.tabs</tt> <em>live array</em>.
+    <p>
+    <em>Event handlers</em> registered with this event binder are
+    passed the <em>HTML document</em> of the object that triggered
+    the event. When called, their <tt>this</tt> variable is set to
+    the <tt>Tab</tt> object on which the event was triggered.
+    <p>
+    The following example code uses the <tt>jetpack.tabs.onReady</tt>
+    handler to display a notification message the next time the
+    user visits a page.
+    <div class="example">
+jetpack.tabs.onReady(function onNextPage(doc) {
+  if (!doc.defaultView.frameElement) {
+    jetpack.notifications.show("Loaded " + doc.location.href);
+    jetpack.tabs.onReady.unbind(onNextPage);
+  }});
+    </div>
+  </div>
+  <div name="url" class="glossary">
+    A JavaScript string representing a URL. For example,
+    <tt>"http:///www.imdb.com"</tt>.
+  </div>
+  <div name="string" class="glossary">
+    A standard immutable JavaScript string. For example,
+    <tt>"hai2u"</tt>.
+  </div>
+  <div name="options object" class="glossary">
+    A JavaScript Object representing the arguments to a
+    function, where each property of the object represents
+    the name and value of an argument.
+    <p>
+    An Options Object is useful when a function takes many arguments
+    whose order would be difficult to remember; it's especially useful
+    when some or all of those arguments are optional.
+  </div>
+  <div name="function" class="glossary">
+    A standard JavaScript function. For example,
+    <tt>function(x) { return x + 1; }</tt>.
+  </div>
+  <div name="html document" class="glossary">
+    This is the standard DOM document object, which is commonly
+    known within web pages as the <tt>document</tt> variable. If
+    you need to access the web page's <tt>window</tt> object through
+    its <tt>document</tt>, use <tt>document.defaultView</tt>.
+  </div>
+  <div name="event handlers" class="glossary">
+    An <em>event handler</em> is just a function that is called
+    whenever a particular event occurs. It's usually passed a single
+    argument that contains specific information about the event that
+    was triggered.
+  </div>
+  <div name="live event binder" class="glossary">
+    A <em>live event binder</em> is a method of a parent object,
+    usually beginning with the prefix <tt>on</tt>, which allows a
+    client to be notified, via a callback function, whenever an event
+    occurs on the parent object.
+    <p>
+    If the parent object is a <em>live array</em>, then the client is
+    notified whenever the relevant event is fired on any member of the
+    live array, <i>even if the member wasn't in the live array when
+    the event binding was created</i>. For an example of this, see
+    <tt>jetpack.tabs.onReady</tt>.
+    <p>
+    Every live event binder method itself has a method called
+    <tt>unbind</tt>, which can be passed a callback to unbind. For an
+    example, see <tt>jetpack.tabs.onReady</tt>.
+  </div>
