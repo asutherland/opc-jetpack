@@ -105,6 +105,28 @@ var App = {
     self.onShowTab(tabLink, content, null);
   },
 
+  activateDynamicButtons: function activateDynamicButtons(context) {
+    var loggingSource = $(".logging-source", context);
+    var tabLink = $(".tab-link", context);
+
+    if (window.console.isFirebug) {
+      loggingSource.text("Firebug Console");
+      loggingSource.addClass("buttony");
+      loggingSource.click(App.openFirebugConsole);
+    } else {
+      loggingSource.click(App.openJsErrorConsole);
+      loggingSource.addClass("buttony");
+      loggingSource.text("JS Error Console");
+    }
+
+    tabLink.addClass("buttony");
+    tabLink.click(
+      function() {
+        window.scroll(0, 0);
+        $("#container").triggerTab($(this).attr('name'));
+      });
+  },
+
   updateInstalledJetpackCount: function updateInstalledJetpackCount() {
     var count = $("#installed-jetpacks").children().length;
     var messages = $(".messages .installed-jetpacks");
@@ -523,6 +545,9 @@ $(window).ready(
     App.initTabs();
 
     window.setInterval(App.tick, 1000);
+
+    // Activate some unique dynamic buttons.
+
     $("#reload-editor-code").click(
       function() {
         JetpackRuntime.forceFeedUpdate(App.codeEditor.url);
@@ -536,6 +561,13 @@ $(window).ready(
 
     if (App.isFirefoxOld)
       $(".developer-warnings").append($("#old-firefox-version"));
+
+    if (window.console.isFirebug)
+      $(".developer-warnings").append($("#firebug-caveats"));
+    else
+      $(".developer-warnings").append($("#firebug-not-found"));
+
+    // Set up the feed management interface.
 
     JetpackRuntime.FeedPlugin.FeedManager.getSubscribedFeeds().forEach(
       function (feed) {
@@ -568,27 +600,13 @@ $(window).ready(
     watcher.add("unsubscribe", onFeedEvent);
     watcher.add("purge", onFeedEvent);
 
+    // Build the Tutorial/API pages.
+
     App.buildApiReference();
     App.enableExampleHacking();
 
-    if (window.console.isFirebug) {
-      $(".developer-warnings").append($("#firebug-caveats"));
-      $(".logging-source").text("Firebug Console");
-      $(".logging-source").addClass("buttony");
-      $(".logging-source").click(App.openFirebugConsole);
-    } else {
-      $(".developer-warnings").append($("#firebug-not-found"));
-      $(".logging-source").click(App.openJsErrorConsole);
-      $(".logging-source").addClass("buttony");
-      $(".logging-source").text("JS Error Console");
-    }
+    // Finish up.
 
-    $(".tab-link").addClass("buttony");
-    $(".tab-link").click(
-      function() {
-        window.scroll(0, 0);
-        $("#container").triggerTab($(this).attr('name'));
-      });
-
+    App.activateDynamicButtons(document);
     App.forceGC();
   });
