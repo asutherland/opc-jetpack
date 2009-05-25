@@ -37,6 +37,32 @@ function UrlFactory(baseUrl) {
   };
 }
 
+function addLazyLoader(url) {
+  var symbolNames = [];
+  for (var i = 1; i < arguments.length; i++)
+    symbolNames.push(arguments[i]);
+
+  var absoluteUrl = (new UrlFactory(document.baseURI)).makeUrl(url);
+
+  symbolNames.forEach(
+    function(name) {
+      window.__defineGetter__(
+        name,
+        function() {
+          // Remove all lazy getters.
+          symbolNames.forEach(function(name) { delete window[name]; });
+
+          var loader = Cc["@mozilla.org/moz/jssubscript-loader;1"]
+                       .getService(Ci.mozIJSSubScriptLoader);
+
+          // Import the script.
+          loader.loadSubScript(absoluteUrl);
+
+          return window[name];
+        });
+    });
+}
+
 function Dictionary() {
   MemoryTracking.track(this);
   var keys = [];

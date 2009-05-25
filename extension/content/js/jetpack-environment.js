@@ -41,6 +41,11 @@ JetpackEnv.addImporter(
     context.addUnloader(timers);
   });
 
+window.addLazyLoader("js/tabs.js",
+                     "EventListenerMixIns",
+                     "EventListenerMixIn",
+                     "Tabs");
+
 JetpackEnv.addImporter(
   "jetpack",
   function importTabs(context) {
