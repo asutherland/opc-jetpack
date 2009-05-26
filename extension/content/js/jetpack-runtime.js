@@ -224,16 +224,25 @@ var JetpackRuntime = {
       feeds.forEach(function(feed) { self.forceFeedUpdate(feed); });
     }
     window.setInterval(updateAllFeeds, self.FEED_UPDATE_INTERVAL);
-    updateAllFeeds();
   },
 
   loadJetpacks: function loadJetpacks() {
     var self = this;
 
+    var UrlUtils = {};
+    Components.utils.import("resource://jetpack/modules/url_utils.js",
+                            UrlUtils);
+
     var feeds = self.FeedPlugin.FeedManager.getSubscribedFeeds();
     feeds.forEach(
       function(feed) {
         if (feed.type == "jetpack") {
+          if (UrlUtils.isLocal(feed.srcUri)) {
+            // It's just local, so flush the cached copy and get the
+            // latest one.
+            feed.setCode("");
+            self.forceFeedUpdate(feed);
+          }
           self.contexts.push(new self.Context(feed));
         }
       });
