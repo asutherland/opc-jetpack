@@ -110,6 +110,7 @@ def remove_extension(options):
             os.remove(options.extension_file)
 
 INSTALL_OPTIONS = [("profile=", "p", "Profile name.")]
+JSBRIDGE_OPTIONS = [("port=", "p", "Port to use for jsbridge communication.")]
 
 @task
 @cmdopts(INSTALL_OPTIONS)
@@ -156,11 +157,7 @@ def xpi(options):
 options(virtualenv = Bunch(packages_to_install=['jsbridge', 'simplejson'],
                            no_site_packages=True))
 
-@task
-@cmdopts([("port=", "p", "Port to use for jsbridge communication.")])
-def run(options):
-    """Run Firefox in a temporary new profile with the extension installed."""
-
+def start_jsbridge(options):
     try:
         import mozrunner
         import jsbridge
@@ -184,12 +181,23 @@ def run(options):
     back_channel, bridge = jsbridge.wait_and_create_network("127.0.0.1",
                                                             options.port)
 
+    return Bunch(back_channel = back_channel,
+                 bridge = bridge,
+                 runner = runner)
+
+@task
+@cmdopts(JSBRIDGE_OPTIONS)
+def run(options):
+    """Run Firefox in a temporary new profile with the extension installed."""
+
+    parts = start_jsbridge(options)
+
     try:
         print "Now running, press Ctrl-C to stop."
-        runner.wait()
+        parts.runner.wait()
     except KeyboardInterrupt:
         print "Received interrupt, stopping."
-        runner.stop()
+        parts.runner.stop()
 
 @task
 def build_bootstrap_script(options):
