@@ -3,8 +3,6 @@
 import os
 import sys
 import xml.dom.minidom
-import subprocess
-import shutil
 import zipfile
 import shutil
 import distutils.dir_util
@@ -65,15 +63,6 @@ def get_install_rdf_property(path_to_extension_root, property):
     rdf = get_install_rdf_dom(path_to_extension_root)
     element = rdf.documentElement.getElementsByTagName(property)[0]
     return element.firstChild.nodeValue
-
-def run_program(args, **kwargs):
-    retval = subprocess.call(args, **kwargs)
-    if retval:
-        print "Process failed with exit code %d." % retval
-        sys.exit(retval)
-
-def run_python_script(args):
-    run_program([sys.executable] + args)
 
 if __name__ == "__main__":
     args = sys.argv[1:]
