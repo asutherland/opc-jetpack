@@ -158,7 +158,17 @@ var JetpackRuntime = {
         // TODO: Log the error?
       }
     };
-    req.send(null);
+    try {
+      req.send(null);
+    } catch (e) {
+      if (e.result == Components.results.NS_ERROR_FILE_NOT_FOUND)
+        console.error("Couldn't find", feed.srcUri.spec, "linked to from",
+                      feed.uri.spec, ". You may want to consider",
+                      "uninstalling the Jetpack feature.");
+      else
+        console.exception(e);
+      return null;
+    }
     return req;
   },
 
@@ -200,13 +210,17 @@ var JetpackRuntime = {
 
     this.cancelFeedUpdate(feed.uri.spec);
 
+    var req;
+
     if (feed.type == "jetpack") {
       if (UrlUtils.isLocal(feed.srcUri))
-        this._feedUpdates[feed.uri.spec] = this._getLocalFeed(feed);
+        req = this._getLocalFeed(feed);
       else if (UrlUtils.isRemote(feed.srcUri) &&
                feed.canAutoUpdate) {
-        this._feedUpdates[feed.uri.spec] = this._getRemoteFeed(feed);
+        req = this._getRemoteFeed(feed);
       }
+      if (req)
+        this._feedUpdates[feed.uri.spec] = req;
     }
   },
 
