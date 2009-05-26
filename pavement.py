@@ -83,7 +83,6 @@ def resolve_options(options, ext_subdir = EXT_SUBDIR):
                                               options.ext_id)
         # If cygwin, change the path to windows format so firefox can
         # understand it.
-
         if sys.platform == "cygwin":
             # TODO: Will this work if path_to_ext_root has spaces in it?
             file = 'cygpath.exe -w ' + options.path_to_ext_root
@@ -92,9 +91,6 @@ def resolve_options(options, ext_subdir = EXT_SUBDIR):
             options.firefox_path_to_ext_root = path
         else:
             options.firefox_path_to_ext_root = options.path_to_ext_root
-    else:
-        options.extension_file = None
-        options.firefox_path_to_ext_root = None
 
 def remove_extension(options):
     if not (options.profile_dir and
@@ -149,9 +145,7 @@ def xpi(options):
     resolve_options(options)
 
     zfname = "%s-%s.xpi" % (options.ext_name.lower(), options.ext_version)
-    zf = zipfile.ZipFile(zfname,
-                         "w",
-                         zipfile.ZIP_DEFLATED)
+    zf = zipfile.ZipFile(zfname, "w", zipfile.ZIP_DEFLATED)
     for dirpath, dirnames, filenames in os.walk(options.path_to_ext_root):
         for filename in filenames:
             abspath = os.path.join(dirpath, filename)
