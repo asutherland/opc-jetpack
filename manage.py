@@ -14,10 +14,6 @@ from ConfigParser import ConfigParser
 # located.
 EXT_SUBDIR = "extension"
 
-# Full path to xpcshell; if it's not an absolute path, it's assumed
-# to be on the user's PATH.
-g_xpcshell_path = "xpcshell"
-
 g_mydir = os.path.abspath(os.path.split(__import__("__main__").__file__)[0])
 
 def clear_dir(dirname):
@@ -79,28 +75,6 @@ def run_program(args, **kwargs):
 def run_python_script(args):
     run_program([sys.executable] + args)
 
-def get_xpcom_info():
-    cmdline = [
-        os.path.join(os.path.dirname(g_xpcshell_path),
-	             "run-mozilla.sh"),
-        g_xpcshell_path,
-        os.path.join(g_mydir, "get_xpcom_info.js")
-        ]
-    if not os.path.exists(cmdline[0]):
-        cmdline = cmdline[1:]
-    popen = subprocess.Popen(
-        cmdline,
-        stdout = subprocess.PIPE
-        )
-    retval = popen.wait()
-    assert retval == 0
-    os_target, xpcomabi = popen.stdout.read().splitlines()
-    comsd = os.path.join(os.path.dirname(g_xpcshell_path),
-                         "components")
-    return dict(comsd = comsd,
-                os_target = os_target,
-                xpcomabi = xpcomabi)
-
 if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
@@ -113,10 +87,6 @@ if __name__ == "__main__":
         print "    build-xpi - build an xpi of the addon"
         print
         sys.exit(1)
-
-    if os.environ.get("OBJDIR"):
-        g_xpcshell_path = os.path.join(os.environ["OBJDIR"],
-                                       "dist", "bin", g_xpcshell_path)
 
     path_to_extension_root = os.path.join(g_mydir, EXT_SUBDIR)
 
