@@ -516,7 +516,8 @@ var App = {
     this.exampleEditor.saveData('');
     if (!FeedManager.isSubscribedFeed(this.exampleEditor.url))
       this.exampleEditor.registerFeed(FeedManager);
-    JetpackRuntime.forceFeedUpdate(this.exampleEditor.url);
+    else
+      JetpackRuntime.forceFeedUpdate(this.exampleEditor.url);
   },
 
   enableExampleHacking: function enableExampleHacking(context) {
@@ -648,9 +649,4 @@ $(window).ready(
     // Finish up.
 
     App.forceGC();
-
-    $(window).unload(
-      function() {
-        App.hideExampleEditor();
-      });
   });
