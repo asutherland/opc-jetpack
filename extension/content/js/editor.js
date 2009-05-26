@@ -75,12 +75,10 @@ JetpackCodeEditor.prototype = {
   },
 
   registerFeed: function registerFeed(feedManager) {
-    // At least make sure the file exists before
-    // subscribing to it.
-    this.loadData();
     feedManager.addSubscribedFeed({url: this.url,
                                    type: "jetpack",
                                    sourceUrl: this.url,
+                                   sourceCode: this.loadData(),
                                    canAutoUpdate: true,
                                    isBuiltIn: true});
   }

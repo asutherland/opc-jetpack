@@ -59,7 +59,6 @@ var App = {
     var codeEditor = new JetpackCodeEditor(this.CODE_EDITOR_FILENAME);
     if (!FeedManager.isSubscribedFeed(codeEditor.url))
       codeEditor.registerFeed(FeedManager);
-    JetpackRuntime.forceFeedUpdate(codeEditor.url);
     App.codeEditor = codeEditor;
   },
 
