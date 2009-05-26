@@ -152,3 +152,10 @@ def xpi(options):
             arcpath = abspath[len(options.path_to_ext_root)+1:]
             zf.write(abspath, arcpath)
     print "Created %s." % zfname
+
+@task
+def auto(options):
+    # TODO: This is silly, we should just be displaying the actual help
+    # instead of telling the user to run the pavement file with help.
+    if options.get('args') is None:
+        print "Run '%s help' for help." % (sys.argv[0])
