@@ -1,4 +1,17 @@
 var Tests = {
+  // Whether we can start running the tests or not. Needed for
+  // jsbridge integration.
+  readyToRun: false,
+
+  // Results of last test, 0 if N/A. Needed for jsbridge integration.
+  lastResult: 0,
+
+  // Run the tests from jsbridge. Needed because jsbridge doesn't
+  // transmit 'this' properly.
+  runFromJsBridge: function runFromJsBridge() {
+    Tests.run();
+  },
+
   _hasImportedTestFiles: false,
 
   _listDir: function _listDir(dir) {
@@ -178,11 +191,16 @@ var Tests = {
 
       if (currentTest)
         self._runTest(currentTest, runNextTest);
-      else
+      else {
         console.log(succeeded, "out of", succeeded + failed,
                     "tests successful (", failed, "failed ).");
+        Tests.lastResult = {failed: failed,
+                            succeeded: succeeded};
+      }
     }
 
     runNextTest();
   }
 };
+
+$(window).load(function() { Tests.readyToRun = true; });

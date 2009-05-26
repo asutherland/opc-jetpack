@@ -200,6 +200,57 @@ def run(options):
         parts.runner.stop()
 
 @task
+@cmdopts(JSBRIDGE_OPTIONS)
+def test(options):
+    """Run test suite."""
+
+    parts = start_jsbridge(options)
+
+    import jsbridge
+    import time
+
+    code = (
+        "((function() { var thingy = {}; "
+        "Components.utils.import('resource://jetpack/modules/init.js', "
+        "thingy); return thingy; })())"
+        )
+
+    extension = jsbridge.JSObject(parts.bridge, code)
+
+    INTERVAL = 0.1
+
+    url = 'chrome://jetpack/content/index.html'
+    while extension.get(url) is None:
+        print "Waiting for index to load."
+        time.sleep(INTERVAL)
+
+    window = extension.get(url)
+
+    while not hasattr(window, 'Tests'):
+        print "Waiting for window.Tests to exist."
+        time.sleep(INTERVAL)
+
+    while not window.Tests.readyToRun:
+        print "Waiting for about:jetpack to be ready to run tests."
+        time.sleep(INTERVAL)
+
+    window.Tests.runFromJsBridge()
+
+    while window.Tests.lastResult == 0:
+        print "Waiting for tests to finish."
+        time.sleep(INTERVAL)
+
+    num_failed = window.Tests.lastResult.failed
+    num_succeeded = window.Tests.lastResult.succeeded
+
+    print "Tests failed: %d" % num_failed
+    print "Tests succeeded: %d" % num_succeeded
+
+    parts.runner.stop()
+    if num_failed > 0:
+        sys.exit(num_failed)
+
+@task
 def build_bootstrap_script(options):
     """Builds a bootstrap script with virtualenv in it."""
 

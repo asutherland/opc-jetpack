@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var EXPORTED_SYMBOLS = ["load", "set", "sessionStorage"];
+var EXPORTED_SYMBOLS = ["load", "set", "get", "sessionStorage"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -80,6 +80,13 @@ function onExtensionUnload(event) {
     load(url);
   } else
     log("Old extension is unloading at " + url + ".");
+}
+
+function get(url) {
+  if (url in extensions)
+    return extensions[url];
+  else
+    return null;
 }
 
 function set(window) {
