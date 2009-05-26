@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import os
 if os.path.exists("paver-minilib.zip"):
     import sys
