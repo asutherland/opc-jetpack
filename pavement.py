@@ -152,3 +152,52 @@ def xpi(options):
             arcpath = abspath[len(options.path_to_ext_root)+1:]
             zf.write(abspath, arcpath)
     print "Created %s." % zfname
+
+options(virtualenv = Bunch(packages_to_install=['jsbridge', 'simplejson'],
+                           no_site_packages=True))
+
+@task
+@cmdopts([("port=", "p", "Port to use for jsbridge communication.")])
+def run(options):
+    """Run Firefox in a temporary new profile with the extension installed."""
+
+    try:
+        import mozrunner
+        import jsbridge
+    except ImportError:
+        raise BuildFailure("Please run 'python bootstrap.py', followed "
+                           "by 'source bin/activate', and then run this "
+                           "command again.")
+
+    resolve_options(options)
+
+    if not options.get('port'):
+        options.port = '24242'
+    options.port = int(options.port)
+
+    plugins = [jsbridge.extension_path, options.path_to_ext_root]
+    profile = mozrunner.FirefoxProfile(plugins=plugins)
+    runner = mozrunner.FirefoxRunner(profile=profile,
+                                     cmdargs=["-jsbridge", str(options.port)])
+    runner.start()
+
+    back_channel, bridge = jsbridge.wait_and_create_network("127.0.0.1",
+                                                            options.port)
+
+    try:
+        print "Now running, press Ctrl-C to stop."
+        runner.wait()
+    except KeyboardInterrupt:
+        print "Received interrupt, stopping."
+        runner.stop()
+
+@task
+def build_bootstrap_script(options):
+    """Builds a bootstrap script with virtualenv in it."""
+
+    import paver.virtual
+
+    if paver.virtual.has_virtualenv:
+        paver.virtual.bootstrap()
+    else:
+        raise BuildFailure("virtualenv must be installed.")
