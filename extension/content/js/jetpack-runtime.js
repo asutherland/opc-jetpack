@@ -198,8 +198,9 @@ var JetpackRuntime = {
     Components.utils.import("resource://jetpack/modules/url_utils.js",
                             UrlUtils);
 
-    if (feed.type == "jetpack" &&
-        !(feed.uri.spec in this._feedUpdates)) {
+    this.cancelFeedUpdate(feed.uri.spec);
+
+    if (feed.type == "jetpack") {
       if (UrlUtils.isLocal(feed.srcUri))
         this._feedUpdates[feed.uri.spec] = this._getLocalFeed(feed);
       else if (UrlUtils.isRemote(feed.srcUri) &&
