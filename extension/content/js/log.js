@@ -25,7 +25,8 @@ var Logging = {
              });
         } catch (e) {
           try {
-            newObj.message = object.QueryInterface(Ci.nsIConsoleMessage);
+            newObj.message = object.QueryInterface(Ci.nsIConsoleMessage)
+                             .message;
           } catch (e) {
             newObj.message = object.toString();
           }
