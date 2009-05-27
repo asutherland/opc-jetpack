@@ -110,7 +110,8 @@ def remove_extension(options):
             os.remove(options.extension_file)
 
 INSTALL_OPTIONS = [("profile=", "p", "Profile name.")]
-JSBRIDGE_OPTIONS = [("port=", "p", "Port to use for jsbridge communication.")]
+JSBRIDGE_OPTIONS = [("port=", "p", "Port to use for jsbridge communication."),
+                    ("binary=", "b", "Path to Firefox binary.")]
 
 @task
 @cmdopts(INSTALL_OPTIONS)
@@ -171,10 +172,12 @@ def start_jsbridge(options):
     if not options.get('port'):
         options.port = '24242'
     options.port = int(options.port)
+    options.binary = options.get('binary')
 
     plugins = [jsbridge.extension_path, options.path_to_ext_root]
     profile = mozrunner.FirefoxProfile(plugins=plugins)
     runner = mozrunner.FirefoxRunner(profile=profile,
+                                     binary=options.binary,
                                      cmdargs=["-jsbridge", str(options.port)])
     runner.start()
 
