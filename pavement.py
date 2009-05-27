@@ -215,19 +215,25 @@ def test(options):
 
     import jsbridge
     import time
+    import threading
+
+    done_event = threading.Event()
+    result = Bunch()
 
     def listener(event_name, obj):
-        if event_name != 'jetpack:message':
-            return
-        if obj.get('isWarning', False):
-            print "[WARNING]: %s" % obj['message']
-        elif obj.get('isError', False):
-            print "[ERROR]  : %s" % obj['message']
-        else:
-            print "[message]: %s" % obj['message']
-        if obj.get('sourceName'):
-            print "           %s:L%s" % (obj['sourceName'],
-                                         obj.get('lineNumber', '?'))
+        if event_name == 'jetpack:message':
+            if obj.get('isWarning', False):
+                print "[WARNING]: %s" % obj['message']
+            elif obj.get('isError', False):
+                print "[ERROR]  : %s" % obj['message']
+            else:
+                print "[message]: %s" % obj['message']
+            if obj.get('sourceName'):
+                print "           %s:L%s" % (obj['sourceName'],
+                                             obj.get('lineNumber', '?'))
+        elif event_name == 'jetpack:result':
+            result.obj = obj
+            done_event.set()
 
     code = (
         "((function() { var extension = {}; "
@@ -239,6 +245,7 @@ def test(options):
     extension = jsbridge.JSObject(remote.bridge, code)
 
     INTERVAL = 0.1
+    MAX_TEST_RUN_TIME = 25.0
 
     is_done = False
 
@@ -271,19 +278,14 @@ def test(options):
 
     window.JSBridge.runTests()
 
-    while window.JSBridge.lastResult == 0:
-        #print "Waiting for tests to finish."
-        time.sleep(INTERVAL)
+    done_event.wait(MAX_TEST_RUN_TIME)
 
-    num_failed = window.JSBridge.lastResult.failed
-    num_succeeded = window.JSBridge.lastResult.succeeded
-
-    print "Tests failed: %d" % num_failed
-    print "Tests succeeded: %d" % num_succeeded
+    print "Tests failed: %d" % result.obj['failed']
+    print "Tests succeeded: %d" % result.obj['succeeded']
 
     remote.runner.stop()
-    if num_failed > 0:
-        sys.exit(num_failed)
+    if result.obj['failed'] > 0:
+        sys.exit(result.obj['failed'])
 
 @task
 def build_bootstrap_script(options):

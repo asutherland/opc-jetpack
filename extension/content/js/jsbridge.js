@@ -2,9 +2,6 @@ var JSBridge = {
   // Whether we can start communicating with the client or not.
   isReady: false,
 
-  // Results of last test, 0 if N/A.
-  lastResult: 0,
-
   get events() {
     delete this.events;
     this.events = {};
@@ -23,7 +20,7 @@ var JSBridge = {
     };
     Tests.run(
       function onDone(result) {
-        JSBridge.lastResult = result;
+        JSBridge.events.fireEvent('jetpack:result', result);
         cl.unload();
       });
   }
