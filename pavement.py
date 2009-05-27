@@ -209,6 +209,17 @@ def test(options):
     import jsbridge
     import time
 
+    def listener(event_name, obj):
+        if obj.get('isWarning', False):
+            print "[WARNING]: %s" % obj['message']
+        elif obj.get('isError', False):
+            print "[ERROR]  : %s" % obj['message']
+        else:
+            print "[message]: %s" % obj['message']
+        if obj.get('sourceName'):
+            print "           %s:L%s" % (obj['sourceName'],
+                                         obj.get('lineNumber', '?'))
+
     code = (
         "((function() { var thingy = {}; "
         "Components.utils.import('resource://jetpack/modules/init.js', "
@@ -217,27 +228,43 @@ def test(options):
 
     extension = jsbridge.JSObject(parts.bridge, code)
 
+    parts.back_channel.add_global_listener(listener)
+
     INTERVAL = 0.1
 
-    url = 'chrome://jetpack/content/index.html'
-    while extension.get(url) is None:
-        print "Waiting for index to load."
+    is_done = False
+
+    while not is_done:
         time.sleep(INTERVAL)
 
-    window = extension.get(url)
+        url = 'chrome://jetpack/content/index.html'
+        window = extension.get(url)
+        if window is None:
+            #print "Waiting for index to load."
+            continue
+        
+        if hasattr(window, 'frameElement'):
+            #print "Window is in an iframe."
+            continue
 
-    while not hasattr(window, 'Tests'):
-        print "Waiting for window.Tests to exist."
-        time.sleep(INTERVAL)
+        if window.closed:
+            #print "Window is closed."
+            continue
 
-    while not window.Tests.readyToRun:
-        print "Waiting for about:jetpack to be ready to run tests."
-        time.sleep(INTERVAL)
+        if not hasattr(window, 'Tests'):
+            #print "window.Tests does not exist."
+            continue
+
+        if not window.Tests.readyToRun:
+            #print "Waiting for about:jetpack to be ready to run tests."
+            continue
+
+        is_done = True
 
     window.Tests.runFromJsBridge()
 
     while window.Tests.lastResult == 0:
-        print "Waiting for tests to finish."
+        #print "Waiting for tests to finish."
         time.sleep(INTERVAL)
 
     num_failed = window.Tests.lastResult.failed

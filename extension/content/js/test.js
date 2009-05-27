@@ -9,7 +9,15 @@ var Tests = {
   // Run the tests from jsbridge. Needed because jsbridge doesn't
   // transmit 'this' properly.
   runFromJsBridge: function runFromJsBridge() {
-    Tests.run();
+    var events = {};
+    Components.utils.import('resource://jsbridge/modules/events.js',
+                            events);
+    var cl = new Logging.ConsoleListener();
+    cl.onMessage = function onMessage(msg) {
+      if (!(msg.sourceName && msg.sourceName.indexOf('http') == 0))
+        events.fireEvent('jetpack:message', msg);
+    };
+    Tests.run(function onDone() { cl.unload(); });
   },
 
   _hasImportedTestFiles: false,
@@ -133,7 +141,7 @@ var Tests = {
     }
   },
 
-  run: function run() {
+  run: function run(cb) {
     var self = this;
     var testSuites = {};
 
@@ -196,6 +204,8 @@ var Tests = {
                     "tests successful (", failed, "failed ).");
         Tests.lastResult = {failed: failed,
                             succeeded: succeeded};
+        if (cb)
+          cb();
       }
     }
 
