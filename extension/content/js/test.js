@@ -128,7 +128,7 @@ var Tests = {
       }
     };
     try {
-      test.func(runner);
+      test.func.call(test.suite, runner);
       if (timeoutId === null && finishedId === null) {
         console.info(test.name, "succeeded");
         finishedId = window.setTimeout(reportSuccess, 0);
@@ -162,10 +162,11 @@ var Tests = {
     for (name in testSuites) {
       var suite = testSuites[name];
       for (testName in suite)
-        tests.push({func: suite[testName],
-                    suite: suite,
-                    name: name + "." + testName,
-                    memoryErrorMargin: 0});
+        if (testName[0] != '_')
+          tests.push({func: suite[testName],
+                      suite: suite,
+                      name: name + "." + testName,
+                      memoryErrorMargin: 0});
     }
 
     var succeeded = 0;
