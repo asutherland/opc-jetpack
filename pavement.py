@@ -224,9 +224,9 @@ def test(options):
                                          obj.get('lineNumber', '?'))
 
     code = (
-        "((function() { var thingy = {}; "
+        "((function() { var extension = {}; "
         "Components.utils.import('resource://jetpack/modules/init.js', "
-        "thingy); return thingy; })())"
+        "extension); return extension; })())"
         )
 
     extension = jsbridge.JSObject(remote.bridge, code)
