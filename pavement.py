@@ -217,6 +217,8 @@ def test(options):
     import time
 
     def listener(event_name, obj):
+        if event_name != 'jetpack:message':
+            return
         if obj.get('isWarning', False):
             print "[WARNING]: %s" % obj['message']
         elif obj.get('isError', False):
@@ -233,9 +235,8 @@ def test(options):
         "extension); return extension; })())"
         )
 
-    extension = jsbridge.JSObject(remote.bridge, code)
-
     remote.back_channel.add_global_listener(listener)
+    extension = jsbridge.JSObject(remote.bridge, code)
 
     INTERVAL = 0.1
 
