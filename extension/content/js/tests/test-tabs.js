@@ -7,8 +7,13 @@ var TabsTests = {
 
   testMixInEventsBubble: function(self) {
     var tabs = new Tabs();
+    var url = "data:text/html,hello";
     tabs.tabs.onReady(
       function onReady(document) {
+        if (document.location.href != url)
+          // It's some other tab that loaded in the user's browser,
+          // ignore it.
+          return;
         tabs.tabs.onReady.unbind(onReady);
         self.assert(this, tab);
         self.assert($(document).text() == "hello");
@@ -16,7 +21,7 @@ var TabsTests = {
         tabs.unload();
         self.success();
       });
-    var tab = tabs.tabs.open("data:text/html,hello");
+    var tab = tabs.tabs.open(url);
     self.setTimeout(1000);
   },
 
