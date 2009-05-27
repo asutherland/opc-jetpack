@@ -175,7 +175,11 @@ def start_jsbridge(options):
     options.binary = options.get('binary')
 
     plugins = [jsbridge.extension_path, options.path_to_ext_root]
-    profile = mozrunner.FirefoxProfile(plugins=plugins)
+    profile = mozrunner.FirefoxProfile(
+        plugins=plugins,
+        preferences={'browser.startup.homepage' : 'about:blank',
+                     'startup.homepage_welcome_url' : 'about:blank'}
+        )
     runner = mozrunner.FirefoxRunner(profile=profile,
                                      binary=options.binary,
                                      cmdargs=["-jsbridge", str(options.port)])
