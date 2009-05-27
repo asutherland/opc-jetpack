@@ -1,25 +1,4 @@
 var Tests = {
-  // Whether we can start running the tests or not. Needed for
-  // jsbridge integration.
-  readyToRun: false,
-
-  // Results of last test, 0 if N/A. Needed for jsbridge integration.
-  lastResult: 0,
-
-  // Run the tests from jsbridge. Needed because jsbridge doesn't
-  // transmit 'this' properly.
-  runFromJsBridge: function runFromJsBridge() {
-    var events = {};
-    Components.utils.import('resource://jsbridge/modules/events.js',
-                            events);
-    var cl = new Logging.ConsoleListener();
-    cl.onMessage = function onMessage(msg) {
-      if (!(msg.sourceName && msg.sourceName.indexOf('http') == 0))
-        events.fireEvent('jetpack:message', msg);
-    };
-    Tests.run(function onDone() { cl.unload(); });
-  },
-
   _hasImportedTestFiles: false,
 
   _listDir: function _listDir(dir) {
@@ -203,15 +182,11 @@ var Tests = {
       else {
         console.log(succeeded, "out of", succeeded + failed,
                     "tests successful (", failed, "failed ).");
-        Tests.lastResult = {failed: failed,
-                            succeeded: succeeded};
         if (cb)
-          cb();
+          cb({failed: failed, succeeded: succeeded});
       }
     }
 
     runNextTest();
   }
 };
-
-$(window).load(function() { Tests.readyToRun = true; });

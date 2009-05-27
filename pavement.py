@@ -258,24 +258,24 @@ def test(options):
             #print "Window is closed."
             continue
 
-        if not hasattr(window, 'Tests'):
-            #print "window.Tests does not exist."
+        if not hasattr(window, 'JSBridge'):
+            #print "window.JSBridge does not exist."
             continue
 
-        if not window.Tests.readyToRun:
-            #print "Waiting for about:jetpack to be ready to run tests."
+        if not window.JSBridge.isReady:
+            #print "Waiting for about:jetpack to be ready."
             continue
 
         is_done = True
 
-    window.Tests.runFromJsBridge()
+    window.JSBridge.runTests()
 
-    while window.Tests.lastResult == 0:
+    while window.JSBridge.lastResult == 0:
         #print "Waiting for tests to finish."
         time.sleep(INTERVAL)
 
-    num_failed = window.Tests.lastResult.failed
-    num_succeeded = window.Tests.lastResult.succeeded
+    num_failed = window.JSBridge.lastResult.failed
+    num_succeeded = window.JSBridge.lastResult.succeeded
 
     print "Tests failed: %d" % num_failed
     print "Tests succeeded: %d" % num_succeeded
