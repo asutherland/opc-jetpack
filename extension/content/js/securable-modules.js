@@ -1,3 +1,17 @@
+// This is a really primitive and experimental implementation of
+// SecurableModules:
+//
+//   https://wiki.mozilla.org/ServerJS/Modules/SecurableModules
+//
+// At the moment, exported functions in modules are wrapped by
+// what's essentially a JSON bridge.  This means that the
+// arguments a function takes in need to be JSON-encodable (or
+// JS primitives), as does the function's return value.
+
+// This constructor creates a SecurableModule loader with one method,
+// require(), that can be used to load a module via a URL and
+// callback. The URL is absolutified via the UrlFactory passed in to
+// this constructor.
 function SecurableModuleLoader(urlFactory) {
   MemoryTracking.track(this);
 
