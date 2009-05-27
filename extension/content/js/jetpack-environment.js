@@ -118,3 +118,10 @@ JetpackEnv.addLazyLoader(
       }
     };
   });
+
+window.addLazyLoader("js/securable-modules.js", "SecurableModuleLoader");
+JetpackEnv.addLazyLoader(
+  "jetpack.require",
+  function(context) {
+    return (new SecurableModuleLoader(context.urlFactory)).require;
+  });
