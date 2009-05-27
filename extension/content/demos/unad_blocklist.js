@@ -34,6 +34,7 @@ function addRule( text ) {
     rules.push(rule);
 }
 
+// Process an AdBlock Plus blocklist.
 exports.process = function process(data) {
   data = data.split("\n");
   for each ( line in data ) {
@@ -42,6 +43,8 @@ exports.process = function process(data) {
   addRule( "doubleclick" );
 };
 
+// Return whether the given URL string represents an ad
+// that should be blocked.
 exports.match = function match( url ) {
   for each ( rule in rules) {
     if ( rule.exec(url) ) {
