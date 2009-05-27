@@ -193,21 +193,21 @@ def start_jsbridge(options):
 def run(options):
     """Run Firefox in a temporary new profile with the extension installed."""
 
-    parts = start_jsbridge(options)
+    remote = start_jsbridge(options)
 
     try:
         print "Now running, press Ctrl-C to stop."
-        parts.runner.wait()
+        remote.runner.wait()
     except KeyboardInterrupt:
         print "Received interrupt, stopping."
-        parts.runner.stop()
+        remote.runner.stop()
 
 @task
 @cmdopts(JSBRIDGE_OPTIONS)
 def test(options):
     """Run test suite."""
 
-    parts = start_jsbridge(options)
+    remote = start_jsbridge(options)
 
     import jsbridge
     import time
@@ -229,9 +229,9 @@ def test(options):
         "thingy); return thingy; })())"
         )
 
-    extension = jsbridge.JSObject(parts.bridge, code)
+    extension = jsbridge.JSObject(remote.bridge, code)
 
-    parts.back_channel.add_global_listener(listener)
+    remote.back_channel.add_global_listener(listener)
 
     INTERVAL = 0.1
 
@@ -276,7 +276,7 @@ def test(options):
     print "Tests failed: %d" % num_failed
     print "Tests succeeded: %d" % num_succeeded
 
-    parts.runner.stop()
+    remote.runner.stop()
     if num_failed > 0:
         sys.exit(num_failed)
 
