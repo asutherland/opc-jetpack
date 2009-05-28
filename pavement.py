@@ -161,8 +161,8 @@ options(virtualenv = Bunch(packages_to_install=['jsbridge', 'simplejson'],
                            no_site_packages=True))
 
 def start_jsbridge(options):
-    HELP_MSG = ("Please run 'python bootstrap.py', followed "
-                "by 'source bin/activate', and then run this "
+    HELP_MSG = ("Please run 'python bootstrap.py', then run "
+                "'source bin/activate', and then run this "
                 "command again.")
 
     try:
