@@ -161,9 +161,18 @@ options(virtualenv = Bunch(packages_to_install=['jsbridge', 'simplejson'],
                            no_site_packages=True))
 
 def start_jsbridge(options):
-    HELP_MSG = ("Please run 'python bootstrap.py', then run "
-                "'source bin/activate', and then run this "
-                "command again.")
+    HELP_MSG = ["",
+                "Please run the following command:",
+                "",
+                "  python bootstrap.py --no-site-packages --clear",
+                "",
+                "This will install a sandboxed Python environment in ",
+                "this directory. To activate the environment, run ",
+                "'source bin/activate', and then run this command again.",
+                "",
+                "If you ever need to deactivate the sandboxed Python ",
+                "environment, just run 'deactivate'."]
+    HELP_MSG = "\n".join(HELP_MSG)
 
     try:
         import pkg_resources
@@ -171,8 +180,8 @@ def start_jsbridge(options):
         try:
             pkg_resources.require('jsbridge>=2.0b1')
         except pkg_resources.VersionConflict:
-            raise BuildFailure("You have an incompatible version of " +
-                               "jsbridge. " + HELP_MSG)
+            raise BuildFailure("\nYou have an incompatible version of " +
+                               "jsbridge.\n" + HELP_MSG)
 
         import mozrunner
         import jsbridge
