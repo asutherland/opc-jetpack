@@ -10,6 +10,19 @@ var JSBridge = {
     return this.events;
   },
 
+  renderApiDocs: function renderApiDocs() {
+    var rawApiDocs = $("<div></div>");
+    var apiContent = $("<div></div>");
+    App.getLocalFile(
+      "raw-api-documentation.html",
+      function(html) {
+        rawApiDocs.html(html);
+        App.buildApiReference(rawApiDocs, apiContent);
+        $(".logging-source", apiContent).text("logging console");
+        JSBridge.events.fireEvent('jetpack:result', apiContent.html());
+      });
+  },
+
   // Run the tests from jsbridge. Needed because jsbridge doesn't
   // transmit 'this' properly.
   runTests: function runTests() {

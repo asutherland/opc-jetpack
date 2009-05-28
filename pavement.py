@@ -4,6 +4,8 @@ import xml.dom.minidom
 import zipfile
 import shutil
 import distutils.dir_util
+import time
+import threading
 from ConfigParser import ConfigParser
 
 from paver.easy import *
@@ -192,48 +194,10 @@ def start_jsbridge(options):
                  bridge = bridge,
                  runner = runner)
 
-@task
-@cmdopts(JSBRIDGE_OPTIONS)
-def run(options):
-    """Run Firefox in a temporary new profile with the extension installed."""
-
-    remote = start_jsbridge(options)
-
-    try:
-        print "Now running, press Ctrl-C to stop."
-        remote.runner.wait()
-    except KeyboardInterrupt:
-        print "Received interrupt, stopping."
-        remote.runner.stop()
-
-@task
-@cmdopts(JSBRIDGE_OPTIONS)
-def test(options):
-    """Run test suite."""
-
+def start_jetpack(options, listener):
     remote = start_jsbridge(options)
 
     import jsbridge
-    import time
-    import threading
-
-    done_event = threading.Event()
-    result = Bunch()
-
-    def listener(event_name, obj):
-        if event_name == 'jetpack:message':
-            if obj.get('isWarning', False):
-                print "[WARNING]: %s" % obj['message']
-            elif obj.get('isError', False):
-                print "[ERROR]  : %s" % obj['message']
-            else:
-                print "[message]: %s" % obj['message']
-            if obj.get('sourceName'):
-                print "           %s:L%s" % (obj['sourceName'],
-                                             obj.get('lineNumber', '?'))
-        elif event_name == 'jetpack:result':
-            result.obj = obj
-            done_event.set()
 
     code = (
         "((function() { var extension = {}; "
@@ -245,7 +209,7 @@ def test(options):
     extension = jsbridge.JSObject(remote.bridge, code)
 
     INTERVAL = 0.1
-    MAX_TEST_RUN_TIME = 25.0
+    MAX_STARTUP_TIME = 5.0
 
     is_done = False
     time_elapsed = 0.0
@@ -255,8 +219,8 @@ def test(options):
             time.sleep(INTERVAL)
             time_elapsed += INTERVAL
 
-            if time_elapsed > MAX_TEST_RUN_TIME:
-                raise Exception('Maximum test run time exceeded.')
+            if time_elapsed > MAX_STARTUP_TIME:
+                raise Exception('Maximum startup time exceeded.')
 
             url = 'chrome://jetpack/content/index.html'
             window = extension.get(url)
@@ -276,11 +240,84 @@ def test(options):
                 #print "Waiting for about:jetpack to be ready."
                 continue
             is_done = True
+    except:
+        remote.runner.stop()
+        raise
 
-        window.JSBridge.runTests()
+    remote.window = window
+    return remote
 
+@task
+@cmdopts(JSBRIDGE_OPTIONS)
+def run(options):
+    """Run Firefox in a temporary new profile with the extension installed."""
+
+    remote = start_jsbridge(options)
+
+    try:
+        print "Now running, press Ctrl-C to stop."
+        remote.runner.wait()
+    except KeyboardInterrupt:
+        print "Received interrupt, stopping."
+        remote.runner.stop()
+
+@task
+@cmdopts(JSBRIDGE_OPTIONS)
+def render_api_docs(options):
+    """Render the API documentation in HTML format."""
+
+    done_event = threading.Event()
+    result = Bunch()
+
+    def listener(event_name, obj):
+        if event_name == 'jetpack:result':
+            result.html = obj
+            done_event.set()
+
+    MAX_RENDER_RUN_TIME = 10.0
+
+    remote = start_jetpack(options, listener)
+
+    try:
+        remote.window.JSBridge.renderApiDocs()
+        done_event.wait(MAX_RENDER_RUN_TIME)
+        if not done_event.isSet():
+            raise Exception('Maximum render run time exceeded.')
+    finally:
+        remote.runner.stop()
+
+    print result.html
+
+@task
+@cmdopts(JSBRIDGE_OPTIONS)
+def test(options):
+    """Run test suite."""
+
+    done_event = threading.Event()
+    result = Bunch()
+
+    def listener(event_name, obj):
+        if event_name == 'jetpack:message':
+            if obj.get('isWarning', False):
+                print "[WARNING]: %s" % obj['message']
+            elif obj.get('isError', False):
+                print "[ERROR]  : %s" % obj['message']
+            else:
+                print "[message]: %s" % obj['message']
+            if obj.get('sourceName'):
+                print "           %s:L%s" % (obj['sourceName'],
+                                             obj.get('lineNumber', '?'))
+        elif event_name == 'jetpack:result':
+            result.obj = obj
+            done_event.set()
+
+    MAX_TEST_RUN_TIME = 25.0
+
+    remote = start_jetpack(options, listener)
+
+    try:
+        remote.window.JSBridge.runTests()
         done_event.wait(MAX_TEST_RUN_TIME)
-
         if not done_event.isSet():
             raise Exception('Maximum test run time exceeded.')
     finally:
