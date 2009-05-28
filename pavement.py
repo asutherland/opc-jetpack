@@ -161,13 +161,23 @@ options(virtualenv = Bunch(packages_to_install=['jsbridge', 'simplejson'],
                            no_site_packages=True))
 
 def start_jsbridge(options):
+    HELP_MSG = ("Please run 'python bootstrap.py', followed "
+                "by 'source bin/activate', and then run this "
+                "command again.")
+
     try:
+        import pkg_resources
+
+        try:
+            pkg_resources.require('jsbridge>=2.0b1')
+        except pkg_resources.VersionConflict:
+            raise BuildFailure("You have an incompatible version of " +
+                               "jsbridge. " + HELP_MSG)
+
         import mozrunner
         import jsbridge
     except ImportError:
-        raise BuildFailure("Please run 'python bootstrap.py', followed "
-                           "by 'source bin/activate', and then run this "
-                           "command again.")
+        raise BuildFailure(HELP_MSG)
 
     resolve_options(options)
 
