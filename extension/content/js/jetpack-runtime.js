@@ -122,6 +122,16 @@ var JetpackRuntime = {
     this.addJetpack(url);
   },
 
+  unloaders: [],
+
+  addUnloader: function addUnloader(unload) this.unloaders.push(unload),
+
+  unloadRuntime: function unloadRuntime() {
+    // Run each unloader function now that we're about to quit
+    this.unloaders.forEach(function(unload) unload.call(JetpackRuntime));
+    this.unloaders = [];
+  },
+
   unloadAllJetpacks: function unloadAllJetpacks() {
     this.contexts.forEach(
       function(jetpack) {
@@ -266,7 +276,8 @@ var JetpackRuntime = {
   FeedPlugin: {}
 };
 
-Extension.addUnloadMethod(JetpackRuntime, JetpackRuntime.unloadAllJetpacks);
+JetpackRuntime.addUnloader(JetpackRuntime.unloadAllJetpacks);
+Extension.addUnloadMethod(JetpackRuntime, JetpackRuntime.unloadRuntime);
 
 Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
                         JetpackRuntime.FeedPlugin);
