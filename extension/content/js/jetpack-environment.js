@@ -106,6 +106,23 @@ JetpackEnv.addImporter(
     };
   });
 
+window.addLazyLoader("js/slidebar.js", "SlideBar");
+JetpackEnv.addLazyLoader("jetpack.slideBar", function(context) {
+  // Make sure the SlideBar is ready for this context
+  SlideBar.init();
+  SlideBar.load(context);
+
+  // When unloading the context, inform SlideBar which one it is
+  context.addUnloader({
+    unload: function() SlideBar.unload(context)
+  });
+
+  // Export functions while letting SlideBar know which context is used
+  return {
+    append: function(args) SlideBar.append(context, args)
+  };
+});
+
 window.addLazyLoader("js/status-bar-panel.js", "StatusBar");
 JetpackEnv.addLazyLoader(
   "jetpack.statusBar",

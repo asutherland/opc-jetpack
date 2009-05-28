@@ -1,0 +1,4 @@
+hbox#browser {
+  display: -moz-stack;
+  -moz-binding: url(chrome://jetpack/content/slidebar.xml#stack);
+}
