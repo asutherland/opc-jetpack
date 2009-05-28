@@ -11,12 +11,11 @@
 var stash = jetpack.sessionStorage;
 if( !stash.history ) stash.history = [jetpack.tabs.length]
 
-var tabCount = jetpack.tabs.length;
 var data = null;
 var legend = null;
 
-function updateTabCount(){
-  stash.history.push( tabCount );
+function updateGraph(){
+  stash.history.push( jetpack.tabs.length );
   
   if( stash.history.length > 400 )
     stash.history = stash.history.slice( 1 );
@@ -25,9 +24,9 @@ function updateTabCount(){
   legend.text( tabCount );
 }
 
-jetpack.tabs.onOpen(function(){ tabCount++; updateTabCount(); });
-jetpack.tabs.onClose(function(){ tabCount--; updateTabCount(); });
-jetpack.tabs.onFocus(function(){ updateTabCount(); });
+jetpack.tabs.onOpen( updateGraph );
+jetpack.tabs.onClose( updateGraph );
+jetpack.tabs.onFocus( updateGraph );
 
 jetpack.statusBar.append({
   url: "statusbar.html",
