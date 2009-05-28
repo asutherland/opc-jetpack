@@ -248,42 +248,47 @@ def test(options):
     MAX_TEST_RUN_TIME = 25.0
 
     is_done = False
+    time_elapsed = 0.0
 
-    while not is_done:
-        time.sleep(INTERVAL)
+    try:
+        while not is_done:
+            time.sleep(INTERVAL)
+            time_elapsed += INTERVAL
 
-        url = 'chrome://jetpack/content/index.html'
-        window = extension.get(url)
-        if window is None:
-            #print "Waiting for index to load."
-            continue
-        
-        if hasattr(window, 'frameElement'):
-            #print "Window is in an iframe."
-            continue
+            if time_elapsed > MAX_TEST_RUN_TIME:
+                raise Exception('Maximum test run time exceeded.')
 
-        if window.closed:
-            #print "Window is closed."
-            continue
+            url = 'chrome://jetpack/content/index.html'
+            window = extension.get(url)
+            if window is None:
+                #print "Waiting for index to load."
+                continue        
+            if hasattr(window, 'frameElement'):
+                #print "Window is in an iframe."
+                continue
+            if window.closed:
+                #print "Window is closed."
+                continue
+            if not hasattr(window, 'JSBridge'):
+                #print "window.JSBridge does not exist."
+                continue
+            if not window.JSBridge.isReady:
+                #print "Waiting for about:jetpack to be ready."
+                continue
+            is_done = True
 
-        if not hasattr(window, 'JSBridge'):
-            #print "window.JSBridge does not exist."
-            continue
+        window.JSBridge.runTests()
 
-        if not window.JSBridge.isReady:
-            #print "Waiting for about:jetpack to be ready."
-            continue
+        done_event.wait(MAX_TEST_RUN_TIME)
 
-        is_done = True
-
-    window.JSBridge.runTests()
-
-    done_event.wait(MAX_TEST_RUN_TIME)
+        if not done_event.isSet():
+            raise Exception('Maximum test run time exceeded.')
+    finally:
+        remote.runner.stop()
 
     print "Tests failed: %d" % result.obj['failed']
     print "Tests succeeded: %d" % result.obj['succeeded']
 
-    remote.runner.stop()
     if result.obj['failed'] > 0:
         sys.exit(result.obj['failed'])
 
