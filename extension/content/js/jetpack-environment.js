@@ -46,6 +46,12 @@ var JetpackEnv = {
   }
 };
 
+// == Globals ==
+//
+// These are globals in two senses: the first obvious one is that they're
+// in the global scope of all Jetpacks.  The second is that they're
+// actually //shared globally// between all Jetpacks.
+
 JetpackEnv.addGlobal("console", console);
 JetpackEnv.addGlobal("jQuery", jQuery);
 JetpackEnv.addGlobal("$", jQuery);
@@ -61,6 +67,18 @@ JetpackEnv.addGlobal(
     // caller, not us.
     MemoryTracking.track(obj, name, 1);
   });
+
+// == Importers and Lazy Loaders ==
+//
+// An //Importer// is simply a function that the Jetpack Runtime calls to add
+// a property to the global namespace of a Jetpack Context.  The Importer
+// has the ability to interact with the Jetpack Context it's augmenting,
+// including adding //Unloader// objects to unload any resources taken
+// up by the importer when the Jetpack Context is unloaded.
+//
+// A //Lazy Loader// is just a special type of Importer that is
+// instantiated only when a Jetpack tries to access the global
+// property the Lazy Loader provides.
 
 JetpackEnv.addImporter(
   function importTimers(context) {
@@ -126,12 +144,12 @@ JetpackEnv.addLazyLoader("jetpack.slideBar", function(context) {
 
   // When unloading the context, inform SlideBar which one it is
   context.addUnloader({
-    unload: function() SlideBar.unload(context)
+    unload: function() { SlideBar.unload(context); }
   });
 
   // Export functions while letting SlideBar know which context is used
   return {
-    append: function(args) SlideBar.append(context, args)
+    append: function(args) { SlideBar.append(context, args); }
   };
 });
 
