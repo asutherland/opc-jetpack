@@ -1,3 +1,15 @@
+// = Jetpack Environment =
+//
+// The Jetpack Environment contained in {{{JetpackEnv}}} defines the
+// global namespace that all Jetpacks have access to.
+//
+// {{{JetpackEnv}}} tries to lazy-load everything it can, so that
+// a resource is loaded only if a particular Jetpack asks for it;
+// this means that Jetpacks which don't need to do much don't take
+// up much memory, and Jetpacks which need lots of functionality
+// have instant access to it without needing to explicitly
+// import anything.
+
 var JetpackEnv = {
   importers: {},
   globals: {},
