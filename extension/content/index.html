@@ -82,16 +82,13 @@
     <p><span class="buttony" id="reload-editor-code">try out this
     code</span></p>
 
-    <p>If you want to hack on the Jetpack platform itself, the vast
-    majority of it is contained in the <span class="buttony"
-    id="this-page-source-code">source code for this page</span>. Just make
-    local changes to the file or one of the scripts it refers to and
-    reload this page.</p>
-
+    <img src="gfx/jetpack_architecture.png" style="float: right;">
     <h2>About This Page</h2>
-    <p>This page actually houses the Jetpack platform. All your Jetpacks
-    are loaded in this page, and you can even use Firebug to inspect
-    their current state.</p>
+    <p>This page houses the <i>Jetpack Runtime</i>. All your
+    Jetpacks are loaded into their own <i>Jetpack Contexts</i> within
+    the Runtime, and you can even use Firebug to inspect their current
+    state. Just try entering <code>JetpackRuntime.contexts</code> in
+    your Firebug console!</p>
     <p>As a result, the lifetime of your Jetpacks is tied to the
     lifetime of this page. When you reload this page, for instance, all
     your Jetpacks are reloaded. This means that the time between making
@@ -105,8 +102,13 @@
     obviously need to be able to use their Jetpacks without having
     Jetpack open in a tab.  If you close the Jetpack tab, it'll actually
     re-open in a hidden browser that you can't see.</p> 
-  </div>
-  
+    <h2>Modifying The Platform</h2>
+    <p>If you want to hack on the Jetpack platform itself, the vast
+    majority of it is contained in the <span class="buttony"
+    id="this-page-source-code">source code for this page</span>. Just make
+    local changes to the file or one of the scripts it refers to and
+    reload this page.</p>
+  </div>  
   
   <!-- INSTALLED FEATURES TAB -->
   
