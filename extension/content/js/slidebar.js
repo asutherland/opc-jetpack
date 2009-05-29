@@ -205,16 +205,16 @@ let SlideBar = let (T = {
           let x = event.screenX - content.boxObject.screenX;
           let diff = event.screenX - W.mouse.pos;
 
-          // If we're closed, close to the left, and moving left..
+          // Might want to open if we're closed
           if (W.state.size == 0) {
-            let near = function(left, thresh) x < left && diff < thresh;
-            if (near(64, -16) || near(128, -128))
+            // Open if the pointer is close to the edge and moving fast
+            if (x < 16 && diff < -64)
               W.slide(32);
           }
-          // If we're not staying open, far from the left, and moving right..
+          // Might want to close if we're transiently open
           else if (!W.state.persist) {
-            let near = function(left, thresh) x > left && diff > thresh;
-            if (near(512, 16) || near(256, 128))
+            // Any motion to the right will close
+            if (diff > 16)
               W.slide(0);
           }
         }
