@@ -5,8 +5,9 @@ function Timers(impl) {
   var intervals = {};
 
   this.setInterval = function(cb, ms) {
+    var args = Array.slice(arguments, 2);
     function cbWrapper() {
-      cb();
+      cb.apply(null, args);
     }
     var id = impl.setInterval(cbWrapper, ms);
     intervals[id] = cbWrapper;
@@ -21,9 +22,10 @@ function Timers(impl) {
   };
 
   this.setTimeout = function(cb, ms) {
+    var args = Array.slice(arguments, 2);
     function cbWrapper() {
       delete timeouts[id];
-      cb();
+      cb.apply(null, args);
     }
     var id = impl.setTimeout(cbWrapper, ms);
     timeouts[id] = cbWrapper;
