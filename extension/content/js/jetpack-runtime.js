@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// == Jetpack Runtime ==
+// = Jetpack Runtime =
 //
 // This is the singleton that manages the loading, execution, and
 // unloading of all Jetpacks the user has installed.
@@ -43,7 +43,7 @@ var JetpackRuntime = {
   // Just so we show up as some class when introspected.
   constructor: function JetpackRuntime() {},
 
-  // === Contexts ===
+  // == Contexts ==
   //
   // A Jetpack Context contains all information about a single installed
   // Jetpack.  The {{{JetpackRuntime.contexts}}} array is a registry of
@@ -191,7 +191,7 @@ var JetpackRuntime = {
     this.contexts = [];
   },
 
-  // === The Feed Update Loop ===
+  // == The Feed Update Loop ==
   //
   // The feed update loop checks for updates to installed Jetpacks
   // at a regular interval.
@@ -343,7 +343,7 @@ Extension.addUnloadMethod(JetpackRuntime, JetpackRuntime.unloadRuntime);
 Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
                         JetpackRuntime.FeedPlugin);
 
-// === Initialization ===
+// == Initialization ==
 //
 // When the host window is ready, we initialize the Jetpack Runtime,
 // load all Jetpacks, and start the feed update loop.
