@@ -35,10 +35,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 //// SlideBar
 
+// = SlideBar =
+//
+// This static singleton module handles appending of SlideBar features as well
+// as animating the SlideBar in each browser window. SlideBar keeps track of
+// each Jetpack context (and each of its appended features) as well as each
+// browser window so that each feature is instantiated for each browser.
+
 let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackEnv
 
+  // ==== {{{SlideBar.append}}} ====
+  // Append a new feature to SlideBar for the context and feature args
   append: function SlideBar_append(context, args) {
     // Remember which features have been appended
     context.slideBar.appends.push(args);
@@ -50,8 +59,12 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackRuntime
 
+  // ==== {{{SlideBar.watcher}}} ====
+  // BrowserWatcher to detect when windows are loaded and unloaded
   watcher: null,
 
+  // ==== {{{SlideBar.init()}}} ====
+  // Called (once) to initialize the singleton on first access
   init: function SlideBar_init() {
     // We should only run once, so set ourselves to do nothing
     T.init = function() {};
@@ -61,6 +74,8 @@ let SlideBar = let (T = {
     T.watcher = new BrowserWatcher(T);
   },
 
+  // ==== {{{SlideBar.uninit()}}} ====
+  // Clean up the singleton when the runtime is quitting
   uninit: function SlideBar_uninit() {
     // Unload the watcher to trigger browser unloads
     T.watcher.unload();
@@ -70,19 +85,34 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackContext
 
+  // ==== {{{SlideBar.contexts}}} ====
+  // Track each JetpackContext that uses SlideBar
   contexts: [],
 
+  // ==== {{{SlideBar.load()}}} ====
+  // Prepare the JetpackContext for use with SlideBar
   load: function SlideBar_load(context) {
     // Keep track of all contexts to add their features to new windows
     T.contexts.push(context);
 
+    // == Context ==
+    // Extend the JetpackContext with custom SlideBar properties to remember
+    // which features were appended and all live instances of the features.
+
     // Inject SlideBar data to the context
     context.slideBar = {
+      // ==== {{{Context.appends}}} ====
+      // All the appended options from the context
       appends: [],
+
+      // ==== {{{Context.features}}} ====
+      // All the feature instances across all windows for the context
       features: []
     };
   },
 
+  // ==== {{{SlideBar.unload()}}} ====
+  // Handle the removal of a context (it might be reloading)
   unload: function SlideBar_unload(context) {
     // Remove all feature instances for this context
     T.removeFeatures(context.slideBar.features);
@@ -94,8 +124,12 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// BrowserWatcher
 
+  // ==== {{{SlideBar.windows}}} ====
+  // Track each browser window that has a SlideBar
   windows: [],
 
+  // ==== {{{SlideBar.onLoad()}}} ====
+  // Handle the load of a new browser window and add features to it
   onLoad: function SlideBar_onLoad(window) {
     // Keep track of all windows to add features to them later
     T.windows.push(window);
@@ -103,9 +137,19 @@ let SlideBar = let (T = {
     let doc = window.document.getElementById("slidebar").contentWindow.document;
     let content = window.document.getElementById("_browser");
 
+    // == Window ==
+    // Extend the browser window with custom SlideBar properties such as its
+    // SlideBar and content area plus track animation progress and mouse moves
+
     // Inject SlideBar data to the window
     let W = window.slideBar = {
+      // ==== {{{Window.content}}} ====
+      // Alias to the original browser content area
       content: content,
+
+      // ==== {{{Window.ease}}} ====
+      // Status of the easing animation such as left/right current, starting and
+      // ending positions as well as timing
       ease: {
         curr: [0, 0],
         end: null,
@@ -113,20 +157,43 @@ let SlideBar = let (T = {
         time: null,
         timer: null
       },
+
+      // ==== {{{Window.features}}} ====
+      // All the feature instances across all contexts for the window
       features: [],
+
+      // ==== {{{Window.icons}}} ====
+      // Alias to the icons container in the browser's SlideBar
       icons: doc.getElementById("icons"),
+
+      // ==== {{{Window.iframes}}} ====
+      // Alias to the iframes container in the browser's SlideBar
       iframes: doc.getElementById("iframes"),
+
+      // ==== {{{Window.mouse}}} ====
+      // Mouse stats such as last position recorded
       mouse: {
         pos: null,
         timer: null
       },
+
+      // ==== {{{Window.shown}}} ====
+      // Currently shown feature in the browser's SlideBar
       shown: null,
+
+      // ==== {{{Window.}}} ====
+      // Alias to the browser's SlideBar's document
       slideDoc: doc,
+
+      // ==== {{{Window.state}}} ====
+      // Current state of the browser's Slidebar position
       state: {
         persist: false,
         size: 0
       },
 
+      // ==== {{{Window.onMouseMove()}}} ====
+      // Handle the user moving the mouse over the browser content area
       onMouseMove: function Window_onMouseMove(event) {
         // Don't bother sliding if there's nothing to show
         if (W.features.length == 0)
@@ -163,6 +230,8 @@ let SlideBar = let (T = {
         }
       },
 
+      // ==== {{{Window.selectFeature()}}} ====
+      // Select the provided feature and unselect the previous one
       selectFeature: function Window_selectFeature(feature) {
         // Don't bother doing anything if we're already showing it
         if (W.shown == feature)
@@ -188,6 +257,8 @@ let SlideBar = let (T = {
         }
       },
 
+      // ==== {{{Window.slide()}}} ====
+      // Slide the browser's SlideBar to the given size and persist state
       slide: function Window_slide(size, persist) {
         // Only handle number slide sizes
         if (typeof size != "number")
@@ -252,6 +323,8 @@ let SlideBar = let (T = {
       function(args) T.addFeature(context, args, window)));
   },
 
+  // ==== {{{SlideBar.onUnload()}}} ====
+  // Handle the unload of a browser to remove features from it
   onUnload: function SlideBar_onUnload(window) {
     let winBar = window.slideBar;
     // Remove listeners on unload
@@ -267,12 +340,20 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// SlideBar
 
+  // ==== {{{SlideBar.addFeature()}}} ====
+  // Add the appended options for the context to the window
   addFeature: function SlideBar_addFeature(context, args, window) {
     let winBar = window.slideBar;
 
+    // == Feature ==
     // Create a new instance of the feature for the context and window
     let F = {
+      // ==== {{{Feature.args}}} ====
+      // Remember the original args used to append the feature
       args: args,
+
+      // ==== {{{Feature.cbArgs()}}} ====
+      // Provide a function object for all SlideBar callbacks
       cbArgs: function Feature_cbArgs(options) {
         options = options || {};
 
@@ -282,13 +363,30 @@ let SlideBar = let (T = {
         else
           winBar.slide(0);
       },
+
+      // ==== {{{Feature.context}}} ====
+      // Remember which context the feature belongs to
       context: context,
+
+      // ==== {{{Feature.icon}}} ====
+      // Icon object for the minimal SlideBar view
       icon: null,
+
+      // ==== {{{Feature.iframe}}} ====
+      // Iframe object for the expanded SlideBar view
       iframe: null,
+
+      // ==== {{{Feature.window}}} ====
+      // Remember which window the feature belongs to
       window: window
     };
 
+    // ==== {{{Feature.cbArgs.icon}}}
+    // Alias to the actual img node of the icon
     F.cbArgs.__defineGetter__("icon", function() F.icon.firstChild);
+
+    // ==== {{{Feature.cbArgs.doc}}}
+    // Alias to the actual document of the iframe
     F.cbArgs.__defineGetter__("doc", function() F.iframe.contentDocument);
 
     let makeEl = function(type) winBar.slideDoc.createElement(type);
@@ -327,6 +425,8 @@ let SlideBar = let (T = {
     window.slideBar.features.push(F);
   },
 
+  // ==== {{{SlideBar.catchCall()}}} ====
+  // Call the named function of an object with any arguments if it exists
   catchCall: function SlideBar_catchCall(obj, func /* , arg1, arg2, .. */) {
     // Convert object property function names to the function
     if (typeof func == "string")
@@ -343,13 +443,16 @@ let SlideBar = let (T = {
     }
   },
 
+  // ==== {{{SlideBar.removeItem()}}} ====
+  // Remove the item from the array if it exists
   removeItem: function SlideBar_removeItem(array, item) {
-    // Remove the item from the array if it exists
     let idx = array.indexOf(item);
     if (idx != -1)
       array.splice(idx, 1);
   },
 
+  // ==== {{{SlideBar.removeFeature()}}} ====
+  // Remove a given feature instance from its window and context
   removeFeature: function SlideBar_removeFeature(feature) {
     // Close if the feature is being removed
     let winBar = feature.window.slideBar;
@@ -368,6 +471,8 @@ let SlideBar = let (T = {
     T.removeItem(feature.window.slideBar.features, feature);
   },
 
+  // ==== {{{SlideBar.removeFeatures()}}} ====
+  // Remove all features given an array of features
   removeFeatures: function SlideBar_removeFeatures(features) {
     // Make a copy of the array as it might change as we remove features
     features.slice().forEach(function(feature) T.removeFeature(feature));
