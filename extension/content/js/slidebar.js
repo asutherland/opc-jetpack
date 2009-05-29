@@ -163,7 +163,7 @@ let SlideBar = let (T = {
         }
       },
 
-      selectFeature: function Browser_selectFeature(feature) {
+      selectFeature: function Window_selectFeature(feature) {
         // Don't bother doing anything if we're already showing it
         if (W.shown == feature)
           return;
@@ -273,7 +273,7 @@ let SlideBar = let (T = {
     // Create a new instance of the feature for the context and window
     let F = {
       args: args,
-      cbArgs: function(options) {
+      cbArgs: function Feature_cbArgs(options) {
         options = options || {};
 
         let size = Number(options.size);
