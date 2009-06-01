@@ -14,7 +14,7 @@ parameter:
   python manage.py install --profile=testing
 
 Using Jetpack
---------------
+-------------
 
 Once Jetpack has been installed, you should be able to start up
 Firefox and the 'about:jetpack' page should load. Just read the
