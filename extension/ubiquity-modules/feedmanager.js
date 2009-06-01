@@ -346,7 +346,7 @@ FMgrProto.showNotification = function showNotification(plugin, targetDoc, comman
     box.appendNotification(
       notify_message,
       BOX_NAME,
-      "http://www.mozilla.com/favicon.ico",
+      "chrome://jetpack/content/gfx/jetpack_32x32.png",
       box.PRIORITY_INFO_MEDIUM,
       buttons
     );
