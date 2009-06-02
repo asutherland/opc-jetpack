@@ -137,6 +137,14 @@ let SlideBar = let (T = {
     let doc = window.document.getElementById("slidebar").contentWindow.document;
     let content = window.document.getElementById("_browser");
 
+    // Add an image as a target area for the SlideBar
+    let slideButton = window.document.createElement("slideButton");
+    slideButton.style.height = slideButton.style.width = "11px";
+    slideButton.style.margin = "7px 2px";
+
+    let tabStrip = window.document.getElementById("content").mStrip;
+    tabStrip.insertBefore(slideButton, tabStrip.firstChild);
+
     // == Window ==
     // Extend the browser window with custom SlideBar properties such as its
     // SlideBar and content area plus track animation progress and mouse moves
@@ -173,7 +181,8 @@ let SlideBar = let (T = {
       // ==== {{{Window.mouse}}} ====
       // Mouse stats such as last position recorded
       mouse: {
-        pos: null,
+        posX: null,
+        posY: null,
         timer: null
       },
 
@@ -181,14 +190,26 @@ let SlideBar = let (T = {
       // Currently shown feature in the browser's SlideBar
       shown: null,
 
-      // ==== {{{Window.}}} ====
+      // === {{{Window.slideButton}}} ===
+      // Button shown in chrome UI to toggle the SlideBar
+      slideButton: slideButton,
+
+      // === {{{Window.slideButtonLeft}}} ===
+      // Image to show when the SlideBar should go left
+      slideButtonLeft: "chrome://jetpack/content/gfx/arrowLeft.png",
+
+      // === {{{Window.slideButtonRight}}} ===
+      // Image to show when the SlideBar should go right
+      slideButtonRight: "chrome://jetpack/content/gfx/arrowRight.png",
+
+      // ==== {{{Window.doc}}} ====
       // Alias to the browser's SlideBar's document
       slideDoc: doc,
 
       // ==== {{{Window.state}}} ====
       // Current state of the browser's Slidebar position
       state: {
-        persist: false,
+        persist: null,
         size: 0
       },
 
@@ -200,31 +221,35 @@ let SlideBar = let (T = {
           return;
 
         // We can calculate movement if we have another point
-        if (W.mouse.pos != null) {
+        if (W.mouse.posX != null) {
           // Calculate the pointer position and movement
           let x = event.screenX - content.boxObject.screenX;
-          let diff = event.screenX - W.mouse.pos;
+          let y = event.screenY - content.boxObject.screenY;
+          let diffX = event.screenX - W.mouse.posX;
+          let diffY = event.screenY - W.mouse.posY;
 
           // Might want to open if we're closed
           if (W.state.size == 0) {
-            // Open if the pointer is close to the edge and moving fast
-            if (x < 16 && diff < -64)
+            // Open if the pointer is moving to the top left
+            if (x < 32 && y < 32 && (diffX < -32 || diffY < -32))
               W.slide(32);
           }
           // Might want to close if we're transiently open
           else if (!W.state.persist) {
             // Any motion to the right will close
-            if (diff > 16)
+            if (diffX > 16)
               W.slide(0);
           }
         }
         else {
           // Save where and when we started
-          W.mouse.pos = event.screenX;
+          W.mouse.posX = event.screenX;
+          W.mouse.posY = event.screenY;
 
           // Clear these stats after a little bit
           W.mouse.timer = setTimeout(function() {
-            W.mouse.pos = null;
+            W.mouse.posX = null;
+            W.mouse.posY = null;
             W.mouse.timer = null;
           }, 500);
         }
@@ -270,8 +295,15 @@ let SlideBar = let (T = {
           return;
 
         // We can't be showing anything
-        if (size == 0)
+        if (size == 0) {
           W.selectFeature();
+          W.slideButton.style.background = "url(" + W.slideButtonRight + ")";
+
+          // Move focus to the slideButton in-case focus went to the SlideBar
+          W.slideButton.focus();
+        }
+        else
+          W.slideButton.style.background = "url(" + W.slideButtonLeft + ")";
 
         // Remember what state we're getting into
         W.state.size = size;
@@ -312,11 +344,20 @@ let SlideBar = let (T = {
           W.content.style.marginLeft = W.ease.curr[0] + "px";
           W.content.style.marginRight = -W.ease.curr[1] + "px";
         }, 30);
+      },
+
+      // ==== {{{{Window.toggle()}}} ====
+      toggle: function Window_toggle() {
+        W.slide(W.state.size == 0 ? 32 : 0);
       }
     };
 
+    // Make sure the SlideBar is in the right position and init background
+    W.slide(0);
+
     // Detect when we should show the SlideBar
     content.addEventListener("mousemove", W.onMouseMove, false);
+    slideButton.addEventListener("click", W.toggle, false);
 
     // Add existing features to the new window
     T.contexts.forEach(function(context) context.slideBar.appends.forEach(
@@ -329,6 +370,9 @@ let SlideBar = let (T = {
     let winBar = window.slideBar;
     // Remove listeners on unload
     winBar.content.removeEventListener("mousemove", winBar.onMouseMove, false);
+
+    // Remove added chrome UI
+    winBar.slideButton.parentNode.removeChild(winBar.slideButton);
 
     // Remove all feature instances for this window
     T.removeFeatures(winBar.features);
