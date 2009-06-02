@@ -4,3 +4,10 @@ content jetpack-safe safe-content/ contentaccessible=yes
 overlay chrome://firebug/content/firebugOverlay.xul chrome://jetpack/content/firebugOverlay.xul
 overlay chrome://browser/content/browser.xul chrome://jetpack/content/browser.xul
 overlay chrome://global/content/console.xul chrome://jetpack/content/console.xul
+
+skin jetpack jetpack skin/winxp/ os=WINNT osversion<6
+skin jetpack jetpack skin/vista/ os=WINNT osversion>=6
+skin jetpack jetpack skin/macos/ os=Darwin
+skin jetpack jetpack skin/linux/ os=Linux
+skin jetpack jetpack skin/linux/ os=SunOS
+skin jetpack jetpack skin/linux/ os=FreeBSD
