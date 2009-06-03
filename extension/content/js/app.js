@@ -648,5 +648,6 @@ $(window).ready(
 
     // Finish up.
 
+    App.updateInstalledJetpackCount();
     App.forceGC();
   });
