@@ -274,7 +274,8 @@ FMgrProto.installToWindow = function FMgr_installToWindow(window) {
   // Watch for any tags of the form <link rel="commands">
   // on pages and add annotations for them if they exist.
   function onLinkAdded(event) {
-    if (!(event.target.rel in self._plugins) || !event.target.href)
+    if (!(event.target.rel in self._plugins) || !event.target.href ||
+        event.target.href.indexOf("data:") == 0)
       return;
 
     var pageUrl = event.target.baseURI;
