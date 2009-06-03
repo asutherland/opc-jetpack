@@ -4,7 +4,7 @@ function Notifications() {
   this.show = function(message) {
     var body = message;
     var title = "Jetpack Notification";
-    var icon = "chrome://jetpack/content/gfx/jetpack_icon.png";
+    var icon = "chrome://jetpack/content/gfx/jetpack_32x32.png";
 
     if (typeof(message) == "object") {
       body = message.body;

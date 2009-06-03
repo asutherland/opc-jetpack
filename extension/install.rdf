@@ -22,7 +22,7 @@
     <em:description>Browser extension development for
     everyone.</em:description>
     <em:creator>Mozilla Corporation</em:creator>
-    <em:iconURL>chrome://jetpack/content/gfx/jetpack_icon.png</em:iconURL>
+    <em:iconURL>chrome://jetpack/content/gfx/jetpack_32x32.png</em:iconURL>
     <em:homepageURL>http://jetpack.mozillalabs.com/</em:homepageURL>
     <em:optionsURL>chrome://jetpack/content/preferences.xul</em:optionsURL>
   </Description>
