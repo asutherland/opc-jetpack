@@ -37,11 +37,7 @@ function UrlFactory(baseUrl) {
   };
 }
 
-function addLazyLoader(url) {
-  var symbolNames = [];
-  for (var i = 1; i < arguments.length; i++)
-    symbolNames.push(arguments[i]);
-
+function addLazyLoader(url, symbolNames) {
   var absoluteUrl = (new UrlFactory(document.baseURI)).makeUrl(url);
 
   symbolNames.forEach(
@@ -61,6 +57,11 @@ function addLazyLoader(url) {
           return window[name];
         });
     });
+}
+
+function addLazyLoaders(urlsToSymbolNames) {
+  for (url in urlsToSymbolNames)
+    addLazyLoader(url, urlsToSymbolNames[url]);
 }
 
 function Dictionary() {

@@ -18,6 +18,10 @@ var JetpackEnv = {
       throw new Error("Name " + dottedName + " already exists");
     this.globals[dottedName] = value;
   },
+  addGlobals: function addGlobals(dottedNamesToValues) {
+    for (dottedName in dottedNamesToValues)
+      this.addGlobal(dottedName, dottedNamesToValues[dottedName]);
+  },
   addLazyLoader: function addLazyLoader(dottedName, factory) {
     var parts = dottedName.split(".");
     var name = parts.pop();
@@ -34,6 +38,10 @@ var JetpackEnv = {
             return self[name];
           });
       });
+  },
+  addLazyLoaders: function addLazyLoaders(dottedNamesToFactories) {
+    for (dottedName in dottedNamesToFactories)
+      this.addLazyLoader(dottedName, dottedNamesToFactories[dottedName]);
   },
   addImporter: function addImporter(namespace, importer) {
     if (typeof(namespace) == "function" && !importer) {
@@ -52,20 +60,39 @@ var JetpackEnv = {
 // in the global scope of all Jetpacks.  The second is that they're
 // actually //shared globally// between all Jetpacks.
 
-JetpackEnv.addGlobal("console", console);
-JetpackEnv.addGlobal("jQuery", jQuery);
-JetpackEnv.addGlobal("$", jQuery);
-JetpackEnv.addGlobal(
-  "jetpack.track",
-  function track(obj, name) {
-    if (typeof(obj) != "object")
-      throw new Logging.ErrorAtCaller("Cannot track non-objects.");
-    if (name !== undefined && typeof(name) != "string")
-        throw new Logging.ErrorAtCaller("Name must be a string.");
+JetpackEnv.addGlobals(
+  {"console": console,
 
-    // Make the memory tracker record the stack frame/line number of our
-    // caller, not us.
-    MemoryTracking.track(obj, name, 1);
+   "jQuery": jQuery,
+
+   "$": jQuery,
+
+   "jetpack.track": function track(obj, name) {
+     if (typeof(obj) != "object")
+       throw new Logging.ErrorAtCaller("Cannot track non-objects.");
+     if (name !== undefined && typeof(name) != "string")
+       throw new Logging.ErrorAtCaller("Name must be a string.");
+
+     // Make the memory tracker record the stack frame/line number of our
+     // caller, not us.
+     MemoryTracking.track(obj, name, 1);
+   },
+
+   "jetpack.json.encode": function encode(object) {
+      var json = Cc["@mozilla.org/dom/json;1"]
+                 .createInstance(Ci.nsIJSON);
+      return json.encode(object);
+    },
+
+   "jetpack.json.decode": function decode(string) {
+      var json = Cc["@mozilla.org/dom/json;1"]
+                 .createInstance(Ci.nsIJSON);
+      try {
+        return json.decode(string);
+      } catch (e) {
+        throw new Logging.ErrorAtCaller("Invalid JSON: " + string);
+      }
+    }
   });
 
 // == Importers and Lazy Loaders ==
@@ -80,6 +107,29 @@ JetpackEnv.addGlobal(
 // instantiated only when a Jetpack tries to access the global
 // property the Lazy Loader provides.
 
+window.addLazyLoaders(
+  {"js/tabs.js": [
+     "EventListenerMixIns",
+     "EventListenerMixIn",
+     "Tabs"
+   ],
+   "js/twitter.js": [
+     "Twitter"
+   ],
+   "js/notifications.js": [
+     "Notifications"
+   ],
+   "js/slidebar.js": [
+     "SlideBar"
+   ],
+   "js/status-bar-panel.js": [
+     "StatusBar"
+   ],
+   "js/securable-modules.js": [
+     "SecurableModuleLoader"
+   ]
+  });
+
 JetpackEnv.addImporter(
   function importTimers(context) {
     var timers = new Timers(window);
@@ -87,88 +137,59 @@ JetpackEnv.addImporter(
     context.addUnloader(timers);
   });
 
-window.addLazyLoader("js/twitter.js", "Twitter");
-JetpackEnv.addLazyLoader("jetpack.lib.twitter",
-                         function() { return Twitter; });
+JetpackEnv.addLazyLoaders(
+  {"jetpack.lib.twitter": function() {
+     return Twitter;
+   },
 
-window.addLazyLoader("js/tabs.js", "EventListenerMixIns",
-                     "EventListenerMixIn", "Tabs");
-JetpackEnv.addLazyLoader(
-  "jetpack.tabs",
-  function(context) {
-    var tabsContext = new Tabs();
-    context.addUnloader(tabsContext);
-    return tabsContext.tabs;
-  });
+   "jetpack.tabs": function(context) {
+     var tabsContext = new Tabs();
+     context.addUnloader(tabsContext);
+     return tabsContext.tabs;
+   },
 
-window.addLazyLoader("js/notifications.js", "Notifications");
-JetpackEnv.addLazyLoader("jetpack.notifications",
-                         function(context) { return new Notifications(); });
+   "jetpack.notifications": function(context) {
+     return new Notifications();
+   },
 
-JetpackEnv.addLazyLoader(
-  "jetpack.sessionStorage",
-  function(context) {
-    if (!Extension.Manager.sessionStorage.jetpacks)
-      Extension.Manager.sessionStorage.jetpacks = {};
-    var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
-    var id = context.urlFactory.makeUrl("");
-    if (!sessionStorage[id])
-      sessionStorage[id] = {};
-    return sessionStorage[id];
-  });
+   "jetpack.sessionStorage": function(context) {
+     if (!Extension.Manager.sessionStorage.jetpacks)
+       Extension.Manager.sessionStorage.jetpacks = {};
+     var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
+     var id = context.urlFactory.makeUrl("");
+     if (!sessionStorage[id])
+       sessionStorage[id] = {};
+     return sessionStorage[id];
+   },
 
-JetpackEnv.addImporter(
-  "jetpack.json",
-  function importJson(context) {
-    this.encode = function encode(object) {
-      var json = Cc["@mozilla.org/dom/json;1"]
-                 .createInstance(Ci.nsIJSON);
-      return json.encode(object);
-    };
-    this.decode = function decode(string) {
-      var json = Cc["@mozilla.org/dom/json;1"]
-                 .createInstance(Ci.nsIJSON);
-      try {
-        return json.decode(string);
-      } catch (e) {
-        throw new Logging.ErrorAtCaller("Invalid JSON: " + string);
-      }
-    };
-  });
+   "jetpack.slideBar": function(context) {
+     // Make sure the SlideBar is ready for this context
+     SlideBar.init();
+     SlideBar.load(context);
 
-window.addLazyLoader("js/slidebar.js", "SlideBar");
-JetpackEnv.addLazyLoader("jetpack.slideBar", function(context) {
-  // Make sure the SlideBar is ready for this context
-  SlideBar.init();
-  SlideBar.load(context);
+     // When unloading the context, inform SlideBar which one it is
+     context.addUnloader(
+       {unload: function() {
+          SlideBar.unload(context);
+        }});
 
-  // When unloading the context, inform SlideBar which one it is
-  context.addUnloader({
-    unload: function() { SlideBar.unload(context); }
-  });
+     // Export functions while letting SlideBar know which context is used
+     return {
+       append: function(args) { SlideBar.append(context, args); }
+     };
+   },
 
-  // Export functions while letting SlideBar know which context is used
-  return {
-    append: function(args) { SlideBar.append(context, args); }
-  };
-});
+   "jetpack.statusBar": function(context) {
+     var statusBar = new StatusBar(context.urlFactory);
+     context.addUnloader(statusBar);
+     return {
+       append: function append(options) {
+         return statusBar.append(options);
+       }
+     };
+   },
 
-window.addLazyLoader("js/status-bar-panel.js", "StatusBar");
-JetpackEnv.addLazyLoader(
-  "jetpack.statusBar",
-  function(context) {
-    var statusBar = new StatusBar(context.urlFactory);
-    context.addUnloader(statusBar);
-    return {
-      append: function append(options) {
-        return statusBar.append(options);
-      }
-    };
-  });
-
-window.addLazyLoader("js/securable-modules.js", "SecurableModuleLoader");
-JetpackEnv.addLazyLoader(
-  "jetpack.require",
-  function(context) {
-    return (new SecurableModuleLoader(context.urlFactory)).require;
+   "jetpack.require": function(context) {
+     return (new SecurableModuleLoader(context.urlFactory)).require;
+   }
   });
