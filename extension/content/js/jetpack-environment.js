@@ -138,7 +138,7 @@ JetpackEnv.addImporter(
   });
 
 JetpackEnv.addLazyLoaders(
-  {"jetpack.lib.twitter": function() {
+  {"jetpack.lib.twitter": function(context) {
      return Twitter;
    },
 
