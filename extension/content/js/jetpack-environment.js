@@ -127,6 +127,9 @@ window.addLazyLoaders(
    ],
    "js/securable-modules.js": [
      "SecurableModuleLoader"
+   ],
+   "js/timers.js": [
+     "Timers"
    ]
   });
 
