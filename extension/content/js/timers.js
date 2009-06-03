@@ -39,16 +39,6 @@ function Timers(impl) {
     }
   };
 
-  this.addMethodsTo = function addMethodsTo(obj) {
-    var self = this;
-
-    ['setInterval', 'clearInterval',
-     'setTimeout', 'clearTimeout'].forEach(
-       function(name) {
-         obj[name] = self[name];
-       });
-  };
-
   Extension.addUnloadMethod(
     this,
     function() {

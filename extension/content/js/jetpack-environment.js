@@ -135,9 +135,29 @@ window.addLazyLoaders(
 
 JetpackEnv.addImporter(
   function importTimers(context) {
-    var timers = new Timers(window);
-    timers.addMethodsTo(this);
-    context.addUnloader(timers);
+    var functionNames = ["setInterval",
+                         "clearInterval",
+                         "setTimeout",
+                         "clearTimeout"];
+
+    function makeLazyLoader(name) {
+      function lazyLoader() {
+        console.log("making timers");
+        var timers = new Timers(window);
+        context.addUnloader(timers);
+        for each (functionName in functionNames) {
+          delete this[functionName];
+          this[functionName] = timers[functionName];
+        }
+        return this[name];
+      }
+      return lazyLoader;
+    }
+
+    for each (functionName in functionNames) {
+      this.__defineGetter__(functionName,
+                            makeLazyLoader(functionName));
+    }
   });
 
 JetpackEnv.addLazyLoaders(
