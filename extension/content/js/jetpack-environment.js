@@ -13,6 +13,14 @@
 var JetpackEnv = {
   importers: {},
   globals: {},
+  futures: {},
+  setFuture: function setFuture(dottedName, factory) {
+    this.futures[dottedName] = factory;
+  },
+  setFutures: function setFutures(dottedNamesToFactories) {
+    for (dottedName in dottedNamesToFactories)
+      this.setFuture(dottedName, dottedNamesToFactories[dottedName]);
+  },
   addGlobal: function addGlobal(dottedName, value) {
     if (dottedName in this.globals)
       throw new Error("Name " + dottedName + " already exists");
@@ -135,6 +143,26 @@ window.addLazyLoaders(
    ]
   });
 
+// Add jetpack.importFromFuture().
+JetpackEnv.addImporter(
+  "jetpack",
+  function importImportFromFuture(context) {
+    this.importFromFuture = function(dottedName) {
+      if (dottedName.indexOf("jetpack.") != 0)
+        dottedName = "jetpack." + dottedName;
+      var factory = JetpackEnv.futures[dottedName];
+      if (!factory)
+        throw new Logging.ErrorAtCaller(dottedName + " has no future.");
+      var parts = dottedName.split(".");
+      var name = parts.pop();
+      var namespace = parts.join(".");
+      context.doImport(namespace,
+                       function(context) {
+                         this[name] = factory(context);
+                       });
+    };
+  });
+
 // Add HTML4 timer/interval functions.
 JetpackEnv.addImporter(
   function importTimers(context) {
@@ -216,5 +244,11 @@ JetpackEnv.addLazyLoaders(
 
    "jetpack.require": function(context) {
      return (new SecurableModuleLoader(context.urlFactory)).require;
+   }
+  });
+
+JetpackEnv.setFutures(
+  {"jetpack.T1000" : function(context) {
+     return function() { return "I'm from the future."; };
    }
   });

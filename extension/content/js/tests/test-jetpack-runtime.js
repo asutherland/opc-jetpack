@@ -46,6 +46,11 @@ var JetpackRuntimeTests = {
     self.assert(sandbox.clearTimeout);
     self.assert(new sandbox.XMLHttpRequest());
 
+    self.assertEqual(typeof(sandbox.jetpack.T1000), "undefined");
+    sandbox.jetpack.importFromFuture("T1000");
+    self.assertEqual(sandbox.jetpack.T1000(),
+                     "I'm from the future.");
+
     context.unload();
   }
 };

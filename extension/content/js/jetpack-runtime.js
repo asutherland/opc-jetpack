@@ -80,23 +80,29 @@ var JetpackRuntime = {
     this.addUnloader = function addUnloader(unloader) {
       unloaders.push(unloader);
     };
+    this.doImport = function doImport(name, importer) {
+      var parts = name.split(".");
+      var obj = this.sandbox;
+      for each (part in parts) {
+        if (part) {
+          if (!obj[part])
+            obj[part] = new Object();
+          obj = obj[part];
+        }
+      }
+
+      importer.call(obj, self);
+    };
 
     var names = [name for (name in importers)];
     names.sort();
 
     names.forEach(
       function(name) {
-        var parts = name.split(".");
-        var obj = sandbox;
-        for each (part in parts) {
-          if (part) {
-            if (!obj[part])
-              obj[part] = new Object();
-            obj = obj[part];
-          }
-        }
-
-        importers[name].forEach(function(imp) { imp.call(obj, self); });
+        importers[name].forEach(
+          function(importer) {
+            self.doImport(name, importer);
+          });
       });
 
     names = [name for (name in globals)];
