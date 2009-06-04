@@ -21,7 +21,7 @@ function updateGraph(){
     stash.history = stash.history.slice( 1 );
   
   data.text( stash.history.join(",") );
-  legend.text( tabCount );
+  legend.text( stash.history[ stash.history.length-1 ] );
 }
 
 jetpack.tabs.onOpen( updateGraph );
