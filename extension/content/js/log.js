@@ -121,7 +121,7 @@ var Logging = {
       if (!flag)
         logStringMessage.apply(this, args);
       else
-        report(stringifyArgs(arguments), flag, numFrames);
+        report(stringifyArgs(args), flag, numFrames);
     };
   },
 
