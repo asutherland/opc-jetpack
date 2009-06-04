@@ -44,6 +44,7 @@ var JetpackRuntimeTests = {
     self.assert(sandbox.jetpack.json.encode);
     self.assert(sandbox.setInterval);
     self.assert(sandbox.clearTimeout);
+    self.assert(new sandbox.XMLHttpRequest());
 
     context.unload();
   }

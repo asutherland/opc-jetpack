@@ -67,6 +67,8 @@ JetpackEnv.addGlobals(
 
    "$": jQuery,
 
+   "XMLHttpRequest": jQuery.ajaxSettings.xhr,
+
    "jetpack.track": function track(obj, name) {
      if (typeof(obj) != "object")
        throw new Logging.ErrorAtCaller("Cannot track non-objects.");
@@ -133,6 +135,7 @@ window.addLazyLoaders(
    ]
   });
 
+// Add HTML4 timer/interval functions.
 JetpackEnv.addImporter(
   function importTimers(context) {
     var functionNames = ["setInterval",
