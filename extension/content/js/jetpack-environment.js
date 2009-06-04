@@ -145,7 +145,6 @@ JetpackEnv.addImporter(
 
     function makeLazyLoader(name) {
       function lazyLoader() {
-        console.log("making timers");
         var timers = new Timers(window);
         context.addUnloader(timers);
         for each (functionName in functionNames) {
