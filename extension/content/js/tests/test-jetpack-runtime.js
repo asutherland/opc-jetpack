@@ -40,7 +40,7 @@ var JetpackRuntimeTests = {
     self.assert(sandbox.jetpack.tabs.focused);
     self.assert(sandbox.jetpack.statusBar.append);
     self.assert(sandbox.jetpack.track);
-    self.assert(sandbox.jetpack.sessionStorage);
+    self.assert(sandbox.jetpack.storage.live);
     self.assert(sandbox.jetpack.json.encode);
     self.assert(sandbox.setInterval);
     self.assert(sandbox.clearTimeout);
