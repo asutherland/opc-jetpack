@@ -345,3 +345,18 @@ def test(options):
 
     if result.obj['failed'] > 0:
         sys.exit(result.obj['failed'])
+
+@task
+def clean(options):
+    """Removes all intermediate and non-essential files."""
+
+    EXTENSIONS_TO_REMOVE = [".pyc", ".orig"]
+
+    for dirpath, dirnames, filenames in os.walk(os.getcwd()):
+        if ".hg" in dirnames:
+            dirnames.remove(".hg")
+        for filename in filenames:
+            fullpath = os.path.join(dirpath, filename)
+            ext = os.path.splitext(filename)[1]
+            if ext in EXTENSIONS_TO_REMOVE:
+                os.remove(fullpath)
