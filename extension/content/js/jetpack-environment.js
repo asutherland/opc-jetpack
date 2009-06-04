@@ -111,13 +111,13 @@ JetpackEnv.addGlobals(
      MemoryTracking.track(obj, name, 1);
    },
 
-   "jetpack.json.encode": function encode(object) {
+   "JSON.stringify": function stringify(object) {
       var json = Cc["@mozilla.org/dom/json;1"]
                  .createInstance(Ci.nsIJSON);
       return json.encode(object);
     },
 
-   "jetpack.json.decode": function decode(string) {
+   "JSON.parse": function parse(string) {
       var json = Cc["@mozilla.org/dom/json;1"]
                  .createInstance(Ci.nsIJSON);
       try {
@@ -278,5 +278,7 @@ JetpackEnv.setFutures(
   });
 
 JetpackEnv.addDeprecations(
-  {"jetpack.sessionStorage": "jetpack.storage.live"
+  {"jetpack.sessionStorage": "jetpack.storage.live",
+   "jetpack.json.encode": "JSON.stringify",
+   "jetpack.json.decode": "JSON.parse"
   });
