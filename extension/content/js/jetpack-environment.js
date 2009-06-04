@@ -215,23 +215,6 @@ JetpackEnv.addLazyLoaders(
      return sessionStorage[id];
    },
 
-   "jetpack.slideBar": function(context) {
-     // Make sure the SlideBar is ready for this context
-     SlideBar.init();
-     SlideBar.load(context);
-
-     // When unloading the context, inform SlideBar which one it is
-     context.addUnloader(
-       {unload: function() {
-          SlideBar.unload(context);
-        }});
-
-     // Export functions while letting SlideBar know which context is used
-     return {
-       append: function(args) { SlideBar.append(context, args); }
-     };
-   },
-
    "jetpack.statusBar": function(context) {
      var statusBar = new StatusBar(context.urlFactory);
      context.addUnloader(statusBar);
@@ -251,5 +234,22 @@ JetpackEnv.setFutures(
    "jetpack.securableModules": function(context) {
      var loader = new SecurableModuleLoader(context.urlFactory);
      return {require: loader.require};
+   },
+
+   "jetpack.slideBar": function(context) {
+     // Make sure the SlideBar is ready for this context
+     SlideBar.init();
+     SlideBar.load(context);
+
+     // When unloading the context, inform SlideBar which one it is
+     context.addUnloader(
+       {unload: function() {
+          SlideBar.unload(context);
+        }});
+
+     // Export functions while letting SlideBar know which context is used
+     return {
+       append: function(args) { SlideBar.append(context, args); }
+     };
    }
   });

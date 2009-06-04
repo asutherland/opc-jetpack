@@ -1,3 +1,4 @@
+jetpack.importFromFuture("slideBar");
 jetpack.slideBar.append({
   // Listen for click events on the icon
   onReady: function(slide) $(slide.icon).click(function() {
