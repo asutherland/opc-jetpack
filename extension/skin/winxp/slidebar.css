@@ -1,0 +1,19 @@
+#icons{
+  top: 30px;
+}
+
+#icons div {
+  -moz-border-bottom-colors: #EEE #B3B3B3 ;
+}
+
+#icons div:hover {
+  opacity: 1;
+}
+
+#icons div.selected {
+  background-color: rgba(0,0,0,.1);
+}
+
+#iframes iframe {
+  background-color: rgba(0,0,0,.1);
+}

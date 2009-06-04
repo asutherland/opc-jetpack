@@ -140,7 +140,11 @@ let SlideBar = let (T = {
     // Add an image as a target area for the SlideBar
     let slideButton = window.document.createElement("slideButton");
     slideButton.style.height = slideButton.style.width = "11px";
-    slideButton.style.margin = "7px 2px";
+    slideButton.style.padding = "7px 2px";
+    slideButton.style.width = "20px"; 
+    
+    slideButton.style.backgroundRepeat = "no-repeat";
+    slideButton.style.backgroundPosition = "center";
 
     let tabStrip = window.document.getElementById("content").mStrip;
     tabStrip.insertBefore(slideButton, tabStrip.firstChild);
@@ -310,13 +314,13 @@ let SlideBar = let (T = {
         // We can't be showing anything
         if (size == 0) {
           W.selectFeature();
-          W.slideButton.style.background = "url(" + W.slideButtonRight + ")";
+          W.slideButton.style.backgroundImage = "url(" + W.slideButtonRight + ")";
 
           // Move focus to the slideButton in-case focus went to the SlideBar
           W.slideButton.focus();
         }
         else
-          W.slideButton.style.background = "url(" + W.slideButtonLeft + ")";
+          W.slideButton.style.backgroundImage = "url(" + W.slideButtonLeft + ")";
 
         // Remember what state we're getting into
         W.state.size = size;
