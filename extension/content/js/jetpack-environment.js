@@ -30,6 +30,29 @@ var JetpackEnv = {
     for (dottedName in dottedNamesToValues)
       this.addGlobal(dottedName, dottedNamesToValues[dottedName]);
   },
+  addDeprecation: function addDeprecation(source, dest) {
+    var parts = source.split(".");
+    var name = parts.pop();
+    var namespace = parts.join(".");
+    this.addImporter(
+      namespace,
+      function importer(context) {
+        var self = this;
+        self.__defineGetter__(
+          name,
+          function() {
+            console.logFromCaller([source, "is deprecated, please use",
+                                   dest, "instead."], "warn");
+            delete self[name];
+            self[name] = Components.utils.evalInSandbox(dest, context.sandbox);
+            return self[name];
+          });
+      });
+  },
+  addDeprecations: function addDeprecations(sourcesToDests) {
+    for (name in sourcesToDests)
+      this.addDeprecation(name, sourcesToDests[name]);
+  },
   addLazyLoader: function addLazyLoader(dottedName, factory) {
     var parts = dottedName.split(".");
     var name = parts.pop();
@@ -205,7 +228,7 @@ JetpackEnv.addLazyLoaders(
      return new Notifications();
    },
 
-   "jetpack.sessionStorage": function(context) {
+   "jetpack.storage.live": function(context) {
      if (!Extension.Manager.sessionStorage.jetpacks)
        Extension.Manager.sessionStorage.jetpacks = {};
      var sessionStorage = Extension.Manager.sessionStorage.jetpacks;
@@ -252,4 +275,8 @@ JetpackEnv.setFutures(
        append: function(args) { SlideBar.append(context, args); }
      };
    }
+  });
+
+JetpackEnv.addDeprecations(
+  {"jetpack.sessionStorage": "jetpack.storage.live"
   });
