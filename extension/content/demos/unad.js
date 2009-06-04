@@ -1,6 +1,7 @@
 var blocklist;
 
-jetpack.require(
+jetpack.importFromFuture("securableModules");
+jetpack.securableModules.require(
   {url: "unad_blocklist.js",
    callback: function(blocklistModule) {
      blocklist = blocklistModule;

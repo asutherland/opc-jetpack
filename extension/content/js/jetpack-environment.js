@@ -240,15 +240,16 @@ JetpackEnv.addLazyLoaders(
          return statusBar.append(options);
        }
      };
-   },
-
-   "jetpack.require": function(context) {
-     return (new SecurableModuleLoader(context.urlFactory)).require;
    }
   });
 
 JetpackEnv.setFutures(
   {"jetpack.T1000" : function(context) {
      return function() { return "I'm from the future."; };
+   },
+
+   "jetpack.securableModules": function(context) {
+     var loader = new SecurableModuleLoader(context.urlFactory);
+     return {require: loader.require};
    }
   });
