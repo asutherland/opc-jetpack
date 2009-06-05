@@ -292,19 +292,6 @@ let SlideBar = let (T = {
         // Only handle number slide sizes
         if (typeof size != "number")
           return;
-          
-        // This is an Aza hack to force correct right-padding of the iframe...
-        // There is some weird XUL box-model interaction with HTML box-model that
-        // I can't wrap my mind around that makes me use this solution.
-        // TODO: Find a better solution.
-        var doc = window.document.getElementById("slidebar").contentWindow.document;
-        var iframes = doc.getElementById("iframes");
-        for( var i=0; i<iframes.children.length; i++ ){
-          var iframe = iframes.children[i];
-          iframe.contentDocument.body.style.width = size-43 + "px";
-        }
-
-        //iframes.style.width = W.ease.curr[0] + "px";        
 
         // Don't bother sliding if it's what we already have
         persist = !!persist;
