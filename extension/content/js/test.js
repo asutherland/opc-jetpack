@@ -19,7 +19,9 @@ var Tests = {
     pathParts.forEach(function(path) { dir.append(path); });
     var relPaths = this._listDir(dir);
     var absBase = "chrome://jetpack/" + pathParts.join("/") + "/";
-    return [(absBase + relPath) for each (relPath in relPaths)];
+    return [(absBase + relPath)
+            for each (relPath in relPaths)
+            if (relPath.match(/^test-.*\.js$/))];
   },
 
   _importTestFiles: function _importTestFiles() {
