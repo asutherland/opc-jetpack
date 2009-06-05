@@ -28,11 +28,12 @@ var JetpackEnvironmentTests = {
       });
   },
 
-  testImportFromFutureWorks: function(self) {
+  testImportFutureWorks: function(self) {
     this._withSandbox(
       function() {
         self.assertEqual(typeof(this.jetpack.T1000), "undefined");
-        this.jetpack.importFromFuture("T1000");
+        self.assert(this.jetpack.future.list().indexOf('jetpack.T1000') != -1);
+        this.jetpack.future.import("T1000");
         self.assertEqual(this.jetpack.T1000(), "I'm from the future.");
       });
   },

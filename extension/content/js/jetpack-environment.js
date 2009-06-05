@@ -173,26 +173,6 @@ window.addLazyLoaders(
    ]
   });
 
-// Add jetpack.importFromFuture().
-JetpackEnv.addImporter(
-  "jetpack",
-  function importImportFromFuture(context) {
-    this.importFromFuture = function(dottedName) {
-      if (dottedName.indexOf("jetpack.") != 0)
-        dottedName = "jetpack." + dottedName;
-      var factory = JetpackEnv.futures[dottedName];
-      if (!factory)
-        throw new Logging.ErrorAtCaller(dottedName + " has no future.");
-      var parts = dottedName.split(".");
-      var name = parts.pop();
-      var namespace = parts.join(".");
-      context.doImport(namespace,
-                       function(context) {
-                         this[name] = factory(context);
-                       });
-    };
-  });
-
 // Add HTML4 timer/interval functions.
 JetpackEnv.addImporter(
   function importTimers(context) {
@@ -223,6 +203,33 @@ JetpackEnv.addImporter(
 JetpackEnv.addLazyLoaders(
   {"jetpack.lib.twitter": function(context) {
      return Twitter;
+   },
+
+   "jetpack.future": function(context) {
+     var future = {
+       list: function() {
+         var list = [];
+         for (name in JetpackEnv.futures)
+           list.push(name);
+         list.sort();
+         return list;
+       }
+     };
+     future['import'] = function(dottedName) {
+       if (dottedName.indexOf("jetpack.") != 0)
+         dottedName = "jetpack." + dottedName;
+       var factory = JetpackEnv.futures[dottedName];
+       if (!factory)
+         throw new Logging.ErrorAtCaller(dottedName + " has no future.");
+       var parts = dottedName.split(".");
+       var name = parts.pop();
+       var namespace = parts.join(".");
+       context.doImport(namespace,
+                        function(context) {
+                          this[name] = factory(context);
+                        });
+     };
+     return future;
    },
 
    "jetpack.tabs": function(context) {
@@ -287,5 +294,6 @@ JetpackEnv.setFutures(
 JetpackEnv.addDeprecations(
   {"jetpack.sessionStorage": "jetpack.storage.live",
    "jetpack.json.encode": "JSON.stringify",
-   "jetpack.json.decode": "JSON.parse"
+   "jetpack.json.decode": "JSON.parse",
+   "jetpack.importFromFuture": "jetpack.future.import"
   });
