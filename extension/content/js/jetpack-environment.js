@@ -176,6 +176,9 @@ window.addLazyLoaders(
 // Add HTML4 timer/interval functions.
 JetpackEnv.addImporter(
   function importTimers(context) {
+    // When any of the timer/interval functions are accessed, we'll
+    // lazy-load the Timers object that powers them all.
+
     var functionNames = ["setInterval",
                          "clearInterval",
                          "setTimeout",
@@ -263,6 +266,14 @@ JetpackEnv.addLazyLoaders(
    }
   });
 
+// == Futures ==
+//
+// These are candidates to be parts of the {{{jetpack}}} namespace that
+// are currently under development, and can be accessed via a call
+// to {{{jetpack.future.import()}}}. See
+// [[https://wiki.mozilla.org/Labs/Jetpack/JEP/13|JEP 13]] for more
+// information.
+
 JetpackEnv.setFutures(
   {"jetpack.T1000" : function(context) {
      return function() { return "I'm from the future."; };
@@ -290,6 +301,14 @@ JetpackEnv.setFutures(
      };
    }
   });
+
+// == Deprecations ==
+//
+// These are mappings from the names of old, deprecated functions or
+// namespaces to their new locations.  Everything listed here allows
+// the deprecated name to be an alias to the non-deprecated name,
+// with the provision that upon the first access of the deprecated
+// name, a warning is logged to the console.
 
 JetpackEnv.addDeprecations(
   {"jetpack.sessionStorage": "jetpack.storage.live",
