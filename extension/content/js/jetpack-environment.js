@@ -112,9 +112,16 @@ JetpackEnv.addGlobals(
    },
 
    "JSON.stringify": function stringify(object) {
-      var json = Cc["@mozilla.org/dom/json;1"]
-                 .createInstance(Ci.nsIJSON);
-      return json.encode(object);
+     switch (typeof(object)) {
+     case "number":
+     case "boolean":
+     case "string":
+       return uneval(object);
+     case "object":
+       var json = Cc["@mozilla.org/dom/json;1"]
+                  .createInstance(Ci.nsIJSON);
+       return json.encode(object);
+     }
     },
 
    "JSON.parse": function parse(string) {

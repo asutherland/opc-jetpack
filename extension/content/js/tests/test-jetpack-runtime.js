@@ -28,30 +28,5 @@ var JetpackRuntimeTests = {
     );
     self.assert(wasLogCalled);
     context.unload();
-  },
-
-  testFullContextWorks: function(self) {
-    var fakeFeed = this._makeFakeFeed("/* do nothing */");
-    var context = new JetpackRuntime.Context(fakeFeed);
-    var sandbox = context.sandbox;
-
-    self.assert(sandbox.jetpack.lib.twitter.Twit);
-    self.assert(sandbox.jetpack.notifications.show);
-    self.assert(sandbox.jetpack.tabs.focused);
-    self.assert(sandbox.jetpack.statusBar.append);
-    self.assert(sandbox.jetpack.track);
-    self.assert(sandbox.jetpack.storage.live);
-    self.assert(sandbox.JSON.parse);
-    self.assert(sandbox.JSON.stringify);
-    self.assert(sandbox.setInterval);
-    self.assert(sandbox.clearTimeout);
-    self.assert(new sandbox.XMLHttpRequest());
-
-    self.assertEqual(typeof(sandbox.jetpack.T1000), "undefined");
-    sandbox.jetpack.importFromFuture("T1000");
-    self.assertEqual(sandbox.jetpack.T1000(),
-                     "I'm from the future.");
-
-    context.unload();
   }
 };
