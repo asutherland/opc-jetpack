@@ -455,6 +455,7 @@ let SlideBar = let (T = {
     F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
     F.iframe.src = url;
     
+    // Set the width of the iframe, if one is passed in.
     if( args.width ){
       // The 5 is for automatic padding.
       // TODO: Figure out a non-magic number way of doing this.
