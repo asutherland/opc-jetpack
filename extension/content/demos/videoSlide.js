@@ -31,6 +31,8 @@ jetpack.slideBar.append({
     // Slide open to show videos, but only stay open if we have videos
     slide({ size: 206, persist: hasVideos() });
   }),
+  
+  width: 206,
 
   html: <>
     <style><![CDATA[

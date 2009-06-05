@@ -454,6 +454,12 @@ let SlideBar = let (T = {
     // Add the iframe for the feature
     F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
     F.iframe.src = url;
+    
+    if( args.width ){
+      // The 5 is for automatic padding.
+      // TODO: Figure out a non-magic number way of doing this.
+      F.iframe.style.width = args.width-8;
+    }
 
     // Track when the icon is selected
     F.icon.addEventListener("click", function() winBar.selectFeature(F), true);
@@ -464,9 +470,6 @@ let SlideBar = let (T = {
 
       // Let the feature know the iframe has loaded
       T.catchCall(args, "onReady", F.cbArgs);
-      //this.contentDocument.body.style.padding = "8px";
-      //this.contentDocument.body.style.width = "60%xxx";
-      //console.log( document.defaultView.getComputedStyle( F.iframe, null).width );
     }, false);
 
     // The contexts tracks all instances of the feature
