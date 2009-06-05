@@ -282,6 +282,9 @@ def run(options):
 @cmdopts(JSBRIDGE_OPTIONS)
 def render_api_docs(options):
     """Render the API documentation in HTML format."""
+    
+    TEMPLATE = os.path.join( "website", "templates", "api.html" )
+    OUTPUT = os.path.join( "website", "api.html" )
 
     done_event = threading.Event()
     result = Bunch()
@@ -303,7 +306,10 @@ def render_api_docs(options):
     finally:
         remote.runner.stop()
 
-    print result.html
+    template = open( TEMPLATE ).read();
+    
+    template = template.replace( "[[CONTENT]]", result.html.encode("ascii") );
+    open(OUTPUT, "w").write( template )
 
 @task
 @cmdopts(JSBRIDGE_OPTIONS)
