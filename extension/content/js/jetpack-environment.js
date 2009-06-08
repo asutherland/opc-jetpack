@@ -266,10 +266,6 @@ JetpackEnv.addLazyLoaders(
          return statusBar.append(options);
        }
      };
-   },
-
-   "jetpack.os.clipboard": function(context) {
-     return new Clipboard();
    }
   });
 
@@ -284,6 +280,10 @@ JetpackEnv.addLazyLoaders(
 JetpackEnv.setFutures(
   {"jetpack.T1000" : function(context) {
      return function() { return "I'm from the future."; };
+   },
+
+   "jetpack.os.clipboard": function(context) {
+     return new Clipboard();
    },
 
    "jetpack.securableModules": function(context) {
