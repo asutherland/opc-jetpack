@@ -11,16 +11,29 @@ var JSBridge = {
   },
 
   renderDocs: function renderDocs() {
+    var result = {};
+    function maybeSendResult() {
+      if (result.apiHtml && result.tutorialHtml)
+        JSBridge.events.fireEvent('jetpack:result', result);
+    }
+
     var rawApiDocs = $("<div></div>");
     var apiContent = $("<div></div>");
+    var tutorialContent = $("<div></div>");
     App.getLocalFile(
       "raw-api-documentation.html",
       function(html) {
         rawApiDocs.html(html);
         App.buildApiReference(rawApiDocs, apiContent);
         $(".logging-source", apiContent).text("logging console");
-        JSBridge.events.fireEvent('jetpack:result',
-                                  {apiHtml: apiContent.html()});
+        result.apiHtml = apiContent.html();
+        maybeSendResult();
+      });
+    App.getLocalFile(
+      "tutorial.html",
+      function(html) {
+        result.tutorialHtml = html;
+        maybeSendResult();
       });
   },
 
