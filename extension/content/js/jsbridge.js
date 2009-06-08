@@ -10,7 +10,7 @@ var JSBridge = {
     return this.events;
   },
 
-  renderApiDocs: function renderApiDocs() {
+  renderDocs: function renderDocs() {
     var rawApiDocs = $("<div></div>");
     var apiContent = $("<div></div>");
     App.getLocalFile(
@@ -19,7 +19,8 @@ var JSBridge = {
         rawApiDocs.html(html);
         App.buildApiReference(rawApiDocs, apiContent);
         $(".logging-source", apiContent).text("logging console");
-        JSBridge.events.fireEvent('jetpack:result', apiContent.html());
+        JSBridge.events.fireEvent('jetpack:result',
+                                  {apiHtml: apiContent.html()});
       });
   },
 

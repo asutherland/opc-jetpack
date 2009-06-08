@@ -294,7 +294,7 @@ def render_docs(options):
 
     def listener(event_name, obj):
         if event_name == 'jetpack:result':
-            result.html = obj
+            result.update(obj)
             done_event.set()
 
     MAX_RENDER_RUN_TIME = 10.0
@@ -302,7 +302,7 @@ def render_docs(options):
     remote = start_jetpack(options, listener)
 
     try:
-        remote.window.JSBridge.renderApiDocs()
+        remote.window.JSBridge.renderDocs()
         done_event.wait(MAX_RENDER_RUN_TIME)
         if not done_event.isSet():
             raise Exception('Maximum render run time exceeded.')
@@ -312,7 +312,7 @@ def render_docs(options):
     template = open(TEMPLATE).read();
     template = template.replace(
         "[[CONTENT]]",
-        result.html.encode("ascii", "xmlcharrefreplace")
+        result.apiHtml.encode("ascii", "xmlcharrefreplace")
         )
     open(OUTPUT, "w").write(template)
     print "Wrote API docs to %s using template at %s." % (OUTPUT,
