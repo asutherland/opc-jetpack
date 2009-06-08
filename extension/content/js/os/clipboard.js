@@ -30,6 +30,9 @@ function Clipboard() {
 }
 
 Clipboard.prototype = {
+  // So that memory tracking shows this object properly.
+  constructor: Clipboard,
+
   __clipboardService: null,
   get _clipboardService() {
     if (!this.__clipboardService)
