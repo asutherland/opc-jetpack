@@ -153,7 +153,7 @@ window.addLazyLoaders(
      "EventListenerMixIn",
      "Tabs"
    ],
-   "js/os/clipboard.js": [
+   "js/clipboard.js": [
      "Clipboard"
    ],
    "js/twitter.js": [
