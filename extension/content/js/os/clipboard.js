@@ -73,7 +73,7 @@ Clipboard.prototype = {
 
     // TODO: return false or throw? -zpao
     if (!dataToSet.length)
-      throw "invalid arg...";
+      throw new Error("Data to set must be non-empty.");
 
     for (var i in dataToSet) {
       // Internal representation is a little weird, but it works
@@ -146,7 +146,7 @@ Clipboard.prototype = {
     // We should definitely have SOME flavor to try to get, but if
     // not, throw an exception.
     if (!requestedFlavors.length)
-      throw new Error("Requested flavors must be specifie.");
+      throw new Error("Requested flavors must be specified.");
 
     for (i in requestedFlavors)
       xferable.addDataFlavor(requestedFlavors[i]);
