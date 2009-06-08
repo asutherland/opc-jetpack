@@ -27,6 +27,79 @@
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    <div name="slideBar" class="property">
+      This object contains methods relevant to the Jetpack-added SlideBar that
+      appears at the left side of the browser window when the user's pointer
+      moves towards the icon on the left of the tab-strip. Features can add an
+      icon and have the SlideBar open to display additional content and then
+      slide away when the user returns to the page.
+      <p>
+      This slideBar object is currently experimental, so load it with:
+      <div class="example">
+jetpack.future.import("slideBar");
+      </div>
+      <div name="append" class="property">
+        <div class="argument options" name="options">
+          <span class="string" name="icon">URI of the initial icon to show when
+          the SlideBar is open.</span>
+          <span class="string" name="html">The initial HTML contents of the new
+          SlideBar feature. This can be a plain string or an E4X xml
+          node.</span>
+          <span class="url" name="url">The URL to load HTML contents for the
+          SlideBar Feature. If the html property is set, it will be used instead
+          of this.</span>
+          <span class="number" name="width">Size of the content area to render
+          <tt>html</tt> or <tt>url</tt>.</span>
+          <span class="function" name="onSelect">The callback function invoked
+          when the icon is clicked and selected. If the feature is already
+          "selected", it won't get another onSelect call. See below for the
+          callback's arguments.</span>
+          <span class="function" name="onReady">The callback function invoked
+          when the SlideBar feature has its contents loaded. See below for the
+          callback's arguments.</span>
+          </div>
+        </div>
+        This function adds an icon to the SlideBar, and it will be shown when
+        the user moves towards the SlideBar icon. When the user selects a
+        feature's icon, it will be "selected," and the feature can do additional
+        actions such as sliding open a larger area to reveal the feature's
+        contents.
+        <p>
+        All callback functions passed in as options will be passed a single
+        function that is used to slide open the SlideBar. This function takes a
+        single "options" object like the slideBar.append method; the two
+        properties are <tt>size</tt> and <tt>persist</tt>. <tt>size</tt> is the
+        number of pixels to slide out, and if <tt>persist</tt> is true, the
+        SlideBar will stay open even if the user moves the cursor away.
+        <p>
+        The function passed to the callback function has two additional
+        properties: <tt>icon</tt> refers to the icon in the SlideBar and
+        <tt>doc</tt> refers to the content document for the feature. These are
+        useful for adding listeners or dynamically changing the icon or
+        document.
+        <p>
+        The following example adds a SlideBar feature that temporarily slides
+        itself open when selected and makes itself stay open after clicking the
+        content area. (To close, click the SlideBar icon.) Additionally, the
+        feature will change its icon when the page is clicked.
+        <div class="example">
+jetpack.future.import("slideBar");
+jetpack.slideBar.append({
+  onSelect: function(slide) slide({ size: 100 }),
+  onReady: function(slide) $(slide.doc).click(function() {
+    slide({ size: 200, persist: true });
+    slide.icon.src = "chrome://branding/content/icon48.png";
+  })
+});
+        </div>
+        Notice when <tt>persist</tt> is not provided to the callback function's
+        argument, <tt>slide</tt>, the SlideBar actually shifts the contents of
+        the browser off the right edge of the window. This is because the
+        default view of the SlideBar and its features are temporary. When
+        <tt>persist</tt> is true, the right edge will stay on the right side of
+        the window, so if it was "off" the window before, it will slide back in.
+      </div>
+    </div>
     <div name="statusBar" class="property">
       This object contains methods relevant to the status bar that
       appears at the bottom of the browser window. Note that the user
