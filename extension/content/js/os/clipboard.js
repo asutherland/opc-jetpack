@@ -47,13 +47,16 @@ Clipboard.prototype = {
 
     var dataToSet = [];
 
-    // If we don't have a data type, determine if we have key/pair or just a single type
+    // If we don't have a data type, determine if we have key/pair or
+    // just a single type.
     if (!aDataType) {
       if (typeof aData === "string") {
-        ///XXXzpao should we take the shortcut here and use nsIClipboardHelper.copyString?
+        /// TODO: should we take the shortcut here and use
+        /// nsIClipboardHelper.copyString? -zpao
         dataToSet.push(["text/unicode", aData]);
       }
-      //XXXzpao Add other cases here (eg. image) if we can figure them out
+      // TODO: Add other cases here (e.g., image) if we can figure them
+      // out.
       else if (typeof aData === "object") {
         for (var flavor in aData) {
           // Ensure we allow this flavor
@@ -63,16 +66,18 @@ Clipboard.prototype = {
         }
       }
     } else if (kAllowableFlavors.indexOf(aDataType) !== -1) {
-      //XXXzpao We should probably do sanity check that they type the specify is what they passed in
+      // TODO: We should probably sanity check that the type they
+      // specify is what they passed in.
       dataToSet.push([aDataType, aData]);
     }
 
-    //XXXzpao return false or throw?
+    // TODO: return false or throw? -zpao
     if (!dataToSet.length)
       throw "invalid arg...";
 
     for (var i in dataToSet) {
-      // Internal representation is a little weird, but it works (makes it easy to check for .length)
+      // Internal representation is a little weird, but it works
+      // (makes it easy to check for .length).
       var [flavor, data] = dataToSet[i];
       switch (flavor) {
         case "text/plain":
@@ -82,14 +87,20 @@ Clipboard.prototype = {
                     createInstance(Ci.nsISupportsString);
           str.data = data;
           xferable.addDataFlavor(flavor);
-          // unicode (and html because we store that in unicode) take up 2 bytes/char
-          var dataLen = (flavor == "text/plain") ? data.length : data.length * 2;
+          // Unicode (and html because we store that in unicode) take up
+          // 2 bytes/char.
+          var dataLen = (flavor == "text/plain") ? data.length
+                                                 : data.length * 2;
           xferable.setTransferData(flavor, str, dataLen);
       }
     }
-    //XXXzpao Not sure if this will ever actually throw
+    // TODO: Not sure if this will ever actually throw. -zpao
     try {
-      this._clipboardService.setData(xferable, null, this._clipboardService.kGlobalClipboard);
+      this._clipboardService.setData(
+        xferable,
+        null,
+        this._clipboardService.kGlobalClipboard
+      );
     } catch (e) {
       return false;
     }
@@ -105,45 +116,55 @@ Clipboard.prototype = {
 
     var requestedFlavors = [];
 
-    // Determine how get() is being used
+    // Determine how get() is being used.
     if (!aDataType) {
-      // no arguments, we try to grab the most best flavor
+      // No arguments, so we try to grab the most best flavor.
       requestedFlavors = kAllowableFlavors;
     } else if (aDataType instanceof Array) {
-      // user has requested multiple types, so use them
+      // The user has requested multiple types, so use them.
       requestedFlavors = aDataType;
     } else if (typeof aDataType === "string") {
-      // user has either requested a single type or a generic type like "text"
+      // The user has either requested a single type or a generic type
+      // like "text".
       if (kGenericFlavors[aDataType]){
-        // it was generic
+        // It was generic.
         requestedFlavors = kGenericFlavors[aDataType];
       } else {
         requestedFlavors.push(aDataType);
       }
     }
 
-    // Ensure that the user hasn't requested a flavor that we don't support
-    //XXXzpao should we just get rid of that type or should we throw an argument error
+    // Ensure that the user hasn't requested a flavor that we don't
+    // support.
+
+    // TODO: Should we just get rid of the unsupported type or should
+    // we throw an ArgumentError?
     for (var i = requestedFlavors - 1; i >= 0; i--)
       if (kAllowableFlavors.indexOf(requestedFlavors[i]) == -1)
         requestedFlavors.splice(i, 1);
 
-    // We should definitely have SOME flavor to try to get, but if not, throw
+    // We should definitely have SOME flavor to try to get, but if
+    // not, throw an exception.
     if (!requestedFlavors.length)
-      throw "invalid arg...";
+      throw new Error("Requested flavors must be specifie.");
 
-    for (var i in requestedFlavors)
+    for (i in requestedFlavors)
       xferable.addDataFlavor(requestedFlavors[i]);
 
-    //XXXzpao We should probably check for matching flavors before getting the clipboard data
+    // TODO: We should probably check for matching flavors before
+    // getting the clipboard data. see:
+    //
     // http://mxr.mozilla.org/mozilla-central/source/browser/components/places/content/controller.js#386
 
-    // Get the data into our transferable
-    this._clipboardService.getData(xferable, this._clipboardService.kGlobalClipboard);
+    // Get the data into our transferable.
+    this._clipboardService.getData(
+      xferable,
+      this._clipboardService.kGlobalClipboard
+    );
 
     var returnData = {};
 
-    for (var i in requestedFlavors) {
+    for (i in requestedFlavors) {
       var flavor = requestedFlavors[i];
 
       var data = {};
@@ -154,11 +175,12 @@ Clipboard.prototype = {
         continue;
       }
 
-      //XXXzpao Not sure data will ever be null at this point, but doesn't hurt to check
+      // TODO: Not sure data will ever be null at this point, but
+      // doesn't hurt to check.
       if (!data)
         continue;
 
-      //XXXzpao Add flavors here as we support more in kAllowableFlavors
+      // TODO: Add flavors here as we support more in kAllowableFlavors.
       switch (flavor) {
         case "text/plain":
           data = data.value.data;
@@ -174,4 +196,4 @@ Clipboard.prototype = {
 
     return returnData;
   }
-}
+};
