@@ -95,7 +95,7 @@ function BrowserWatcher(options) {
 
   while (enumerator.hasMoreElements()) {
     var chromeWindow = enumerator.getNext();
-    if (chromeWindow.gBrowser)
+    if (chromeWindow.gIsDoneLoading)
       loadAndBind(chromeWindow);
     else
       onWindowOpened(chromeWindow);
