@@ -280,11 +280,14 @@ def run(options):
 
 @task
 @cmdopts(JSBRIDGE_OPTIONS)
-def render_api_docs(options):
-    """Render the API documentation in HTML format."""
+def render_docs(options):
+    """Render the API and tutorial documentation in HTML format,
+    and output it to the website directory."""
     
-    TEMPLATE = os.path.join( "website", "templates", "api.html" )
-    OUTPUT = os.path.join( "website", "api.html" )
+    # TODO: Render tutorial docs too (bug 496457).
+
+    TEMPLATE = os.path.join("website", "templates", "api.html")
+    OUTPUT = os.path.join("website", "api.html")
 
     done_event = threading.Event()
     result = Bunch()
@@ -306,10 +309,14 @@ def render_api_docs(options):
     finally:
         remote.runner.stop()
 
-    template = open( TEMPLATE ).read();
-    
-    template = template.replace( "[[CONTENT]]", result.html.encode("ascii") );
-    open(OUTPUT, "w").write( template )
+    template = open(TEMPLATE).read();
+    template = template.replace(
+        "[[CONTENT]]",
+        result.html.encode("ascii", "xmlcharrefreplace")
+        )
+    open(OUTPUT, "w").write(template)
+    print "Wrote API docs to %s using template at %s." % (OUTPUT,
+                                                          TEMPLATE)
 
 @task
 @cmdopts(JSBRIDGE_OPTIONS)
