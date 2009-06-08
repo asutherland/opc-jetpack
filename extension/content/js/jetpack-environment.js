@@ -153,6 +153,9 @@ window.addLazyLoaders(
      "EventListenerMixIn",
      "Tabs"
    ],
+   "js/os/clipboard.js": [
+     "Clipboard"
+   ],
    "js/twitter.js": [
      "Twitter"
    ],
@@ -263,6 +266,10 @@ JetpackEnv.addLazyLoaders(
          return statusBar.append(options);
        }
      };
+   },
+
+   "jetpack.os.clipboard": function(context) {
+     return new Clipboard();
    }
   });
 
