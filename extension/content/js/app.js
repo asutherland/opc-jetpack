@@ -330,6 +330,11 @@ var App = {
 
     var context = new JetpackRuntime.Context(fakeFeed);
 
+    context.sandbox.jetpack.future.list().forEach(
+      function(name) {
+        context.sandbox.jetpack.future.import(name);
+      });
+
     this.buildDocsForObject(output, data, context.sandbox,
                             data.find("[name=globals]"));
     this.buildDocsForObject(output, data,
