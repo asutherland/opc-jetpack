@@ -1,6 +1,6 @@
   <div name="globals">
     <h3>The Global Namespace</h3>
-    The global namesace of a Jetpack feature is where most of
+    The global namesace of a Jetpack Feature is where most of
     its functionality can be found. Special care has been taken
     to make this namespace look and function as much like a Web page's
     global namespace as possible.
@@ -43,7 +43,7 @@ jetpack.future.import("slideBar");
           <span class="string" name="icon">URI of the initial icon to show when
           the SlideBar is open.</span>
           <span class="string" name="html">The initial HTML contents of the new
-          SlideBar feature. This can be a plain string or an E4X xml
+          SlideBar Feature. This can be a plain string or an E4X xml
           node.</span>
           <span class="url" name="url">The URL to load HTML contents for the
           SlideBar Feature. If the html property is set, it will be used instead
@@ -51,17 +51,17 @@ jetpack.future.import("slideBar");
           <span class="number" name="width">Size of the content area to render
           <tt>html</tt> or <tt>url</tt>, in pixels.</span>
           <span class="function" name="onSelect">The callback function invoked
-          when the icon is clicked and selected. If the feature is already
+          when the icon is clicked and selected. If the Feature is already
           "selected", it won't get another onSelect call. See below for the
           callback's arguments.</span>
           <span class="function" name="onReady">The callback function invoked
-          when the SlideBar feature has its contents loaded. See below for the
+          when the SlideBar Feature has its contents loaded. See below for the
           callback's arguments.</span>
         </div>
         This function adds an icon to the SlideBar, and it will be shown when
         the user moves towards the SlideBar icon. When the user selects a
-        feature's icon, it will be "selected," and the feature can do additional
-        actions such as sliding open a larger area to reveal the feature's
+        Feature's icon, it will be "selected," and the Feature can do additional
+        actions such as sliding open a larger area to reveal the Feature's
         contents.
         <p>
         All callback functions passed in as options will be called with a single
@@ -74,16 +74,16 @@ jetpack.future.import("slideBar");
         <p>
         <tt>slide()</tt> is a named-property object and has two additional
         properties: <tt>icon</tt> refers to the icon in the SlideBar and
-        <tt>doc</tt> refers to the content document for the feature. These are
+        <tt>doc</tt> refers to the content document for the Feature. These are
         useful for adding listeners or dynamically changing the icon or
         document.
         <p>
         To close the SlideBar, just call <tt>slide()</tt> without any arguments.
         <p>
-        The following example adds a SlideBar feature that temporarily slides
+        The following example adds a SlideBar Feature that temporarily slides
         itself open when selected and makes itself stay open after clicking the
         content area. (To close, click the SlideBar icon.) Additionally, the
-        feature will change its icon when the page is clicked.
+        Feature will change its icon when the page is clicked.
         <div class="example">
 jetpack.future.import("slideBar");
 jetpack.slideBar.append({
@@ -98,7 +98,7 @@ jetpack.slideBar.append({
         Notice when <tt>persist</tt> is not provided to the callback function's
         argument, <tt>slide</tt>, the SlideBar actually shifts the contents of
         the browser off the right edge of the window. This is because the
-        default view of the SlideBar and its features are temporary. When
+        default view of the SlideBar and its Features are temporary. When
         <tt>persist</tt> is true, the right edge will stay on the right side of
         the window, so if it was "off" the window before, it will slide back in.
       </div>
@@ -197,7 +197,7 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
     <p>
     The following example logs some information to the console.
     <div class="example">
-console.log('Hello from the Jetpack feature', this);
+console.log('Hello from the Jetpack Feature', this);
     </div>
   </div>
   <div name="setInterval" class="property">
@@ -232,7 +232,7 @@ console.log('Hello from the Jetpack feature', this);
   </div>
   <div name="location" class="property">
     This string contains the URL representing the source code of
-    the feature.
+    the Feature.
     <p>
     The following example logs the location to the console.
     <div class="example">
