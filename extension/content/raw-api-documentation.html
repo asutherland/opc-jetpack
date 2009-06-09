@@ -64,18 +64,21 @@ jetpack.future.import("slideBar");
         actions such as sliding open a larger area to reveal the feature's
         contents.
         <p>
-        All callback functions passed in as options will be passed a single
-        function that is used to slide open the SlideBar. This function takes a
-        single "options" object like the slideBar.append method; the two
+        All callback functions passed in as options will be called with a single
+        function argument, referred to here as <tt>slide()</tt>, that is used to
+        slide open the SlideBar. <tt>slide()</tt> takes a single "options"
+        object like the <tt>slideBar.append</tt> method; the two
         properties are <tt>size</tt> and <tt>persist</tt>. <tt>size</tt> is the
         number of pixels to slide out, and if <tt>persist</tt> is true, the
         SlideBar will stay open even if the user moves the cursor away.
         <p>
-        The function passed to the callback function has two additional
+        <tt>slide()</tt> is a named-property object and has two additional
         properties: <tt>icon</tt> refers to the icon in the SlideBar and
         <tt>doc</tt> refers to the content document for the feature. These are
         useful for adding listeners or dynamically changing the icon or
         document.
+        <p>
+        To close the SlideBar, just call <tt>slide()</tt> without any arguments.
         <p>
         The following example adds a SlideBar feature that temporarily slides
         itself open when selected and makes itself stay open after clicking the
