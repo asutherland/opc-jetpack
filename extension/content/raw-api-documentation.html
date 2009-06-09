@@ -49,7 +49,7 @@ jetpack.future.import("slideBar");
           SlideBar Feature. If the html property is set, it will be used instead
           of this.</span>
           <span class="number" name="width">Size of the content area to render
-          <tt>html</tt> or <tt>url</tt>.</span>
+          <tt>html</tt> or <tt>url</tt>, in pixels.</span>
           <span class="function" name="onSelect">The callback function invoked
           when the icon is clicked and selected. If the feature is already
           "selected", it won't get another onSelect call. See below for the
@@ -110,6 +110,8 @@ jetpack.slideBar.append({
           of the new status bar panel.</span>
           <span class="url" name="url">The URL of the status bar
           panel's HTML contents.</span>
+          <span class="number" name="width">Size of the content area to render
+          <tt>html</tt> or <tt>url</tt>, in pixels.</span>
           <span class="function" name="onReady">The callback function
           to invoke when the new panel is created on a status
           bar.</span>
@@ -340,6 +342,9 @@ jetpack.tabs.onReady(function onNextPage(doc) {
     jetpack.tabs.onReady.unbind(onNextPage);
   }});
     </div>
+  </div>
+  <div name="number" class="glossary">
+    A standard JavaScript number, e.g., <tt>12</tt>.
   </div>
   <div name="url" class="glossary">
     A JavaScript string representing a URL. For example,
