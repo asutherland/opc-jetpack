@@ -420,11 +420,11 @@ def xpcom(options):
     print "Building XPCOM binary components for %s" % platform
 
     comp_src_dir = os.path.join(options.my_dir, "components")
-    rel_dest_dir = os.path.join("browser", "components", "ubiquity")
+    rel_dest_dir = os.path.join("browser", "components", "jetpack")
     comp_dest_dir = os.path.join(options.srcdir, rel_dest_dir)
     comp_xpi_dir = os.path.join(options.objdir, "dist", "xpi-stage",
-                                "ubiquity", "components")
-    comp_plat_dir = os.path.join(options.my_dir, "ubiquity", "platform",
+                                "jetpack", "components")
+    comp_plat_dir = os.path.join(options.my_dir, "jetpack", "platform",
                                  platform, "components")
     clear_dir(comp_dest_dir)
     clear_dir(comp_xpi_dir)
