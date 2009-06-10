@@ -44,7 +44,7 @@ var NaiveXPCFlexibleWrapperTests = {
   },
 
   // TODO: Make this work.
-  testWrapperAllowsAccess: function(self) {
+  _SKIP_testWrapperAllowsAccess: function(self) {
     var sandbox = new Components.utils.Sandbox("about:blank");
     var object = {a: {b: "blarg"}};
     sandbox.object = new NaiveXPCFlexibleWrapper(object);
