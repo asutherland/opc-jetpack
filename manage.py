@@ -31,6 +31,8 @@ import shutil
 import distutils.dir_util
 import time
 import threading
+import subprocess
+import simplejson
 from ConfigParser import ConfigParser
 
 from paver.easy import *
@@ -373,3 +375,89 @@ def clean(options):
             ext = os.path.splitext(filename)[1]
             if ext in EXTENSIONS_TO_REMOVE:
                 os.remove(fullpath)
+
+def run_program(args, **kwargs):
+    retval = subprocess.call(args, **kwargs)
+    if retval:
+        print "Process failed with exit code %d." % retval
+        sys.exit(retval)
+
+@task
+@cmdopts([("srcdir=", "t", "The root of your mozilla-central checkout"),
+          ("objdir=", "o", "The root of your objdir")])
+def xpcom(options):
+    """Builds binary XPCOM components for Jetpack."""
+
+    for option in ["srcdir", "objdir"]:
+        if not options.get(option):
+            raise Exception("Please specify a value for the '%s' option." %
+                            option)
+
+    for dirname in ["srcdir", "objdir"]:
+        options[dirname] = os.path.expanduser(options[dirname])
+
+    resolve_options(options)
+    options.xpcshell = os.path.join(options.objdir, "dist", "bin",
+                                    "xpcshell")
+
+    script = """
+      const Cc = Components.classes;
+      const Ci = Components.interfaces;
+      var xulr = Cc['@mozilla.org/xre/app-info;1']
+                 .getService(Ci.nsIXULRuntime);
+      var json = Cc["@mozilla.org/dom/json;1"]
+                 .createInstance(Ci.nsIJSON);
+      dump(json.encode({os: xulr.OS, abi: xulr.XPCOMABI}));
+    """
+
+    popen = subprocess.Popen([options.xpcshell, "-e", script],
+                             stdout = subprocess.PIPE)
+    xpcom_info = Bunch(simplejson.loads(popen.stdout.read()))
+    xpcom_info.components_dir = os.path.join(options.objdir, "dist",
+                                             "bin", "components")
+
+    platform = "%(os)s_%(abi)s" % xpcom_info
+    print "Building XPCOM binary components for %s" % platform
+
+    comp_src_dir = os.path.join(options.my_dir, "components")
+    rel_dest_dir = os.path.join("browser", "components", "ubiquity")
+    comp_dest_dir = os.path.join(options.srcdir, rel_dest_dir)
+    comp_xpi_dir = os.path.join(options.objdir, "dist", "xpi-stage",
+                                "ubiquity", "components")
+    comp_plat_dir = os.path.join(options.my_dir, "ubiquity", "platform",
+                                 platform, "components")
+    clear_dir(comp_dest_dir)
+    clear_dir(comp_xpi_dir)
+    clear_dir(comp_plat_dir)
+
+    shutil.copytree(comp_src_dir, comp_dest_dir)
+
+    # Ensure that these paths are unix-like on Windows.
+    sh_pwd = subprocess.Popen(["sh", "-c", "pwd"],
+                              cwd=options.srcdir,
+                              stdout=subprocess.PIPE)
+    sh_pwd.wait()
+    unix_topsrcdir = sh_pwd.stdout.read().strip()
+    unix_rel_dest_dir = rel_dest_dir.replace("\\", "/")
+
+    # We're specifying 'perl' here because we have to for this
+    # to work on Windows.
+    run_program(["perl",
+                 os.path.join(options.srcdir, "build", "autoconf",
+                              "make-makefile"),
+                 "-t", unix_topsrcdir,
+                 unix_rel_dest_dir],
+                cwd=options.objdir)
+
+    run_program(["make"],
+                cwd=os.path.join(options.objdir, rel_dest_dir))
+
+    shutil.copytree(comp_xpi_dir, comp_plat_dir)
+    for filename in os.listdir(comp_xpi_dir):
+        shutil.copy(os.path.join(comp_xpi_dir, filename),
+                    xpcom_info.components_dir)
+
+    for filename in ["compreg.dat", "xpti.dat"]:
+        fullpath = os.path.join(xpcom_info.components_dir, filename)
+        if os.path.exists(fullpath):
+            os.unlink(fullpath)
