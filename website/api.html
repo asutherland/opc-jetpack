@@ -200,6 +200,8 @@ console.log('Hello from the Jetpack Feature', this);
     you won't have to change your code as Firefox continues to evolve.
     
     
+      
+    
     
     
   </div></div><div class="properties"><div name="jetpack.notifications" class="documentation"><div class="heading">jetpack.notifications</div><div class="content"><div name="notifications" class="property description">
@@ -328,7 +330,36 @@ jetpack.statusBar.append({
         add additional parameters to this function allowing the
         addition of simpler, less resource-intensive elements such as
         static text labels and images.
-      </p></div></div><div class="properties"></div></div></div></div><div name="jetpack.tabs" class="documentation"><div class="heading">jetpack.tabs</div><div class="content"><div name="tabs" class="property description">
+      </p></div></div><div class="properties"></div></div></div></div><div name="jetpack.storage" class="documentation"><div class="heading">jetpack.storage</div><div class="content"><div name="storage" class="property description">
+      This object contains everything related to permanent and temporary storage.
+      
+      
+      
+    </div></div><div class="properties"><div name="jetpack.storage.live" class="documentation"><div class="heading">jetpack.storage.live</div><div class="content"><div name="live" class="property description">
+        You can attach any object to <tt>jetpack.storage.live</tt> and it will
+        be available
+        for you to use until Firefox is restarted. For example: <div class="example">
+jetpack.storage.live.myData = {hello: "world"};
+console.log( jetpack.storage.live.myData );          
+          </div>
+      </div></div><div class="properties"></div></div><div name="jetpack.storage.simple" class="documentation"><div class="heading">jetpack.storage.simple</div><div class="content"><div name="simple" class="property description">
+        See the <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/11">Simple
+        Persistent Storage JEP</a>.
+        <p>
+        The simple storage is sandboxed to each Jetpack, so that you never
+        have to worry about collisions with
+        somebody elses code.
+        </p><p>
+        Here's a quick example of how to use the simple storage API:
+        </p><p>
+        </p><div class="example">
+jetpack.future.import("storage.simple");
+jetpack.storage.simple.set( "4ever", {hello:"world"} );
+jetpack.storage.simple.get( "4ever", function(data, value){
+  console.log( data, value );
+});          
+        </div>
+      </div></div><div class="properties"></div></div></div></div><div name="jetpack.tabs" class="documentation"><div class="heading">jetpack.tabs</div><div class="content"><div name="tabs" class="property description">
       <tt>jetpack.tabs</tt> is a <em>live array</em> with special
       tab-related properties.
       
