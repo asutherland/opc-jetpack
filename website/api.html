@@ -139,7 +139,7 @@ window.onload = function () {
 
     <div class="content"><div class="description" name="globals">
     <h3>The Global Namespace</h3>
-    The global namesace of a Jetpack feature is where most of
+    The global namesace of a Jetpack Feature is where most of
     its functionality can be found. Special care has been taken
     to make this namespace look and function as much like a Web page's
     global namespace as possible.
@@ -168,10 +168,10 @@ window.onload = function () {
     the <a href="http://docs.jquery.com/Ajax">jQuery Ajax
     documentation</a> for more information.
   </p></div></div><div class="properties"></div></div><div name="clearInterval" class="documentation"><div class="heading">clearInterval()</div><div class="content"><div name="clearInterval" class="property description">
-    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearInterval"><tt>window.clearInterval</tt></a>
+    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearInterval"><tt>window.clearInterval()</tt></a>
     function.
   </div></div><div class="properties"></div></div><div name="clearTimeout" class="documentation"><div class="heading">clearTimeout()</div><div class="content"><div name="clearTimeout" class="property description">
-    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearTimeout"><tt>window.clearTimeout</tt></a>
+    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.clearTimeout"><tt>window.clearTimeout()</tt></a>
     function.
   </div></div><div class="properties"></div></div><div name="console" class="documentation"><div class="heading">console</div><div class="content"><div name="console" class="property description">
     This object is used to log messages to the <span class="logging-source">logging console</span> for debugging purposes. Use the methods
@@ -181,7 +181,7 @@ window.onload = function () {
     <p>
     The following example logs some information to the console.
     </p><div class="example">
-console.log('Hello from the Jetpack feature', this);
+console.log('Hello from the Jetpack Feature', this);
     </div>
   </div></div><div class="properties"></div></div><div name="jQuery" class="documentation"><div class="heading">jQuery()</div><div class="content"><div name="jQuery" class="property description">
     This is jQuery, a lightweight JavaScript library. For
@@ -198,6 +198,7 @@ console.log('Hello from the Jetpack feature', this);
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    
     
     
     
@@ -222,7 +223,75 @@ jetpack.notifications.show({title: 'hai2u',
                             body: 'o hai.',
                             icon: 'http://www.mozilla.org/favicon.ico'});
          </div>
-      </div></div><div class="properties"></div></div></div></div><div name="jetpack.statusBar" class="documentation"><div class="heading">jetpack.statusBar</div><div class="content"><div name="statusBar" class="property description">
+      </div></div><div class="properties"></div></div></div></div><div name="jetpack.slideBar" class="documentation"><div class="heading">jetpack.slideBar</div><div class="content"><div name="slideBar" class="property description">
+      This object contains methods relevant to the Jetpack-added SlideBar that
+      appears at the left side of the browser window when the user's pointer
+      moves towards the icon on the left of the tab-strip. Features can add an
+      icon and have the SlideBar open to display additional content and then
+      slide away when the user returns to the page.
+      <p>
+      This slideBar object is currently experimental, so load it with:
+      </p><div class="example">
+jetpack.future.import("slideBar");
+      </div>
+      
+    </div></div><div class="properties"><div name="jetpack.slideBar.append" class="documentation"><div class="heading">jetpack.slideBar.append(options)</div><div class="content"><h2>Arguments</h2><div class="arguments"><div class="argument"><span class="name">options</span><span class="types"><span class="type">Options Object</span></span><span class="description"><div class="option"><span class="name">icon</span><span class="types"><span class="type">String</span></span><span class="description">URI of the initial icon to show when
+          the SlideBar is open.</span></div><div class="option"><span class="name">html</span><span class="types"><span class="type">String</span></span><span class="description">The initial HTML contents of the new
+          SlideBar Feature. This can be a plain string or an E4X xml
+          node.</span></div><div class="option"><span class="name">url</span><span class="types"><span class="type">URL</span></span><span class="description">The URL to load HTML contents for the
+          SlideBar Feature. If the html property is set, it will be used instead
+          of this.</span></div><div class="option"><span class="name">width</span><span class="types"><span class="type">Number</span></span><span class="description">Size of the content area to render
+          <tt>html</tt> or <tt>url</tt>, in pixels.</span></div><div class="option"><span class="name">onSelect</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function invoked
+          when the icon is clicked and selected. If the Feature is already
+          "selected", it won't get another onSelect call. See below for the
+          callback's arguments.</span></div><div class="option"><span class="name">onReady</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function invoked
+          when the SlideBar Feature has its contents loaded. See below for the
+          callback's arguments.</span></div></span></div></div><h2>Description</h2><div name="append" class="property description">
+        
+        This function adds an icon to the SlideBar, and it will be shown when
+        the user moves towards the SlideBar icon. When the user selects a
+        Feature's icon, it will be "selected," and the Feature can do additional
+        actions such as sliding open a larger area to reveal the Feature's
+        contents.
+        <p>
+        All callback functions passed in as options will be called with a single
+        function argument, referred to here as <tt>slide()</tt>, that is used to
+        slide open the SlideBar. <tt>slide()</tt> takes a single "options"
+        object like the <tt>slideBar.append</tt> method; the two
+        properties are <tt>size</tt> and <tt>persist</tt>. <tt>size</tt> is the
+        number of pixels to slide out, and if <tt>persist</tt> is true, the
+        SlideBar will stay open even if the user moves the cursor away.
+        </p><p>
+        <tt>slide()</tt> is a named-property object and has two additional
+        properties: <tt>icon</tt> refers to the icon in the SlideBar and
+        <tt>doc</tt> refers to the content document for the Feature. These are
+        useful for adding listeners or dynamically changing the icon or
+        document.
+        </p><p>
+        To close the SlideBar, just call <tt>slide()</tt> without any arguments.
+        </p><p>
+        The following example adds a SlideBar Feature that temporarily slides
+        itself open when selected and makes itself stay open after clicking the
+        content area. (To close, click the SlideBar icon.) Additionally, the
+        Feature will change its icon when the page is clicked.
+        </p><div class="example">
+jetpack.future.import("slideBar");
+jetpack.slideBar.append({
+  onSelect: function(slide) slide({ size: 100 }),
+  onReady: function(slide) $(slide.doc).click(function() {
+    slide({ size: 200, persist: true });
+    slide.icon.src = "chrome://branding/content/icon48.png";
+  })
+});
+        </div>
+        <p>
+        Notice when <tt>persist</tt> is not provided to the callback function's
+        argument, <tt>slide</tt>, the SlideBar actually shifts the contents of
+        the browser off the right edge of the window. This is because the
+        default view of the SlideBar and its Features are temporary. When
+        <tt>persist</tt> is true, the right edge will stay on the right side of
+        the window, so if it was "off" the window before, it will slide back in.
+      </p></div></div><div class="properties"></div></div></div></div><div name="jetpack.statusBar" class="documentation"><div class="heading">jetpack.statusBar</div><div class="content"><div name="statusBar" class="property description">
       This object contains methods relevant to the status bar that
       appears at the bottom of the browser window. Note that the user
       has the option to disable the display of the status bar in
@@ -230,7 +299,8 @@ jetpack.notifications.show({title: 'hai2u',
       
     </div></div><div class="properties"><div name="jetpack.statusBar.append" class="documentation"><div class="heading">jetpack.statusBar.append(options)</div><div class="content"><h2>Arguments</h2><div class="arguments"><div class="argument"><span class="name">options</span><span class="types"><span class="type">Options Object</span></span><span class="description"><div class="option"><span class="name">html</span><span class="types"><span class="type">String</span></span><span class="description">The initial HTML contents
           of the new status bar panel.</span></div><div class="option"><span class="name">url</span><span class="types"><span class="type">URL</span></span><span class="description">The URL of the status bar
-          panel's HTML contents.</span></div><div class="option"><span class="name">onReady</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function
+          panel's HTML contents.</span></div><div class="option"><span class="name">width</span><span class="types"><span class="type">Number</span></span><span class="description">Size of the content area to render
+          <tt>html</tt> or <tt>url</tt>, in pixels.</span></div><div class="option"><span class="name">onReady</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function
           to invoke when the new panel is created on a status
           bar.</span></div></span></div></div><h2>Description</h2><div name="append" class="property description">
         
@@ -324,17 +394,17 @@ jetpack.tabs.onReady(function onNextPage(doc) {
     </div>
   </div></div><div class="properties"></div></div></div></div></div></div><div name="location" class="documentation"><div class="heading">location</div><div class="content"><div name="location" class="property description">
     This string contains the URL representing the source code of
-    the feature.
+    the Feature.
     <p>
     The following example logs the location to the console.
     </p><div class="example">
 console.log(location);
     </div>
   </div></div><div class="properties"></div></div><div name="setInterval" class="documentation"><div class="heading">setInterval()</div><div class="content"><div name="setInterval" class="property description">
-    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setInterval"><tt>window.setInterval</tt></a>
+    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setInterval"><tt>window.setInterval()</tt></a>
     function.
   </div></div><div class="properties"></div></div><div name="setTimeout" class="documentation"><div class="heading">setTimeout()</div><div class="content"><div name="setTimeout" class="property description">
-    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setTimeout"><tt>window.setTimeout</tt></a>
+    This function works just like the Web's <a href="https://developer.mozilla.org/En/Window.setTimeout"><tt>window.setTimeout()</tt></a>
     function.
   </div></div><div class="properties"></div></div></div><div class="content"><div class="description" name="Tab">
     <h3>Tab Objects</h3>
