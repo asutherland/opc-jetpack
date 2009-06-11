@@ -146,6 +146,37 @@ jetpack.statusBar.append({
         static text labels and images.
       </div>
     </div>
+    <div name="storage" class="property">
+      This object contains everything related to permanent and temporary storage.
+      <div name="simple" class="property">
+        See the <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/11">Simple
+        Persistent Storage JEP</a>.
+        <p>
+        The simple storage is sandboxed to each Jetpack, so that you never
+        have to worry about collisions with
+        somebody elses code.
+        <p>
+        Here's a quick example of how to use the simple storage API:
+        <p>
+        <div class="example">
+jetpack.future.import("storage.simple");
+jetpack.storage.simple.set( "4ever", {hello:"world"} );
+jetpack.storage.simple.get( "4ever", function(data, value){
+  console.log( data, value );
+});          
+        </div>
+      </div>
+      <div name="live" class="property">
+        You can attach any object to <tt>jetpack.storage.live</tt> and it will
+        be available
+        for you to use until Firefox is restarted. For example: <div class="example">
+jetpack.storage.live.myData = {hello: "world"};
+console.log( jetpack.storage.live.myData );          
+          </div>
+      </div>
+      
+    </div>  
+    
     <div name="notifications" class="property">
       Eventually, this object will be the end-all be-all of easy
       communication with your users. Notification bars, transparent
