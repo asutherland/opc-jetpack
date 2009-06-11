@@ -291,6 +291,17 @@ JetpackEnv.setFutures(
      return {require: loader.require};
    },
 
+   "jetpack.storage.simple": function (context) {
+     Components.utils.import("resource://jetpack/modules/simple-storage.js");
+     //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
+     //  so it should be unique to this feature.
+     var ss = new SimpleStorage(context.srcUrl);
+     context.addUnloader({
+       unload: function () { ss.teardown(); }
+     });
+     return ss;
+   },
+
    "jetpack.slideBar": function(context) {
      // Make sure the SlideBar is ready for this context
      SlideBar.init();

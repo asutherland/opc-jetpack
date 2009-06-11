@@ -35,6 +35,12 @@ var JetpackEnvironmentTests = {
         self.assert(this.jetpack.future.list().indexOf('jetpack.T1000') != -1);
         this.jetpack.future.import("T1000");
         self.assertEqual(this.jetpack.T1000(), "I'm from the future.");
+
+        self.assertEqual(typeof(this.jetpack.storage.simple), "undefined");
+        self.assert(this.jetpack.future.list().
+                      indexOf("jetpack.storage.simple") != -1);
+        this.jetpack.future.import("storage.simple");
+        self.assertEqual(typeof(this.jetpack.storage.simple), "object");
       });
   },
 
