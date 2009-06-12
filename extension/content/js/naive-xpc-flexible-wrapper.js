@@ -10,12 +10,17 @@
         if (obj &&
             obj === target &&
             entry.options.trustedPrincipal == options.trustedPrincipal &&
-            entry.options.untrustedPrincipal == options.untrustedPrincipal)
-          return entry.wrappedObject;
+            entry.options.untrustedPrincipal == options.untrustedPrincipal) {
+          var wrapper = entry.weakWrapper.get();
+          if (wrapper)
+            return wrapper;
+          cache.splice(i, 1);
+          break;
+        }
       }
       var wrapper = makeWrapper(target, options);
       cache.push({weakref: Components.utils.getWeakReference(target),
-                  wrappedObject: wrapper,
+                  weakWrapper: Components.utils.getWeakReference(wrapper),
                   options: options});
       return wrapper;
     }
@@ -48,6 +53,8 @@
       Components.utils.evalInSandbox(wrappedCaller.toString(),
                                      sandbox);
 
+      MemoryTracking.track(sandbox.wrappedCaller,
+                           "NaiveXPCFlexibleWrappedFuncton");
       return sandbox.wrappedCaller;
     }
 
@@ -85,6 +92,8 @@
       Components.utils.evalInSandbox("(" + makeGetters.toString() + ")();",
                                      sandbox);
 
+      MemoryTracking.track(sandbox.wrapper,
+                           "NaiveXPCFlexibleWrappedObject");
       return sandbox.wrapper;
     }
 
