@@ -43,14 +43,28 @@ var NaiveXPCFlexibleWrapperTests = {
     self.assertEqual(wrapped.blarg(5), func(5));
   },
 
-  testWrapperAllowsAccess: function(self) {
+  _inSandbox: function(object, evalString) {
     var sandbox = new Components.utils.Sandbox("about:blank");
-    var object = {a: {b: "blarg"}};
     sandbox.object = new NaiveXPCFlexibleWrapper(
       object,
       {untrustedPrincipal: "about:blank"}
     );
-    var result = Components.utils.evalInSandbox("object.a.b", sandbox);
-    self.assertEqual(result, "blarg");
+    return Components.utils.evalInSandbox(evalString, sandbox);
+  },
+
+  testWrapperAllowsAccessToFunction: function(self) {
+    self.assertEqual(
+      this._inSandbox({a: {b: function(x) { return "blarg " + x; }}},
+                      "object.a.b('hi');"),
+      "blarg hi"
+    );
+  },
+
+  testWrapperAllowsAccessToProperty: function(self) {
+    self.assertEqual(
+      this._inSandbox({a: {b: "blarg"}},
+                      "object.a.b"),
+      "blarg"
+    );
   }
 };
