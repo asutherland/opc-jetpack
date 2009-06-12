@@ -3,10 +3,6 @@ window.addLazyLoaders(
 );
 
 var NaiveXPCFlexibleWrapperTests = {
-  testFunctionIsCallable: function(self) {
-
-  },
-
   _testPrimitiveIsPreserved: function(self, value) {
     var wrapped = new NaiveXPCFlexibleWrapper({blarg: value});
     self.assertEqual(typeof(wrapped.blarg), typeof(value));
