@@ -52,6 +52,14 @@ var NaiveXPCFlexibleWrapperTests = {
     return Components.utils.evalInSandbox(evalString, sandbox);
   },
 
+  testWrapperAllowsAccessToDomNode: function(self) {
+    self.assertEqual(
+      this._inSandbox(document,
+                      "object.documentElement.nodeName"),
+      "HTML"
+    );
+  },
+
   testWrapperAllowsAccessToFunction: function(self) {
     self.assertEqual(
       this._inSandbox({a: {b: function(x) { return "blarg " + x; }}},
