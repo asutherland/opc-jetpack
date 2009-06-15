@@ -21,7 +21,7 @@ Firefox and the 'about:jetpack' page should load. Just read the
 instructions from there.
 
 Uninstalling Jetpack
----------------------
+--------------------
 
 Just run "python manage.py uninstall", optionally specifying a profile
 name if necessary, just like you did with the 'install' target.
