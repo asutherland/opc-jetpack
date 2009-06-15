@@ -18,9 +18,13 @@ FBL.ns(
       var JETPACK_URL = "about:jetpack";
 
       var JetpackTabWatcher = {
-        shouldCreateContext: function(win, uri) {
+        shouldCreateContext: function(browser, uri) {
+          if (uri == JETPACK_URL) {
+            Firebug.URLSelector.watchBrowser(browser);
+            return true;
+          }
         },
-        shouldNotCreateContext: function(win, uri) {
+        shouldNotCreateContext: function(browser, uri) {
         },
         initContext: function(context) {
           var msg = ("Thanks for using Jetpack with Firebug! Please note " +
