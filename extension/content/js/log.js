@@ -49,9 +49,17 @@ var Logging = {
   JsErrorConsoleLogger: function JsErrorConsoleLogger() {
     MemoryTracking.track(this);
     function stringifyArgs(args) {
+      var string;
       var stringArgs = [];
-      for (var i = 0; i < args.length; i++)
-        stringArgs.push(args[i]);
+      for (var i = 0; i < args.length; i++) {
+        try {
+          string = args[i].toString();
+        } catch (e) {
+          // TODO: Log the error somewhere, or display it here?
+          string = "<toString() error>";
+        }
+        stringArgs.push(string);
+      }
       return stringArgs.join(" ");
     }
 
