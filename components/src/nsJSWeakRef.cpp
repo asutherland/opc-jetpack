@@ -61,12 +61,7 @@ NS_IMETHODIMP nsJSWeakRef::Set()
     return NS_ERROR_ILLEGAL_VALUE;
 
   JSObject *objToWrap = JSVAL_TO_OBJECT(argv[0]);
-  JSObject *obj = JS_NewObjectWithGivenProto(
-    cx,
-    &sXPC_FlexibleWrapper_JSClass.base,
-    nsnull,
-    objToWrap
-    );
+  JSObject *obj = wrapObject(cx, objToWrap);
   *rval = OBJECT_TO_JSVAL(obj);
   cc->SetReturnValueWasSet(PR_TRUE);
 

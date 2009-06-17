@@ -16,9 +16,7 @@ static JSBool
 resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         JSObject **objp)
 {
-  *objp = obj;
-  return JS_DefineFunction(cx, obj, "toString",
-                           toString, 0, 0) != NULL;
+  return JS_TRUE;
 }
 
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
@@ -43,3 +41,15 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   NULL, // wrapped object
   JSCLASS_NO_RESERVED_MEMBERS
 };
+
+JSObject *wrapObject(JSContext *cx, JSObject *objToWrap)
+{
+  JSObject *obj = JS_NewObjectWithGivenProto(
+    cx,
+    &sXPC_FlexibleWrapper_JSClass.base,
+    NULL,
+    objToWrap
+    );
+  JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
+  return obj;
+}
