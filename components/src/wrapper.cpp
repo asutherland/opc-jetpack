@@ -110,6 +110,15 @@ setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   return propertyOp("setProperty", cx, obj, id, vp);
 }
 
+static JSBool
+checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
+            jsval *vp)
+{
+  // TODO: This effectively overrides the default JS_CheckAccess() and
+  // always grants access to any property on the object!
+  return JS_GetPropertyById(cx, obj, id, vp);
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
@@ -119,7 +128,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     getProperty,        setProperty,
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
-    NULL,               NULL,
+    NULL,               checkAccess,
     NULL,               NULL,
     NULL,               NULL,
     NULL,               NULL
