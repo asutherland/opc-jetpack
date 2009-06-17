@@ -97,4 +97,7 @@ var sandbox = new Cu.Sandbox("http://www.google.com");
 sandbox.wrapped = wrapped;
 assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
 
+wrapped = wrap(obj, {});
+assertEqual(wrapped.blargle, undefined);
+
 print("All tests passed!");
