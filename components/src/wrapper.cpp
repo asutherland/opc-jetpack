@@ -70,12 +70,33 @@ addProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   return JS_TRUE;
 }
 
+static JSBool
+delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+  jsval rval = NULL;
+  jsval args[2];
+  args[0] = OBJECT_TO_JSVAL(obj);
+  args[1] = id;
+  if (!delegateToResolver(cx, obj, "delProperty", 2, args, &rval))
+    return JS_FALSE;
+
+  // TODO: The MDC docs say that setting *vp to JSVAL_FALSE and then
+  // returning JS_TRUE should indicate that the property can't be
+  // deleted, but this doesn't seem to actually be the case.
+  if (!rval || !JSVAL_IS_BOOLEAN(rval)) {
+    JS_ReportError(cx, "delProperty must return a boolean");
+    return JS_FALSE;
+  }
+  *vp = rval;
+  return JS_TRUE;
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
     JSCLASS_NEW_RESOLVE | JSCLASS_IS_EXTENDED |
     JSCLASS_HAS_RESERVED_SLOTS(1),
-    addProperty,        JS_PropertyStub,
+    addProperty,        delProperty,
     JS_PropertyStub,    JS_PropertyStub,
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
