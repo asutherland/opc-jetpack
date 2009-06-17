@@ -424,7 +424,7 @@ def xpcom(options):
     comp_dest_dir = os.path.join(options.srcdir, rel_dest_dir)
     comp_xpi_dir = os.path.join(options.objdir, "dist", "xpi-stage",
                                 "jetpack", "components")
-    comp_plat_dir = os.path.join(options.my_dir, "jetpack", "platform",
+    comp_plat_dir = os.path.join(options.path_to_ext_root, "platform",
                                  platform, "components")
     clear_dir(comp_dest_dir)
     clear_dir(comp_xpi_dir)
