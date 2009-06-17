@@ -16,6 +16,20 @@ static JSBool
 resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         JSObject **objp)
 {
+  jsval resolver;
+  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+    return JS_FALSE;
+  JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
+  jsval rval = NULL;
+  jsval args[2];
+  args[0] = OBJECT_TO_JSVAL(obj);
+  args[1] = id;
+  if (!JS_CallFunctionName(cx, resolverObj, "resolve", 2, args, &rval))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(rval))
+    *objp = JSVAL_TO_OBJECT(rval);
+
   return JS_TRUE;
 }
 
@@ -42,14 +56,15 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   JSCLASS_NO_RESERVED_MEMBERS
 };
 
-JSObject *wrapObject(JSContext *cx, JSObject *objToWrap)
+JSObject *wrapObject(JSContext *cx, JSObject *objToWrap, jsval resolver)
 {
-  JSObject *obj = JS_NewObjectWithGivenProto(
+  JSObject *obj = JS_NewObject(
     cx,
     &sXPC_FlexibleWrapper_JSClass.base,
     NULL,
     objToWrap
     );
   JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
+  JS_SetReservedSlot(cx, obj, 0, resolver);
   return obj;
 }
