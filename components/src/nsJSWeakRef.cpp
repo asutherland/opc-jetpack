@@ -1,4 +1,5 @@
 #include "nsJSWeakRef.h"
+#include "wrapper.h"
 
 #include "jsapi.h"
 #include "nsIXPConnect.h"
@@ -159,6 +160,12 @@ NS_IMETHODIMP nsJSWeakRef::Get()
   if(!cc)
     return NS_ERROR_FAILURE;
 
+  // Get JSContext of current call
+  JSContext* cx;
+  rv = cc->GetJSContext(&cx);
+  if(NS_FAILED(rv) || !cx)
+    return NS_ERROR_FAILURE;
+
   // get place for return value
   jsval *rval = nsnull;
   rv = cc->GetRetValPtr(&rval);
@@ -169,7 +176,13 @@ NS_IMETHODIMP nsJSWeakRef::Get()
   // or anything?
 
   // This automatically is set to JSVAL_NULL if weakRef is nsnull.
-  *rval = OBJECT_TO_JSVAL(this->impl->weakRef);
+  JSObject *obj = JS_NewObjectWithGivenProto(
+    cx,
+    &sXPC_FlexibleWrapper_JSClass.base,
+    nsnull,
+    this->impl->weakRef
+    );
+  *rval = OBJECT_TO_JSVAL(obj);
   cc->SetReturnValueWasSet(PR_TRUE);
 
   return NS_OK;

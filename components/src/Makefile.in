@@ -25,6 +25,7 @@ REQUIRES	= \
 
 CPPSRCS = nsJSWeakRef.cpp \
           jetpackmodule.cpp \
+          wrapper.cpp \
           $(NULL)
 
 include $(topsrcdir)/config/rules.mk
