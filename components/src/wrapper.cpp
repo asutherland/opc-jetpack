@@ -13,6 +13,22 @@ toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 }
 
 static JSBool
+enumerate(JSContext *cx, JSObject *obj)
+{
+  jsval resolver;
+  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+    return JS_FALSE;
+  JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
+  jsval rval = NULL;
+  jsval args[1];
+  args[0] = OBJECT_TO_JSVAL(obj);
+  if (!JS_CallFunctionName(cx, resolverObj, "enumerate", 1, args, &rval))
+    return JS_FALSE;
+
+  return JS_TRUE;
+}
+
+static JSBool
 resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         JSObject **objp)
 {
@@ -40,7 +56,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     JSCLASS_HAS_RESERVED_SLOTS(1),
     JS_PropertyStub,    JS_PropertyStub,
     JS_PropertyStub,    JS_PropertyStub,
-    JS_EnumerateStub,   (JSResolveOp)resolve,
+    enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
     NULL,               NULL,
     NULL,               NULL,
