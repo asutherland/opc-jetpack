@@ -49,12 +49,32 @@ resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
   return JS_TRUE;
 }
 
+static JSBool
+addProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+  jsval resolver;
+  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+    return JS_FALSE;
+  JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
+  jsval rval = NULL;
+  jsval args[3];
+  args[0] = OBJECT_TO_JSVAL(obj);
+  args[1] = id;
+  args[2] = *vp;
+  if (!JS_CallFunctionName(cx, resolverObj, "addProperty", 3, args, &rval))
+    return JS_FALSE;
+
+  if (rval)
+    *vp = rval;
+  return JS_TRUE;
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
     JSCLASS_NEW_RESOLVE | JSCLASS_IS_EXTENDED |
     JSCLASS_HAS_RESERVED_SLOTS(1),
-    JS_PropertyStub,    JS_PropertyStub,
+    addProperty,        JS_PropertyStub,
     JS_PropertyStub,    JS_PropertyStub,
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
@@ -80,7 +100,7 @@ JSObject *wrapObject(JSContext *cx, JSObject *objToWrap, jsval resolver)
     NULL,
     objToWrap
     );
-  JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
   JS_SetReservedSlot(cx, obj, 0, resolver);
+  JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
   return obj;
 }
