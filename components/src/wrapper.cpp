@@ -55,19 +55,26 @@ resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
 }
 
 static JSBool
-addProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+propertyOp(const char *name, JSContext *cx, JSObject *obj, jsval id,
+           jsval *vp)
 {
   jsval rval = NULL;
   jsval args[3];
   args[0] = OBJECT_TO_JSVAL(obj);
   args[1] = id;
   args[2] = *vp;
-  if (!delegateToResolver(cx, obj, "addProperty", 3, args, &rval))
+  if (!delegateToResolver(cx, obj, name, 3, args, &rval))
     return JS_FALSE;
 
   if (rval)
     *vp = rval;
   return JS_TRUE;
+}
+
+static JSBool
+addProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+  return propertyOp("addProperty", cx, obj, id, vp);
 }
 
 static JSBool
@@ -91,13 +98,25 @@ delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   return JS_TRUE;
 }
 
+static JSBool
+getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+  return propertyOp("getProperty", cx, obj, id, vp);
+}
+
+static JSBool
+setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+  return propertyOp("setProperty", cx, obj, id, vp);
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
     JSCLASS_NEW_RESOLVE | JSCLASS_IS_EXTENDED |
     JSCLASS_HAS_RESERVED_SLOTS(1),
     addProperty,        delProperty,
-    JS_PropertyStub,    JS_PropertyStub,
+    getProperty,        setProperty,
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
     NULL,               NULL,
