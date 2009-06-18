@@ -99,7 +99,7 @@ delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   // TODO: The MDC docs say that setting *vp to JSVAL_FALSE and then
   // returning JS_TRUE should indicate that the property can't be
   // deleted, but this doesn't seem to actually be the case.
-  if (!rval || !JSVAL_IS_BOOLEAN(rval)) {
+  if (!JSVAL_IS_BOOLEAN(rval)) {
     JS_ReportError(cx, "delProperty must return a boolean");
     return JS_FALSE;
   }
@@ -128,6 +128,39 @@ checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
   return JS_GetPropertyById(cx, obj, id, vp);
 }
 
+static JSObject *
+wrappedObject(JSContext *cx, JSObject *obj) {
+  // TODO: The resolver isn't actually our wrapped object, it's just what
+  // defines the policies of our wrapping. We should probably store the
+  // actual wrapped object in a reserved slot.
+  jsval resolver;
+  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+    return obj;
+  return JSVAL_TO_OBJECT(resolver);
+}
+
+static JSBool
+equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp) {
+  jsval rval;
+  jsval args[2];
+  args[0] = OBJECT_TO_JSVAL(obj);
+  args[1] = v;
+
+  jsval defaultRval = JSVAL_FALSE;
+  if (JSVAL_IS_OBJECT(v) && JSVAL_TO_OBJECT(v) == obj)
+    defaultRval = JSVAL_TRUE;
+
+  if (!delegateToResolver(cx, obj, "equality", 2, args, &rval, defaultRval))
+    return JS_FALSE;
+
+  if (!JSVAL_IS_BOOLEAN(rval)) {
+    JS_ReportError(cx, "equality must return a boolean");
+    return JS_FALSE;
+  }
+  *bp = JSVAL_TO_BOOLEAN(rval);
+  return JS_TRUE;
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
@@ -143,11 +176,11 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     NULL,               NULL
   },
   // JSExtendedClass initialization
-  NULL, // equality
+  equality,
   NULL, // outerObject
   NULL, // innerObject
   NULL, // iterator
-  NULL, // wrapped object
+  wrappedObject,
   JSCLASS_NO_RESERVED_MEMBERS
 };
 

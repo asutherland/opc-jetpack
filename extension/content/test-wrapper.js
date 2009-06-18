@@ -97,9 +97,22 @@ assertEqual(wrapped.foo, 4);
 
 assertEqual(wrapped.nom, "nowai");
 
+assertEqual(wrapped, wrapped);
+
+assert(wrapped === wrapped, "a wrapper instance must be === to itself");
+assert(wrapped === wrap(resolver),
+       "a wrapper instance must be === to another wrapper instance of " +
+       "the same resolver");
+
 var sandbox = new Cu.Sandbox("http://www.google.com");
 sandbox.wrapped = wrapped;
 assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
+
+assertEqual(wrap(
+              {equality: function(self, v) {
+                 return v.blah == "beans";
+               }}),
+            {blah: "beans"});
 
 wrapped = wrap({});
 assertEqual(wrapped.blargle, undefined);
