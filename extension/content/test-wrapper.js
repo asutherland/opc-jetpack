@@ -252,12 +252,14 @@ wrapped = wrap({},
 assert(3 + wrapped == 8);
 assert("hi" + wrapped == "hi5");
 
-function FunkyWrapper(wrappee) {
+// A silly wrapper that masks all non-string values in the wrapped object,
+// except for sub-objects, and that uppercases all string values.
+function SillyWrapper(wrappee) {
   this.wrappee = wrappee;
   return wrap(wrappee, this);
 }
 
-FunkyWrapper.prototype = {
+SillyWrapper.prototype = {
   getProperty: function(wrappee, wrapper, name, defaultValue) {
     assertEqual(this.wrappee, wrappee);
     var value = this.wrappee[name];
@@ -265,7 +267,7 @@ FunkyWrapper.prototype = {
     case "string":
       return value.toUpperCase();
     case "object":
-      return new FunkyWrapper(value);
+      return new SillyWrapper(value);
     default:
       return undefined;
     }
@@ -275,7 +277,7 @@ FunkyWrapper.prototype = {
   }
 };
 
-wrapped = new FunkyWrapper({boop: 'blarg',
+wrapped = new SillyWrapper({boop: 'blarg',
                             number: 5,
                             sub: {flarg: 'arg'}});
 assertEqual(wrapped.boop, 'BLARG');
@@ -283,5 +285,46 @@ assertEqual(wrapped.number, undefined);
 assertEqual(wrapped.sub.flarg, 'ARG');
 assert(wrapped.sub == wrapped.sub);
 assert(wrapped.sub === wrapped.sub);
+
+function testReadOnlyDomWrapper() {
+  function ReadOnlyDomWrapper(node) {
+    this.node = node;
+    return wrap(node, this);
+  }
+  ReadOnlyDomWrapper.prototype = {
+    getProperty: function(wrappee, wrapper, name, defaultValue) {
+      var value = this.node[name];
+      switch (typeof(value)) {
+      case "string":
+        return value;
+      case "object":
+        return new ReadOnlyDomWrapper(value);
+      case "function":
+        throw new Error("Sorry, you can't access functions on this DOM.");
+      default:
+        return undefined;
+      }
+    },
+    setProperty: function(wrappee, wrapper, name, defaultValue) {
+      throw new Error("Sorry, this DOM is read-only.");
+    }
+  };
+
+  var wrapped = new ReadOnlyDomWrapper(document.getElementById("test"));
+  assertEqual(wrapped.innerHTML, "This is test <b>HTML</b>.");
+  assertEqual(wrapped.style.display, "none");
+  assertEqual(wrapped.firstChild.nodeValue, "This is test ");
+  assertThrows(
+    function() { wrapped.innerHTML = "blah"; },
+    "Error: Sorry, this DOM is read-only."
+  );
+  assertThrows(
+    function() { wrapped.setAttribute('blarg', 'fnarg'); },
+    "Error: Sorry, you can't access functions on this DOM."
+  );
+}
+
+if (this.window)
+  testReadOnlyDomWrapper();
 
 print("All tests passed!");
