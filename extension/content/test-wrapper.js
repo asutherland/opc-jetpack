@@ -82,7 +82,7 @@ var object = {a: 5};
 var wrapped = wrap(object, resolver);
 
 assertEqual(typeof(wrapped), "object");
-assertEqual(wrapped.toString(), "[object XPCFlexibleWrapper]");
+assertEqual(wrapped.toString(), "[object Object]");
 
 assertEqual(wrapped.blarg, "boop");
 assertEqual(wrapped.blarg, "boop");

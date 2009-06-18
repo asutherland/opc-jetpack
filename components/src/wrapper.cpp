@@ -7,18 +7,6 @@
 #define SLOT_WRAPPEE  1
 
 static JSBool
-toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-         jsval *rval)
-{
-  JSString *str = JS_NewStringCopyZ(cx, "[object XPCFlexibleWrapper]");
-  if (!str)
-    return JS_FALSE;
-
-  *rval = STRING_TO_JSVAL(str);
-  return JS_TRUE;
-}
-
-static JSBool
 resolverHasMethod(JSContext *cx, JSObject *obj, const char *name)
 {
   jsval resolver;
@@ -248,6 +236,5 @@ JSObject *wrapObject(JSContext *cx, jsval object, jsval resolver)
     );
   JS_SetReservedSlot(cx, obj, SLOT_RESOLVER, resolver);
   JS_SetReservedSlot(cx, obj, SLOT_WRAPPEE, object);
-  JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
   return obj;
 }
