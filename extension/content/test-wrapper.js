@@ -29,6 +29,22 @@ function assertEqual(a, b) {
                     '"' + b + '"');
 }
 
+function assertThrows(func, validator, msg) {
+  try {
+    func();
+  } catch (e) {
+    switch (typeof(validator)) {
+    case "string":
+      assertEqual(e.toString(), validator);
+      break;
+    default:
+      throw new Error("Not sure what to do with " + validator);
+    }
+    return;
+  }
+  throw new Error("Assertion failed: " + msg);
+}
+
 var resolver = {
   resolve: function(wrappee, wrapper, name) {
     print("resolve on " + name);
@@ -94,7 +110,9 @@ assertEqual(resolver.enumerateCalled, true);
 wrapped.foo = 2;
 assertEqual(wrapped.foo, 4);
 
-try { delete wrapped.foo; } catch (e) {}
+assertThrows(function() { delete wrapped.foo; },
+             "Error: no wai");
+
 assertEqual(wrapped.foo, 4);
 
 assertEqual(wrapped.nom, "nowai");
