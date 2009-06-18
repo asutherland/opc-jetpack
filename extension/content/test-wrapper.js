@@ -100,12 +100,9 @@ var resolver = {
 var object = {a: 5};
 var wrapped = wrap(object, resolver);
 
-// TODO: Not sure what these should actually evaluate to
-// given our resolver, but at the very least they shouldn't cause infinite
-// recursion!
 for each (name in ["__parent__", "__proto__", "prototype", "constructor"]) {
-  assert(wrapped[name] || !wrapped[name],
-         name + " shouldn't result in crash");
+  assert(wrapped[name] === undefined,
+         name + " property of wrapped object should be undefined");
 }
 
 assertEqual(typeof(wrapped), "object");
