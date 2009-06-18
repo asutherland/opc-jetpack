@@ -35,7 +35,21 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
     return JS_TRUE;
   }
 
-  if (!JS_CallFunctionName(cx, resolverObj, name, argc, argv, rval))
+  uintN allArgc = argc + 2;
+  jsval allArgv[10];
+  if (allArgc > 10) {
+    JS_ReportError(cx, "Didn't expect so many args!");
+    return JS_FALSE;
+  }
+
+  if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, allArgv))
+    return JS_FALSE;
+  allArgv[1] = OBJECT_TO_JSVAL(obj);
+
+  for (int i = 0; i < argc; i++)
+    allArgv[i + 2] = argv[i];
+
+  if (!JS_CallFunctionName(cx, resolverObj, name, allArgc, allArgv, rval))
     return JS_FALSE;
   return JS_TRUE;
 }
@@ -44,9 +58,7 @@ static JSBool
 enumerate(JSContext *cx, JSObject *obj)
 {
   jsval rval;
-  jsval args[1];
-  args[0] = OBJECT_TO_JSVAL(obj);
-  if (!delegateToResolver(cx, obj, "enumerate", 1, args, &rval, JSVAL_VOID))
+  if (!delegateToResolver(cx, obj, "enumerate", 0, NULL, &rval, JSVAL_VOID))
     return JS_FALSE;
 
   return JS_TRUE;
@@ -57,10 +69,9 @@ resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         JSObject **objp)
 {
   jsval rval;
-  jsval args[2];
-  args[0] = OBJECT_TO_JSVAL(obj);
-  args[1] = id;
-  if (!delegateToResolver(cx, obj, "resolve", 2, args, &rval, JSVAL_VOID))
+  jsval args[1];
+  args[0] = id;
+  if (!delegateToResolver(cx, obj, "resolve", 1, args, &rval, JSVAL_VOID))
     return JS_FALSE;
 
   if (JSVAL_IS_OBJECT(rval))
@@ -74,11 +85,10 @@ propertyOp(const char *name, JSContext *cx, JSObject *obj, jsval id,
            jsval *vp)
 {
   jsval rval;
-  jsval args[3];
-  args[0] = OBJECT_TO_JSVAL(obj);
-  args[1] = id;
-  args[2] = *vp;
-  if (!delegateToResolver(cx, obj, name, 3, args, &rval, JSVAL_VOID))
+  jsval args[2];
+  args[0] = id;
+  args[1] = *vp;
+  if (!delegateToResolver(cx, obj, name, 2, args, &rval, JSVAL_VOID))
     return JS_FALSE;
 
   if (!JSVAL_IS_VOID(rval))
@@ -96,10 +106,9 @@ static JSBool
 delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
   jsval rval;
-  jsval args[2];
-  args[0] = OBJECT_TO_JSVAL(obj);
-  args[1] = id;
-  if (!delegateToResolver(cx, obj, "delProperty", 2, args, &rval, JSVAL_TRUE))
+  jsval args[1];
+  args[0] = id;
+  if (!delegateToResolver(cx, obj, "delProperty", 1, args, &rval, JSVAL_TRUE))
     return JS_FALSE;
 
   // TODO: The MDC docs say that setting *vp to JSVAL_FALSE and then
@@ -145,15 +154,14 @@ wrappedObject(JSContext *cx, JSObject *obj) {
 static JSBool
 equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp) {
   jsval rval;
-  jsval args[2];
-  args[0] = OBJECT_TO_JSVAL(obj);
-  args[1] = v;
+  jsval args[1];
+  args[0] = v;
 
   jsval defaultRval = JSVAL_FALSE;
   if (JSVAL_IS_OBJECT(v) && JSVAL_TO_OBJECT(v) == obj)
     defaultRval = JSVAL_TRUE;
 
-  if (!delegateToResolver(cx, obj, "equality", 2, args, &rval, defaultRval))
+  if (!delegateToResolver(cx, obj, "equality", 1, args, &rval, defaultRval))
     return JS_FALSE;
 
   if (!JSVAL_IS_BOOLEAN(rval)) {

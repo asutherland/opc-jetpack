@@ -30,29 +30,29 @@ function assertEqual(a, b) {
 }
 
 var resolver = {
-  resolve: function(self, name) {
+  resolve: function(wrappee, wrapper, name) {
     print("resolve on " + name);
     if (name == 'blarg') {
       print('resolving blarg now!');
-      self.__defineGetter__('blarg',
-                            function() { return 'boop'; });
-      return self;
+      wrapper.__defineGetter__('blarg',
+                               function() { return 'boop'; });
+      return wrapper;
     }
   },
 
   enumerateCalled: false,
 
-  enumerate: function(self) {
+  enumerate: function(wrappee, wrapper) {
     this.enumerateCalled = true;
   },
 
-  addProperty: function(self, name, defaultValue) {
+  addProperty: function(wrappee, wrapper, name, defaultValue) {
     if (name == 'foo')
       return defaultValue + 1;
     return defaultValue;
   },
 
-  delProperty: function(self, name) {
+  delProperty: function(wrappee, wrapper, name) {
     if (name == 'foo') {
       print('delProperty ' + name);
       // TODO: We'd like to just return false here to indicate that
@@ -63,14 +63,14 @@ var resolver = {
     return true;
   },
 
-  getProperty: function(self, name, defaultValue) {
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
     print('get ' + name);
     if (name == "nom")
       return "nowai";
     return defaultValue;
   },
 
-  setProperty: function(self, name, defaultValue) {
+  setProperty: function(wrappee, wrapper, name, defaultValue) {
     print('set ' + name);
     if (name == 'foo')
       return defaultValue + 1;
@@ -114,7 +114,7 @@ assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
 
 assertEqual(wrap(
               {},
-              {equality: function(self, v) {
+              {equality: function(wrappee, wrapper, v) {
                  return v.blah == "beans";
                }}),
             {blah: "beans"});
@@ -124,7 +124,7 @@ assertEqual(wrapped.blargle, undefined);
 
 function testGCWorks() {
   var resolver = {
-    getProperty: function(self, name, defaultValue) {
+    getProperty: function(wrappee, wrapper, name, defaultValue) {
       if (name == "foo")
         return "bar";
       return defaultValue;
