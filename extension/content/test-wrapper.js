@@ -117,6 +117,7 @@ function testGCWorks() {
   resolver = undefined;
   Cu.forceGC();
   assert(weakref.get(), "weakref should still exist");
+  assertEqual(wrapped.foo, "bar");
   wrapped = undefined;
   Cu.forceGC();
   assertEqual(weakref.get(), null);
