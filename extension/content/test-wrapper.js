@@ -94,6 +94,22 @@ var resolver = {
     if (name == 'foo')
       return defaultValue + 1;
     return defaultValue;
+  },
+
+  iteratorObject: function(wrappee, wrapper, keysonly) {
+    if (keysonly) {
+      function keyIterator() {
+        for (name in wrappee)
+          yield name;
+      }
+      return keyIterator();
+    } else {
+      function keyValueIterator() {
+        for (name in wrappee)
+          yield [name, wrappee[name]];
+      }
+      return keyValueIterator();
+    }
   }
 };
 
@@ -113,7 +129,22 @@ assertEqual(wrapped.blarg, "boop");
 
 assertEqual(resolver.enumerateCalled, false);
 for (name in wrapped) {}
-assertEqual(resolver.enumerateCalled, true);
+for each (obj in wrapped) {}
+var iter = Iterator(wrapped);
+assertEqual(iter.next()[0], "a");
+assertEqual(resolver.enumerateCalled, false);
+
+// TODO: Somehow create a test that calls the enumerate hook. It used to be
+// automatically called when doing a for..in loop, but when the iteratorObject
+// hook was added, it got called instead.
+
+assertThrows(function() {
+               var wrapper = wrap({}, {});
+               for (name in wrapper) {}
+             },
+             "Error: iteratorObject() is unimplemented.",
+             "Iterating over a wrapper with no defined iterator should " +
+             "throw an error.");
 
 wrapped.foo = 2;
 assertEqual(wrapped.foo, 4);

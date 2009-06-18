@@ -235,6 +235,25 @@ convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
   return JS_ConvertStub(cx, obj, type, vp);
 }
 
+static JSObject *
+iteratorObject(JSContext *cx, JSObject *obj, JSBool keysonly)
+{
+  if (resolverHasMethod(cx, obj, "iteratorObject")) {
+    jsval rval;
+    jsval args[1];
+    args[0] = BOOLEAN_TO_JSVAL(keysonly);
+    if (!delegateToResolver(cx, obj, "iteratorObject", 1, args, &rval))
+      return NULL;
+    if (!JSVAL_IS_OBJECT(rval)) {
+      JS_ReportError(cx, "iteratorObject() must return an object.");
+      return NULL;
+    }
+    return JSVAL_TO_OBJECT(rval);
+  }
+  JS_ReportError(cx, "iteratorObject() is unimplemented.");
+  return NULL;
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
@@ -253,7 +272,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   equality,
   NULL, // outerObject
   NULL, // innerObject
-  NULL, // iterator
+  iteratorObject,
   wrappedObject,
   JSCLASS_NO_RESERVED_MEMBERS
 };
