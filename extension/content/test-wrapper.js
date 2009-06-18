@@ -287,11 +287,31 @@ assert(wrapped.sub == wrapped.sub);
 assert(wrapped.sub === wrapped.sub);
 
 function testReadOnlyDomWrapper() {
+  function WrappedDomFunction(node, func) {
+    this.node = node;
+    this.func = func;
+    return wrap(func, this);
+  }
+  WrappedDomFunction.prototype = {
+    call: function call(wrappee, wrapper, thisObj, args) {
+      var safeArgs = [];
+      for (var i = 0; i < args.length; i++)
+        safeArgs.push(XPCSafeJSObjectWrapper(args[i]));
+      var result = this.func.apply(this.node, safeArgs);
+      switch (typeof(result)) {
+      case "string":
+        return result;
+      default:
+        return undefined;
+      }
+    }
+  };
   function ReadOnlyDomWrapper(node) {
     this.node = node;
     return wrap(node, this);
   }
   ReadOnlyDomWrapper.prototype = {
+    accessibleFunctions: {getAttribute: true},
     getProperty: function(wrappee, wrapper, name, defaultValue) {
       var value = this.node[name];
       switch (typeof(value)) {
@@ -300,7 +320,9 @@ function testReadOnlyDomWrapper() {
       case "object":
         return new ReadOnlyDomWrapper(value);
       case "function":
-        throw new Error("Sorry, you can't access functions on this DOM.");
+        if (name in this.accessibleFunctions)
+          return new WrappedDomFunction(this.node, value);
+        throw new Error("Sorry, you can't access that function.");
       default:
         return undefined;
       }
@@ -320,8 +342,31 @@ function testReadOnlyDomWrapper() {
   );
   assertThrows(
     function() { wrapped.setAttribute('blarg', 'fnarg'); },
-    "Error: Sorry, you can't access functions on this DOM."
+    "Error: Sorry, you can't access that function."
   );
+
+  var sandbox = new Cu.Sandbox("http://www.google.com");
+  sandbox.wrapped = wrapped;
+  assertEqual(
+    Cu.evalInSandbox("wrapped.innerHTML", sandbox),
+    "This is test <b>HTML</b>."
+  );
+  assertEqual(
+    Cu.evalInSandbox("wrapped.style.display", sandbox),
+    "none"
+  );
+  assertEqual(
+    Cu.evalInSandbox("wrapped.getAttribute('id');", sandbox),
+    "test"
+  );
+  assertThrows(
+    function() {
+      Cu.evalInSandbox("wrapped.setAttribute('blarg', 'fnarg');",
+                       sandbox);
+    },
+    "Error: Sorry, you can't access that function."
+  );
+
 }
 
 if (this.window)
