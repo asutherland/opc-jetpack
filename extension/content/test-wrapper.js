@@ -12,10 +12,10 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
-function wrap(resolver) {
+function wrap(object, resolver) {
   var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
                 .createInstance(Ci.nsIJSWeakRef);
-  return factory.set(resolver);
+  return factory.set(object, resolver);
 }
 
 function assert(a, msg) {
@@ -78,7 +78,8 @@ var resolver = {
   }
 };
 
-var wrapped = wrap(resolver);
+var object = {a: 5};
+var wrapped = wrap(object, resolver);
 
 assertEqual(wrapped.toString(), "[object XPCFlexibleWrapper]");
 
@@ -100,21 +101,25 @@ assertEqual(wrapped.nom, "nowai");
 assertEqual(wrapped, wrapped);
 
 assert(wrapped === wrapped, "a wrapper instance must be === to itself");
-assert(wrapped === wrap(resolver),
+assert(wrap(object, resolver) === wrap(object, resolver),
        "a wrapper instance must be === to another wrapper instance of " +
-       "the same resolver");
+       "the same target object");
+assert(wrap({}, resolver) !== wrap({}, resolver),
+       "a wrapper instance must be !== to another wrapper instance of " +
+       "a different target object");
 
 var sandbox = new Cu.Sandbox("http://www.google.com");
 sandbox.wrapped = wrapped;
 assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
 
 assertEqual(wrap(
+              {},
               {equality: function(self, v) {
                  return v.blah == "beans";
                }}),
             {blah: "beans"});
 
-wrapped = wrap({});
+wrapped = wrap({}, {});
 assertEqual(wrapped.blargle, undefined);
 
 function testGCWorks() {
@@ -125,15 +130,24 @@ function testGCWorks() {
       return defaultValue;
     }
   };
-  var weakref = Cu.getWeakReference(resolver);
-  var wrapped = wrap(resolver);
+  var obj = new Object();
+
+  var weakResolver = Cu.getWeakReference(resolver);
+  var weakObj = Cu.getWeakReference(obj);
+
+  var wrapped = wrap(obj, resolver);
   resolver = undefined;
+  obj = undefined;
+
   Cu.forceGC();
-  assert(weakref.get(), "weakref should still exist");
+
+  assert(weakResolver.get(), "weakResolver should still exist");
+  assert(weakObj.get(), "weakObj should still exist");
   assertEqual(wrapped.foo, "bar");
   wrapped = undefined;
   Cu.forceGC();
-  assertEqual(weakref.get(), null);
+  assertEqual(weakResolver.get(), null);
+  assertEqual(weakObj.get(), null);
 }
 
 testGCWorks();

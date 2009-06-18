@@ -130,13 +130,10 @@ checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
 
 static JSObject *
 wrappedObject(JSContext *cx, JSObject *obj) {
-  // TODO: The resolver isn't actually our wrapped object, it's just what
-  // defines the policies of our wrapping. We should probably store the
-  // actual wrapped object in a reserved slot.
-  jsval resolver;
-  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+  jsval wrappee;
+  if (!JS_GetReservedSlot(cx, obj, 1, &wrappee))
     return obj;
-  return JSVAL_TO_OBJECT(resolver);
+  return JSVAL_TO_OBJECT(wrappee);
 }
 
 static JSBool
@@ -165,7 +162,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
     JSCLASS_NEW_RESOLVE | JSCLASS_IS_EXTENDED |
-    JSCLASS_HAS_RESERVED_SLOTS(1),
+    JSCLASS_HAS_RESERVED_SLOTS(2),
     addProperty,        delProperty,
     getProperty,        setProperty,
     enumerate,          (JSResolveOp)resolve,
@@ -184,7 +181,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   JSCLASS_NO_RESERVED_MEMBERS
 };
 
-JSObject *wrapObject(JSContext *cx, jsval resolver)
+JSObject *wrapObject(JSContext *cx, jsval object, jsval resolver)
 {
   JSObject *obj = JS_NewObject(
     cx,
@@ -193,6 +190,7 @@ JSObject *wrapObject(JSContext *cx, jsval resolver)
     NULL
     );
   JS_SetReservedSlot(cx, obj, 0, resolver);
+  JS_SetReservedSlot(cx, obj, 1, object);
   JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
   return obj;
 }
