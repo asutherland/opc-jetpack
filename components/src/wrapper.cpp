@@ -228,11 +228,11 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
 
 JSObject *wrapObject(JSContext *cx, jsval object, jsval resolver)
 {
-  JSObject *obj = JS_NewObject(
+  JSObject *obj = JS_NewObjectWithGivenProto(
     cx,
     &sXPC_FlexibleWrapper_JSClass.base,
     NULL,
-    NULL
+    JS_GetScopeChain(cx)
     );
   JS_SetReservedSlot(cx, obj, SLOT_RESOLVER, resolver);
   JS_SetReservedSlot(cx, obj, SLOT_WRAPPEE, object);

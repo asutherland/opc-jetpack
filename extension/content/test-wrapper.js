@@ -50,8 +50,11 @@ var resolver = {
     print("resolve on " + name);
     if (name == 'blarg') {
       print('resolving blarg now!');
-      wrapper.__defineGetter__('blarg',
-                               function() { return 'boop'; });
+      wrapper.blarg = 'boop';
+      return wrapper;
+    }
+    if (name == 'toString') {
+      wrapper.toString = function() { return "[my wrapped object]"; };
       return wrapper;
     }
   },
@@ -97,8 +100,16 @@ var resolver = {
 var object = {a: 5};
 var wrapped = wrap(object, resolver);
 
+// TODO: Not sure what these should actually evaluate to
+// given our resolver, but at the very least they shouldn't cause infinite
+// recursion!
+for each (name in ["__parent__", "__proto__", "prototype", "constructor"]) {
+  assert(wrapped[name] || !wrapped[name],
+         name + " shouldn't result in crash");
+}
+
 assertEqual(typeof(wrapped), "object");
-assertEqual(wrapped.toString(), "[object Object]");
+assertEqual(wrapped.toString(), "[my wrapped object]");
 
 assertEqual(wrapped.blarg, "boop");
 assertEqual(wrapped.blarg, "boop");
@@ -172,17 +183,26 @@ function testGCWorks() {
 
 testGCWorks();
 
-var funcWrapper = wrap(function(x) { return x + 1; }, {});
-
-assertThrows(function() { funcWrapper(1); },
+assertThrows(function() {
+               function foo(x) { return x + 1; }
+               var resolver = {
+                 resolve: function(wrappee, wrapper, name) {
+                   print("resolve " + name);
+                   return wrappee;
+                 }
+               };
+               var funcWrapper = wrap(foo, resolver);
+               funcWrapper.__parent__ = foo.__parent__;
+               funcWrapper(1);
+             },
              "Error: Either the object isn't callable, or the " +
              "caller doesn't have permission to call it.",
              "By default, wrappers shouldn't allow function calls.");
 
-funcWrapper = wrap(function(x) { return x + 1; },
-                   {call: function(wrappee, wrapper, thisObj, args) {
-                      return wrappee.apply(thisObj, args);
-                    }});
+var funcWrapper = wrap(function(x) { return x + 1; },
+                       {call: function(wrappee, wrapper, thisObj, args) {
+                          return wrappee.apply(thisObj, args);
+                        }});
 assertEqual(typeof(funcWrapper), "function");
 assertEqual(funcWrapper(1), 2);
 
