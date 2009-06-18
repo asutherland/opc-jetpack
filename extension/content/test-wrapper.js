@@ -195,4 +195,20 @@ var funcWrapper = wrap(function(x) { return x + 1; },
 assertEqual(typeof(funcWrapper), "function");
 assertEqual(funcWrapper(1), 2);
 
+assertThrows(function() {
+               var Constructor = wrap(function(x) { this.x = 1; }, {});
+               var obj = new Constructor(1);
+             },
+             "Error: Either the object can't be used as a constructor, or " +
+             "the caller doesn't have permission to use it.",
+             "By default, wrappers shouldn't allow for constructors.");
+
+var Constructor = wrap(function(x) { this.x = 1; },
+                       {construct: function(wrappee, wrapper,
+                                            thisObj, args) {
+                         thisObj.x = args[0];
+                         return thisObj;
+                       }});
+assertEqual((new Constructor(1)).x, 1);
+
 print("All tests passed!");

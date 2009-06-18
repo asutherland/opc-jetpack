@@ -185,21 +185,41 @@ equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp) {
 }
 
 static JSBool
+delegateNativeToResolver(const char *name, JSContext *cx, JSObject *thisPtr,
+                         JSObject *obj, uintN argc, jsval *argv, jsval *rval) {
+  JSObject *array = JS_NewArrayObject(cx, argc, argv);
+  jsval delegateArgv[2];
+  delegateArgv[0] = OBJECT_TO_JSVAL(thisPtr);
+  delegateArgv[1] = OBJECT_TO_JSVAL(array);
+
+  return delegateToResolver(cx, obj, name, 2, delegateArgv, rval);
+}
+
+static JSBool
 call(JSContext *cx, JSObject *thisPtr, uintN argc, jsval *argv, jsval *rval)
 {
   JSObject *obj = JSVAL_TO_OBJECT(JS_ARGV_CALLEE(argv));
   
-  if (resolverHasMethod(cx, obj, "call")) {
-    JSObject *array = JS_NewArrayObject(cx, argc, argv);
-    jsval delegateArgv[2];
-    delegateArgv[0] = OBJECT_TO_JSVAL(thisPtr);
-    delegateArgv[1] = OBJECT_TO_JSVAL(array);
-
-    return delegateToResolver(cx, obj, "call", 2, delegateArgv, rval);
-  }
+  if (resolverHasMethod(cx, obj, "call"))
+    return delegateNativeToResolver("call", cx, thisPtr, obj, argc, argv,
+                                    rval);
 
   JS_ReportError(cx, "Either the object isn't callable, or the caller "
                  "doesn't have permission to call it.");
+  return JS_FALSE;
+}
+
+static JSBool
+construct(JSContext *cx, JSObject *thisPtr, uintN argc, jsval *argv, jsval *rval)
+{
+  JSObject *obj = JSVAL_TO_OBJECT(JS_ARGV_CALLEE(argv));
+  
+  if (resolverHasMethod(cx, obj, "construct"))
+    return delegateNativeToResolver("construct", cx, thisPtr, obj, argc, argv,
+                                    rval);
+
+  JS_ReportError(cx, "Either the object can't be used as a constructor, or "
+                 "the caller doesn't have permission to use it.");
   return JS_FALSE;
 }
 
@@ -213,7 +233,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
     NULL,               checkAccess,
-    call,               NULL,
+    call,               construct,
     NULL,               NULL,
     NULL,               NULL
   },
