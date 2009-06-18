@@ -1,5 +1,11 @@
 #include "wrapper.h"
 
+// Reserved slot ID for the resolver (meta) object
+#define SLOT_RESOLVER 0
+
+// Reserved slot ID for the object to be wrapped
+#define SLOT_WRAPPEE  1
+
 static JSBool
 toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
          jsval *rval)
@@ -17,7 +23,7 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
                    uintN argc, jsval *argv, jsval *rval, jsval defaultRval)
 {
   jsval resolver;
-  if (!JS_GetReservedSlot(cx, obj, 0, &resolver))
+  if (!JS_GetReservedSlot(cx, obj, SLOT_RESOLVER, &resolver))
     return JS_FALSE;
   JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
   
@@ -131,7 +137,7 @@ checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
 static JSObject *
 wrappedObject(JSContext *cx, JSObject *obj) {
   jsval wrappee;
-  if (!JS_GetReservedSlot(cx, obj, 1, &wrappee))
+  if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, &wrappee))
     return obj;
   return JSVAL_TO_OBJECT(wrappee);
 }
@@ -189,8 +195,8 @@ JSObject *wrapObject(JSContext *cx, jsval object, jsval resolver)
     NULL,
     NULL
     );
-  JS_SetReservedSlot(cx, obj, 0, resolver);
-  JS_SetReservedSlot(cx, obj, 1, object);
+  JS_SetReservedSlot(cx, obj, SLOT_RESOLVER, resolver);
+  JS_SetReservedSlot(cx, obj, SLOT_WRAPPEE, object);
   JS_DefineFunction(cx, obj, "toString", toString, 0, 0);
   return obj;
 }
