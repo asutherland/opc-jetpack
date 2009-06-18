@@ -223,6 +223,18 @@ construct(JSContext *cx, JSObject *thisPtr, uintN argc, jsval *argv, jsval *rval
   return JS_FALSE;
 }
 
+static JSBool
+convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
+{
+  if (resolverHasMethod(cx, obj, "convert")) {
+    JSString *typeStr = JS_NewStringCopyZ(cx, JS_GetTypeName(cx, type));
+    jsval args[1];
+    args[0] = STRING_TO_JSVAL(typeStr);
+    return delegateToResolver(cx, obj, "convert", 1, args, vp);
+  }
+  return JS_ConvertStub(cx, obj, type, vp);
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
@@ -231,7 +243,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     addProperty,        delProperty,
     getProperty,        setProperty,
     enumerate,          (JSResolveOp)resolve,
-    JS_ConvertStub,     JS_FinalizeStub,
+    convert,            JS_FinalizeStub,
     NULL,               checkAccess,
     call,               construct,
     NULL,               NULL,

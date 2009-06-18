@@ -106,7 +106,7 @@ for each (name in ["__parent__", "__proto__", "prototype", "constructor"]) {
 }
 
 assertEqual(typeof(wrapped), "object");
-assertEqual(wrapped.toString(), "[my wrapped object]");
+assertEqual(wrapped, "[my wrapped object]");
 
 assertEqual(wrapped.blarg, "boop");
 assertEqual(wrapped.blarg, "boop");
@@ -210,5 +210,15 @@ var Constructor = wrap(function(x) { this.x = 1; },
                          return thisObj;
                        }});
 assertEqual((new Constructor(1)).x, 1);
+
+wrapped = wrap({},
+               {convert: function(wrappee, wrapper, type) {
+                  // TODO: Not sure why type is always "undefined".
+                  if (type == "undefined")
+                    return 5;
+                  throw new Error("unknown type: " + type);
+                }});
+assert(3 + wrapped == 8);
+assert("hi" + wrapped == "hi5");
 
 print("All tests passed!");
