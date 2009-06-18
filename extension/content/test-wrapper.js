@@ -252,4 +252,36 @@ wrapped = wrap({},
 assert(3 + wrapped == 8);
 assert("hi" + wrapped == "hi5");
 
+function FunkyWrapper(wrappee) {
+  this.wrappee = wrappee;
+  return wrap(wrappee, this);
+}
+
+FunkyWrapper.prototype = {
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
+    assertEqual(this.wrappee, wrappee);
+    var value = this.wrappee[name];
+    switch (typeof(value)) {
+    case "string":
+      return value.toUpperCase();
+    case "object":
+      return new FunkyWrapper(value);
+    default:
+      return undefined;
+    }
+  },
+  equality: function(wrappee, wrapper, other) {
+    return wrappee === other;
+  }
+};
+
+wrapped = new FunkyWrapper({boop: 'blarg',
+                            number: 5,
+                            sub: {flarg: 'arg'}});
+assertEqual(wrapped.boop, 'BLARG');
+assertEqual(wrapped.number, undefined);
+assertEqual(wrapped.sub.flarg, 'ARG');
+assert(wrapped.sub == wrapped.sub);
+assert(wrapped.sub === wrapped.sub);
+
 print("All tests passed!");
