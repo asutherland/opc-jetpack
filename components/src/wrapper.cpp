@@ -26,7 +26,7 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
   if (!JS_GetReservedSlot(cx, obj, SLOT_RESOLVER, &resolver))
     return JS_FALSE;
   JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
-  
+
   JSBool hasProperty;
   if (!JS_HasProperty(cx, resolverObj, name, &hasProperty))
     return JS_FALSE;
@@ -172,6 +172,22 @@ equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp) {
   return JS_TRUE;
 }
 
+static JSBool
+call(JSContext *cx, JSObject *thisPtr, uintN argc, jsval *argv, jsval *rval)
+{
+  jsval obj = JS_ARGV_CALLEE(argv);
+  JSObject *array = JS_NewArrayObject(cx, argc, argv);
+  jsval delegateArgv[2];
+  delegateArgv[0] = OBJECT_TO_JSVAL(thisPtr);
+  delegateArgv[1] = OBJECT_TO_JSVAL(array);
+
+  // TODO: This effectively means that by default, any wrapper is callable
+  // and will return undefined. This shouldn't necessarily be the case,
+  // should it?
+  return delegateToResolver(cx, JSVAL_TO_OBJECT(obj), "call", 2,
+                            delegateArgv, rval, JSVAL_VOID);
+}
+
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
   { "XPCFlexibleWrapper",
@@ -182,7 +198,7 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
     enumerate,          (JSResolveOp)resolve,
     JS_ConvertStub,     JS_FinalizeStub,
     NULL,               checkAccess,
-    NULL,               NULL,
+    call,               NULL,
     NULL,               NULL,
     NULL,               NULL
   },

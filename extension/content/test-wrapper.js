@@ -154,7 +154,10 @@ function testGCWorks() {
 testGCWorks();
 
 var funcWrapper = wrap(function(x) { return x + 1; },
-                       {});
+                       {call: function(wrappee, wrapper, thisObj, args) {
+                          return wrappee.apply(thisObj, args);
+                        }});
 assertEqual(typeof(funcWrapper), "function");
+assertEqual(funcWrapper(1), 2);
 
 print("All tests passed!");
