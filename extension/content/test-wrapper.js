@@ -184,15 +184,7 @@ function testGCWorks() {
 testGCWorks();
 
 assertThrows(function() {
-               function foo(x) { return x + 1; }
-               var resolver = {
-                 resolve: function(wrappee, wrapper, name) {
-                   print("resolve " + name);
-                   return wrappee;
-                 }
-               };
-               var funcWrapper = wrap(foo, resolver);
-               funcWrapper.__parent__ = foo.__parent__;
+               var funcWrapper = wrap(function(x) { return x + 1; }, {});
                funcWrapper(1);
              },
              "Error: Either the object isn't callable, or the " +
