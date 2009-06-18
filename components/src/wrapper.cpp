@@ -19,8 +19,7 @@ toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 }
 
 static JSBool
-delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
-                   uintN argc, jsval *argv, jsval *rval, jsval defaultRval)
+resolverHasMethod(JSContext *cx, JSObject *obj, const char *name)
 {
   jsval resolver;
   if (!JS_GetReservedSlot(cx, obj, SLOT_RESOLVER, &resolver))
@@ -30,10 +29,19 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
   JSBool hasProperty;
   if (!JS_HasProperty(cx, resolverObj, name, &hasProperty))
     return JS_FALSE;
-  if (!hasProperty) {
-    *rval = defaultRval;
-    return JS_TRUE;
-  }
+  return hasProperty;
+
+  // TODO: Check to make sure the property is a function?
+}
+
+static JSBool
+delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
+                   uintN argc, jsval *argv, jsval *rval)
+{
+  jsval resolver;
+  if (!JS_GetReservedSlot(cx, obj, SLOT_RESOLVER, &resolver))
+    return JS_FALSE;
+  JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
 
   uintN allArgc = argc + 2;
   jsval allArgv[10];
@@ -46,7 +54,7 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
     return JS_FALSE;
   allArgv[1] = OBJECT_TO_JSVAL(obj);
 
-  for (int i = 0; i < argc; i++)
+  for (unsigned int i = 0; i < argc; i++)
     allArgv[i + 2] = argv[i];
 
   if (!JS_CallFunctionName(cx, resolverObj, name, allArgc, allArgv, rval))
@@ -57,26 +65,33 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
 static JSBool
 enumerate(JSContext *cx, JSObject *obj)
 {
-  jsval rval;
-  if (!delegateToResolver(cx, obj, "enumerate", 0, NULL, &rval, JSVAL_VOID))
-    return JS_FALSE;
-
-  return JS_TRUE;
+  if (resolverHasMethod(cx, obj, "enumerate")) {
+    jsval rval;
+    if (!delegateToResolver(cx, obj, "enumerate", 0, NULL, &rval))
+      return JS_FALSE;
+  }
+  return JS_EnumerateStub(cx, obj);
 }
 
 static JSBool
 resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
         JSObject **objp)
 {
-  jsval rval;
-  jsval args[1];
-  args[0] = id;
-  if (!delegateToResolver(cx, obj, "resolve", 1, args, &rval, JSVAL_VOID))
-    return JS_FALSE;
+  if (resolverHasMethod(cx, obj, "resolve")) {
+    jsval rval;
+    jsval args[1];
+    args[0] = id;
+    if (!delegateToResolver(cx, obj, "resolve", 1, args, &rval))
+      return JS_FALSE;
 
-  if (JSVAL_IS_OBJECT(rval))
-    *objp = JSVAL_TO_OBJECT(rval);
+    if (JSVAL_IS_OBJECT(rval))
+      *objp = JSVAL_TO_OBJECT(rval);
+    else
+      *objp = NULL;
 
+    return JS_TRUE;
+  }
+  *objp = NULL;
   return JS_TRUE;
 }
 
@@ -84,16 +99,19 @@ static JSBool
 propertyOp(const char *name, JSContext *cx, JSObject *obj, jsval id,
            jsval *vp)
 {
-  jsval rval;
-  jsval args[2];
-  args[0] = id;
-  args[1] = *vp;
-  if (!delegateToResolver(cx, obj, name, 2, args, &rval, JSVAL_VOID))
-    return JS_FALSE;
+  if (resolverHasMethod(cx, obj, name)) {
+    jsval rval;
+    jsval args[2];
+    args[0] = id;
+    args[1] = *vp;
+    if (!delegateToResolver(cx, obj, name, 2, args, &rval))
+      return JS_FALSE;
 
-  if (!JSVAL_IS_VOID(rval))
-    *vp = rval;
-  return JS_TRUE;
+    if (!JSVAL_IS_VOID(rval))
+      *vp = rval;
+    return JS_TRUE;
+  }
+  return JS_PropertyStub(cx, obj, id, vp);
 }
 
 static JSBool
@@ -105,21 +123,24 @@ addProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 static JSBool
 delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
-  jsval rval;
-  jsval args[1];
-  args[0] = id;
-  if (!delegateToResolver(cx, obj, "delProperty", 1, args, &rval, JSVAL_TRUE))
-    return JS_FALSE;
+  if (resolverHasMethod(cx, obj, "delProperty")) {
+    jsval rval;
+    jsval args[1];
+    args[0] = id;
+    if (!delegateToResolver(cx, obj, "delProperty", 1, args, &rval))
+      return JS_FALSE;
 
-  // TODO: The MDC docs say that setting *vp to JSVAL_FALSE and then
-  // returning JS_TRUE should indicate that the property can't be
-  // deleted, but this doesn't seem to actually be the case.
-  if (!JSVAL_IS_BOOLEAN(rval)) {
-    JS_ReportError(cx, "delProperty must return a boolean");
-    return JS_FALSE;
+    // TODO: The MDC docs say that setting *vp to JSVAL_FALSE and then
+    // returning JS_TRUE should indicate that the property can't be
+    // deleted, but this doesn't seem to actually be the case.
+    if (!JSVAL_IS_BOOLEAN(rval)) {
+      JS_ReportError(cx, "delProperty must return a boolean");
+      return JS_FALSE;
+    }
+    *vp = rval;
+    return JS_TRUE;
   }
-  *vp = rval;
-  return JS_TRUE;
+  return JS_PropertyStub(cx, obj, id, vp);
 }
 
 static JSBool
@@ -153,39 +174,45 @@ wrappedObject(JSContext *cx, JSObject *obj) {
 
 static JSBool
 equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp) {
-  jsval rval;
-  jsval args[1];
-  args[0] = v;
+  if (resolverHasMethod(cx, obj, "equality")) {
+    jsval rval;
+    jsval args[1];
+    args[0] = v;
+    
+    if (!delegateToResolver(cx, obj, "equality", 1, args, &rval))
+      return JS_FALSE;
 
-  jsval defaultRval = JSVAL_FALSE;
-  if (JSVAL_IS_OBJECT(v) && JSVAL_TO_OBJECT(v) == obj)
-    defaultRval = JSVAL_TRUE;
-
-  if (!delegateToResolver(cx, obj, "equality", 1, args, &rval, defaultRval))
-    return JS_FALSE;
-
-  if (!JSVAL_IS_BOOLEAN(rval)) {
-    JS_ReportError(cx, "equality must return a boolean");
-    return JS_FALSE;
+    if (!JSVAL_IS_BOOLEAN(rval)) {
+      JS_ReportError(cx, "equality must return a boolean");
+      return JS_FALSE;
+    }
+    *bp = JSVAL_TO_BOOLEAN(rval);
+    return JS_TRUE;
   }
-  *bp = JSVAL_TO_BOOLEAN(rval);
+  if (JSVAL_IS_OBJECT(v) && JSVAL_TO_OBJECT(v) == obj)
+    *bp = JS_TRUE;
+  else
+    *bp = JS_FALSE;
   return JS_TRUE;
 }
 
 static JSBool
 call(JSContext *cx, JSObject *thisPtr, uintN argc, jsval *argv, jsval *rval)
 {
-  jsval obj = JS_ARGV_CALLEE(argv);
-  JSObject *array = JS_NewArrayObject(cx, argc, argv);
-  jsval delegateArgv[2];
-  delegateArgv[0] = OBJECT_TO_JSVAL(thisPtr);
-  delegateArgv[1] = OBJECT_TO_JSVAL(array);
+  JSObject *obj = JSVAL_TO_OBJECT(JS_ARGV_CALLEE(argv));
+  
+  if (resolverHasMethod(cx, obj, "call")) {
+    JSObject *array = JS_NewArrayObject(cx, argc, argv);
+    jsval delegateArgv[2];
+    delegateArgv[0] = OBJECT_TO_JSVAL(thisPtr);
+    delegateArgv[1] = OBJECT_TO_JSVAL(array);
 
-  // TODO: This effectively means that by default, any wrapper is callable
-  // and will return undefined. This shouldn't necessarily be the case,
-  // should it?
-  return delegateToResolver(cx, JSVAL_TO_OBJECT(obj), "call", 2,
-                            delegateArgv, rval, JSVAL_VOID);
+    return delegateToResolver(cx, obj, "call", 2, delegateArgv, rval);
+  }
+
+  JS_ReportError(cx, "Either the object isn't callable, or the caller "
+                 "doesn't have permission to call it.");
+  return JS_FALSE;
 }
 
 JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
