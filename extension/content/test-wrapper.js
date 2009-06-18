@@ -111,7 +111,8 @@ wrapped.foo = 2;
 assertEqual(wrapped.foo, 4);
 
 assertThrows(function() { delete wrapped.foo; },
-             "Error: no wai");
+             "Error: no wai",
+             "property delete handlers should work");
 
 assertEqual(wrapped.foo, 4);
 
@@ -171,10 +172,17 @@ function testGCWorks() {
 
 testGCWorks();
 
-var funcWrapper = wrap(function(x) { return x + 1; },
-                       {call: function(wrappee, wrapper, thisObj, args) {
-                          return wrappee.apply(thisObj, args);
-                        }});
+var funcWrapper = wrap(function(x) { return x + 1; }, {});
+
+assertThrows(function() { funcWrapper(1); },
+             "Error: Either the object isn't callable, or the " +
+             "caller doesn't have permission to call it.",
+             "By default, wrappers shouldn't allow function calls.");
+
+funcWrapper = wrap(function(x) { return x + 1; },
+                   {call: function(wrappee, wrapper, thisObj, args) {
+                      return wrappee.apply(thisObj, args);
+                    }});
 assertEqual(typeof(funcWrapper), "function");
 assertEqual(funcWrapper(1), 2);
 
