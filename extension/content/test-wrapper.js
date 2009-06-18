@@ -18,6 +18,11 @@ function wrap(resolver) {
   return factory.set(resolver);
 }
 
+function assert(a, msg) {
+  if (!a)
+    throw new Error("Assertion failed: " + msg);
+}
+
 function assertEqual(a, b) {
   if (a != b)
     throw new Error('"' + a + '" is not equal to ' +
@@ -98,5 +103,25 @@ assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
 
 wrapped = wrap({});
 assertEqual(wrapped.blargle, undefined);
+
+function testGCWorks() {
+  var resolver = {
+    getProperty: function(self, name, defaultValue) {
+      if (name == "foo")
+        return "bar";
+      return defaultValue;
+    }
+  };
+  var weakref = Cu.getWeakReference(resolver);
+  var wrapped = wrap(resolver);
+  resolver = undefined;
+  Cu.forceGC();
+  assert(weakref.get(), "weakref should still exist");
+  wrapped = undefined;
+  Cu.forceGC();
+  assertEqual(weakref.get(), null);
+}
+
+testGCWorks();
 
 print("All tests passed!");
