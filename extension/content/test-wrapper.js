@@ -12,10 +12,10 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
-function wrap(obj, resolver) {
+function wrap(resolver) {
   var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
                 .createInstance(Ci.nsIJSWeakRef);
-  return factory.set(obj, resolver);
+  return factory.set(resolver);
 }
 
 function assertEqual(a, b) {
@@ -73,8 +73,7 @@ var resolver = {
   }
 };
 
-var obj = {a: 5};
-var wrapped = wrap(obj, resolver);
+var wrapped = wrap(resolver);
 
 assertEqual(wrapped.toString(), "[object XPCFlexibleWrapper]");
 
@@ -97,7 +96,7 @@ var sandbox = new Cu.Sandbox("http://www.google.com");
 sandbox.wrapped = wrapped;
 assertEqual(Cu.evalInSandbox("wrapped.nom", sandbox), "nowai");
 
-wrapped = wrap(obj, {});
+wrapped = wrap({});
 assertEqual(wrapped.blargle, undefined);
 
 print("All tests passed!");

@@ -151,13 +151,13 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   JSCLASS_NO_RESERVED_MEMBERS
 };
 
-JSObject *wrapObject(JSContext *cx, JSObject *objToWrap, jsval resolver)
+JSObject *wrapObject(JSContext *cx, jsval resolver)
 {
   JSObject *obj = JS_NewObject(
     cx,
     &sXPC_FlexibleWrapper_JSClass.base,
     NULL,
-    objToWrap
+    NULL
     );
   JS_SetReservedSlot(cx, obj, 0, resolver);
   JS_DefineFunction(cx, obj, "toString", toString, 0, 0);

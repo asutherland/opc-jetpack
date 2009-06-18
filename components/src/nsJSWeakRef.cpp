@@ -49,7 +49,7 @@ NS_IMETHODIMP nsJSWeakRef::Set()
   if(NS_FAILED(rv))
     return rv;
 
-  if (argc < 2)
+  if (argc < 1)
     return NS_ERROR_XPC_NOT_ENOUGH_ARGS;
 
   jsval *argv;
@@ -60,12 +60,8 @@ NS_IMETHODIMP nsJSWeakRef::Set()
   if (!JSVAL_IS_OBJECT(argv[0]))
     return NS_ERROR_ILLEGAL_VALUE;
 
-  if (!JSVAL_IS_OBJECT(argv[1]))
-    return NS_ERROR_ILLEGAL_VALUE;
-
-  JSObject *objToWrap = JSVAL_TO_OBJECT(argv[0]);
-  JSObject *obj = wrapObject(cx, objToWrap, argv[1]);
-  *rval = OBJECT_TO_JSVAL(obj);
+  JSObject *wrapped = wrapObject(cx, argv[0]);
+  *rval = OBJECT_TO_JSVAL(wrapped);
   cc->SetReturnValueWasSet(PR_TRUE);
 
   return NS_OK;
