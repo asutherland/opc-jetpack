@@ -317,6 +317,11 @@ JetpackEnv.setFutures(
      return {
        append: function(args) { SlideBar.append(context, args); }
      };
+   },
+
+   "jetpack.audio.recorder": function(context) {
+    return Components.classes["@labs.mozilla.com/audio/recorder;1"].
+        getService(Components.interfaces.IAudioRecorder);
    }
   });
 

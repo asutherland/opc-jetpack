@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -77,7 +76,6 @@ initialize_portaudio()
 
     err = Pa_Initialize();
     if (err != paNoError) {
-        fprintf(stderr, "Could not initialize paudio! %d", err);
         return err;
     }
 
@@ -115,6 +113,28 @@ AudioRecorder::~AudioRecorder()
 }
 
 /*
+ * This code is ripped from profile/src/nsProfile.cpp and is further
+ * duplicated in uriloader/exthandler.  this should probably be moved
+ * into xpcom or some other shared library.
+ */ 
+static void
+MakeRandomString(char *buf, PRInt32 bufLen)
+{
+    // turn PR_Now() into milliseconds since epoch
+    // and salt rand with that.
+    double fpTime;
+    LL_L2D(fpTime, PR_Now());
+
+    // use 1e-6, granularity of PR_Now() on the mac is seconds
+    srand((uint)(fpTime * 1e-6 + 0.5));   
+    PRInt32 i;
+    for (i=0;i<bufLen;i++) {
+        *buf++ = table[rand()%TABLE_SIZE];
+    }
+    *buf = 0;
+}
+
+/*
  * Start recording
  */
 NS_IMETHODIMP
@@ -123,7 +143,7 @@ AudioRecorder::Start()
     /* Init portaudio */
     PaError err;
     if ((err = initialize_portaudio()) != paNoError) {
-        fprintf(stderr, "Could not initialize PortAudio! %d\n", err);
+        fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
         return NS_ERROR_FAILURE;
     }
 
@@ -131,14 +151,15 @@ AudioRecorder::Start()
     nsCOMPtr<nsIFile> o;
 
     /* Allocate OGG file */
-    char buf[8];
+    char buf[13];
     nsCAutoString path;
 
     rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(o));
     if (NS_FAILED(rv)) return rv;
 
-    memcpy(buf, "ar.ogg", 7);
-    rv = o->AppendNative(nsDependentCString(buf, 6));
+    MakeRandomString(buf, 8);
+    memcpy(buf + 8, ".ogg", 5);
+    rv = o->AppendNative(nsDependentCString(buf, 12));
     if (NS_FAILED(rv)) return rv;
     rv = o->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
     if (NS_FAILED(rv)) return rv;
@@ -148,7 +169,6 @@ AudioRecorder::Start()
     if (NS_FAILED(rv)) return rv;
 
     /* Store tmpfile name */
-    fprintf(stderr, "Encoding audio to %s\n", path.get());
     filename = (char *)PR_Calloc(strlen(path.get()) + 1, sizeof(char));
     memcpy(filename, path.get(), strlen(path.get()));
 
@@ -166,7 +186,7 @@ AudioRecorder::Start()
     /* Start recording */
     err = Pa_StartStream(stream);
     if (err != paNoError) {
-        fprintf(stderr, "Could not start stream! %d", err);
+        fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
         return NS_ERROR_FAILURE;
     }
 
