@@ -319,9 +319,9 @@ JetpackEnv.setFutures(
      };
    },
 
-   "jetpack.audio.recorder": function(context) {
-    return Components.classes["@labs.mozilla.com/audio/recorder;1"].
-        getService(Components.interfaces.IAudioRecorder);
+   "jetpack.audio": function(context) {
+       Components.utils.import("resource://jetpack/modules/audio.js");
+       return new Audio();
    }
   });
 
