@@ -106,10 +106,23 @@ NS_IMPL_ISUPPORTS1(AudioRecorder, IAudioRecorder)
 
 AudioRecorder::AudioRecorder()
 {
+    stream = NULL;
+    recording = 0;
+    outfile = NULL;
+    filename = NULL;
+
+    PaError err;
+    if ((err = initialize_portaudio()) != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
+    }
 }
 
 AudioRecorder::~AudioRecorder()
 {
+    PaError err;
+    if ((err = Pa_Terminate()) != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not terminate PortAudio! %d\n", err);
+    }
 }
 
 /*
@@ -140,13 +153,12 @@ MakeRandomString(char *buf, PRInt32 bufLen)
 NS_IMETHODIMP
 AudioRecorder::Start()
 {
-    /* Init portaudio */
-    PaError err;
-    if ((err = initialize_portaudio()) != paNoError) {
-        fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
+    if (recording) {
+        fprintf(stderr, "JEP Audio:: Recording in progress!\n");
         return NS_ERROR_FAILURE;
     }
 
+    PaError err;
     nsresult rv;
     nsCOMPtr<nsIFile> o;
 
@@ -184,6 +196,7 @@ AudioRecorder::Start()
     }
 
     /* Start recording */
+    recording = 1;
     err = Pa_StartStream(stream);
     if (err != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
@@ -199,13 +212,17 @@ AudioRecorder::Start()
 NS_IMETHODIMP
 AudioRecorder::Stop(nsACString& final)
 {
-    Pa_StopStream(stream);
+    if (!recording) {
+        fprintf(stderr, "JEP Audio:: No recording in progress!\n");
+        return NS_ERROR_FAILURE;    
+    }
 
+    Pa_StopStream(stream);
     sf_close(outfile);
     final.Assign(filename, strlen(filename));
     PR_Free(filename);
-    Pa_Terminate();
 
+    recording = 0;
     return NS_OK;
 }
 

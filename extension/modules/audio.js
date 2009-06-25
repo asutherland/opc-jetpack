@@ -59,11 +59,13 @@ function Audio() {
             let lFile = CC("@mozilla.org/file/local;1",
                     "nsILocalFile", "initWithPath");
             let src = new lFile(fPath);
+            let dst = getOrCreateDirectory();
 
-            src.moveTo(getOrCreateDirectory(), '');
-            return src.leafName;
+            src.moveTo(dst, '');
+            dst.append(src.leafName);
+            return dst.path;
         }
-    }
+    };
 }
 
 function ensureDirectoryExists(aFile) {

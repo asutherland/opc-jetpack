@@ -56,6 +56,9 @@ public:
 
 private:
     ~AudioRecorder();
+
+protected:
+    int recording;
 };
 
 #define TABLE_SIZE 36
