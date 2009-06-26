@@ -139,11 +139,12 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
 
   JSPropertyDescArray properties;
   if (!JS_GetPropertyDescArray(targetCx, target, &properties)) {
-    JS_ReportError(cx, "Couldn't get property desc array.");
-    return JS_FALSE;
+    if (JS_IsExceptionPending(targetCx))
+      JS_ClearPendingException(targetCx);
+    return JS_TRUE;
   }
 
-  for (int i = 0; i < properties.length; i++) {
+  for (unsigned int i = 0; i < properties.length; i++) {
     jsval id = properties.array[i].id;
     // TODO: What if the property is a number?
     if (JSVAL_IS_STRING(id)) {
@@ -300,9 +301,12 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS_END
 };
 
-JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
-                     jsval *argv, jsval *rval)
+static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
+                        jsval *argv, jsval *rval)
 {
+  // TODO: We really need to make sure everything gets cleaned up
+  // properly if an error occurred here.
+
   JSString *code;
   const char *filename;
 
@@ -350,6 +354,8 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
     return JS_FALSE;
 
+  JSBool wasSuccessful = JS_TRUE;
+
   if (!JS_EvaluateScript(serverCx, serverGlobal,
                          JS_GetStringBytes(code),
                          JS_GetStringLength(code),
@@ -357,7 +363,7 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
                          &serverRval)) {
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Running server script failed.");
-    return JS_FALSE;
+    wasSuccessful = JS_FALSE;
   }
 
   /* Cleanup. */
@@ -366,6 +372,51 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   JS_DestroyContext(serverCx);
   JS_DestroyRuntime(serverRuntime);
 
-  *rval = JSVAL_VOID;
-  return JS_TRUE;
+  return wasSuccessful;
+}
+
+JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
+                     jsval *argv, jsval *rval)
+{
+  if (argc < 2) {
+    JS_ReportError(cx, "Not enough arguments.");
+    return JS_FALSE;
+  }
+
+  JSContext *freshCx = JS_NewContext(JS_GetRuntime(cx), 8192);
+  if (freshCx == NULL) {
+    JS_ReportError(cx, "Couldn't create fresh context.");
+    return JS_FALSE;
+  }
+  JS_SetOptions(freshCx, JSOPTION_VAROBJFIX);
+  JS_SetVersion(freshCx, JSVERSION_LATEST);
+  JS_BeginRequest(freshCx);
+
+  JSObject *newObj = JS_NewObject(freshCx, &TCB_global_class, NULL, NULL);
+  if (newObj == NULL) {
+    JS_ReportError(cx, "Couldn't create new object.");
+    return JS_FALSE;
+  }
+
+  if (!JS_DefineProperty(freshCx, newObj, "code", argv[0], NULL, NULL,
+                         NULL) ||
+      !JS_DefineProperty(freshCx, newObj, "filename", argv[1], NULL, NULL,
+                         NULL) ||
+      !JS_DefineFunction(freshCx, newObj, "profile", doProfile, 2, 0))
+    return JS_FALSE;
+
+  JSBool wasSuccessful = JS_TRUE;
+
+  if (!JS_EvaluateScript(freshCx, newObj,
+                         "profile(code, filename)",
+                         23,
+                         "<string>", 1, rval)) {
+    JS_ReportError(cx, "Profiling failed.");
+    wasSuccessful = JS_FALSE;
+  }
+
+  JS_EndRequest(freshCx);
+  JS_DestroyContext(freshCx);
+
+  return wasSuccessful;
 }

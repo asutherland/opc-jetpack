@@ -441,19 +441,27 @@ function memoryProfilingTests(global) {
     }
   }
 
+  var visitedCount = 0;
   var leftToVisit = getGCRoots();
   while (leftToVisit.length > 0) {
     var id = leftToVisit.pop();
     if (!(id in visited)) {
       visited[id] = true;
+      visitedCount++;
       var info = getObjectInfo(id);
       if (info)
         leftToVisit = leftToVisit.concat(info.children);
     }
   }
+
+  print("Successfully visited " + visitedCount + " objects.");
 }
+
+print("Now profiling memory.");
 
 profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
               "<string>");
+
+print("Done profiling memory.");
 
 print("All tests passed!");
