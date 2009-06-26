@@ -148,44 +148,42 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
       return JS_FALSE;
     }
 
-    // TODO: What if the property is a number?
-    if (JSVAL_IS_STRING(id)) {
-      jsval value;
-      JSObject *valueObj;
-      if (!JS_LookupPropertyWithFlagsById(
-            targetCx,
-            target,
-            ids->vector[i],
-            JSRESOLVE_DETECTING,
-            &valueObj,
-            &value)) {
-        JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
+    jsval value;
+    JSObject *valueObj;
+    if (!JS_LookupPropertyWithFlagsById(
+          targetCx,
+          target,
+          ids->vector[i],
+          JSRESOLVE_DETECTING,
+          &valueObj,
+          &value)) {
+      JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
+      return JS_FALSE;
+    }
+    if (JSVAL_IS_OBJECT(value)) {
+      JSObject *valueObj = JSVAL_TO_OBJECT(value);
+      value = INT_TO_JSVAL((unsigned int) valueObj);
+    } else if (JSVAL_IS_STRING(value)) {
+      JSString *valueStr = JS_NewUCStringCopyZ(
+        cx,
+        JS_GetStringChars(JSVAL_TO_STRING(value))
+        );
+      if (valueStr == NULL) {
+        JS_ReportOutOfMemory(cx);
         return JS_FALSE;
       }
-      if (JSVAL_IS_OBJECT(value)) {
-        JSObject *valueObj = JSVAL_TO_OBJECT(value);
-        value = INT_TO_JSVAL((unsigned int) valueObj);
-      } else if (JSVAL_IS_STRING(value)) {
-        JSString *valueStr = JS_NewUCStringCopyZ(
-          cx,
-          JS_GetStringChars(JSVAL_TO_STRING(value))
-          );
-        if (valueStr == NULL) {
-          JS_ReportOutOfMemory(cx);
-          return JS_FALSE;
-        }
-        value = STRING_TO_JSVAL(valueStr);
-      } else
-        value = JSVAL_NULL;
+      value = STRING_TO_JSVAL(valueStr);
+    } else
+      value = JSVAL_NULL;
 
-      if (!JS_DefineProperty(cx, propInfo,
-                             JS_GetStringBytes(JSVAL_TO_STRING(id)),
-                             value,
-                             NULL,
-                             NULL,
-                             JSPROP_ENUMERATE))
+    if (!JS_DefinePropertyById(
+          cx, propInfo,
+          ids->vector[i],
+          value,
+          NULL,
+          NULL,
+          JSPROP_ENUMERATE))
         return JS_FALSE;
-    }
   }
 
   return JS_TRUE;
