@@ -107,6 +107,7 @@ StatusBar.prototype = {
             if (Extension.OS == "Darwin") {
               iframe.contentDocument.documentElement.style.MozAppearance = "statusbar";
               iframe.contentDocument.documentElement.style.marginTop = "-1px";
+              iframe.contentDocument.documentElement.style.height = "100%";
             }
             else {
               self._copyBackground(iframe.parentNode,
