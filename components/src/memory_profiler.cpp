@@ -137,6 +137,12 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
                          NULL, NULL, JSPROP_ENUMERATE))
     return JS_FALSE;
 
+  // TODO: It'd be nice if we could use the OBJ_IS_NATIVE() macro here,
+  // but that appears to be defined in a private header, jsobj.h. Still,
+  // leakmon uses it, so it might be OK if we do too:
+  //
+  // http://hg.mozilla.org/users/dbaron_mozilla.com/leak-monitor/file/88274af9f629/src/leakmonJSObjectInfo.cpp#l208
+
   JSIdArray *ids = JS_Enumerate(targetCx, target);
   if (ids == NULL)
     return JS_TRUE;
