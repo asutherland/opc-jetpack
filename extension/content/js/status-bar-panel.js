@@ -30,26 +30,6 @@ StatusBar.prototype = {
       function(name) {
         toElement.style[name] = style[name];
       });
-    if (toElement.style.backgroundImage == "none" &&
-        toElement.style.backgroundColor == "transparent" &&
-        Extension.OS == "Darwin") {
-      // Due to the fixing of bug 449442, it's very hard for us to
-      // copy the background of the status bar on OS X, but here's
-      // a shot.
-
-      // TODO: We may also want to try applying this bg to the
-      // entire statusbar.
-
-      // This file used to be at
-      // chrome://global/skin/statusbar-background.gif, but was
-      // removed when 449442 was fixed.
-      var url = ("chrome://jetpack-safe/content/" +
-                 "old-osx-statusbar-background.gif");
-
-      toElement.style.backgroundImage = "url(" + url + ")";
-      toElement.style.backgroundColor = "rgb(148, 147, 147)";
-      toElement.style.backgroundRepeat = "repeat-x";
-    }
   },
 
   _injectPanelWindowFunctions: function _injectPanelWindowFunctions(iframe) {
@@ -123,8 +103,16 @@ StatusBar.prototype = {
           if (evt.originalTarget.nodeName == "#document") {
             iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
             self._injectPanelWindowFunctions(iframe);
-            self._copyBackground(iframe.parentNode,
-                                 iframe.contentDocument.body);
+
+            if (Extension.OS == "Darwin") {
+              iframe.contentDocument.documentElement.style.MozAppearance = "statusbar";
+              iframe.contentDocument.documentElement.style.marginTop = "-1px";
+            }
+            else {
+              self._copyBackground(iframe.parentNode,
+                                   iframe.contentDocument.body);
+            }
+
             iframe.style.marginLeft = "4px";
             iframe.style.marginRight = "4px";
             iframe.contentDocument.body.style.padding = 0;
