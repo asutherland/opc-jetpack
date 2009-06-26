@@ -70,6 +70,8 @@ var resolver = {
 
   enumerate: function(wrappee, wrapper) {
     this.enumerateCalled = true;
+    yield "i am enumerating!";
+    yield 2;
   },
 
   addProperty: function(wrappee, wrapper, name, defaultValue) {
@@ -134,12 +136,14 @@ assertEqual(wrapped, "[my wrapped object]");
 assertEqual(wrapped.blarg, "boop");
 assertEqual(wrapped.blarg, "boop");
 
-assertEqual(resolver.enumerateCalled, false);
 for (name in wrapped) {}
 for each (obj in wrapped) {}
 var iter = Iterator(wrapped);
 assertEqual(iter.next()[0], "a");
+
 assertEqual(resolver.enumerateCalled, false);
+assertEqual(enumerate(wrapped)[0], "i am enumerating!");
+assertEqual(resolver.enumerateCalled, true);
 
 // TODO: Somehow create a test that calls the enumerate hook. It used to be
 // automatically called when doing a for..in loop, but when the iteratorObject
@@ -175,6 +179,8 @@ assert(getWrapper(wrap(object, resolver)) == resolver,
        "getWrapper() must == the original wrapper.");
 assert(getWrapper(wrap(object, resolver)) === resolver,
        "getWrapper() must === the original wrapper.");
+assert(getWrapper({}) === null,
+       "getWrapper() of a non-wrappedo object should return null.");
 
 assert(unwrap(wrap(object, resolver)) == object,
        "unwrap() must == the original object.");
