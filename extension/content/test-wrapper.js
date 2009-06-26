@@ -170,6 +170,23 @@ assert(wrapped === wrapped, "a wrapper instance must be === to itself");
 assert(wrap(object, resolver) === wrap(object, resolver),
        "a wrapper instance must be === to another wrapper instance of " +
        "the same target object");
+
+assert(getWrapper(wrap(object, resolver)) == resolver,
+       "getWrapper() must == the original wrapper.");
+assert(getWrapper(wrap(object, resolver)) === resolver,
+       "getWrapper() must === the original wrapper.");
+
+assert(unwrap(wrap(object, resolver)) == object,
+       "unwrap() must == the original object.");
+assert(unwrap(wrap(object, resolver)) === object,
+       "unwrap() must === the original object.");
+assertEqual(unwrap(wrapped), "[object Object]");
+assert(unwrap(wrapped).blarg === undefined,
+       "unwrap() should return the original object.");
+assert(unwrap(unwrap(wrapped)) === null,
+       "calling unwrap() on an already-unwrapped object " +
+       "should return null.");
+
 assert(wrap({}, resolver) !== wrap({}, resolver),
        "a wrapper instance must be !== to another wrapper instance of " +
        "a different target object");
