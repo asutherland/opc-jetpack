@@ -1,0 +1,47 @@
+<html>
+<head>
+  <title>Memory Profiler Server</title>
+</head>
+<body>
+<p>
+  This page can be used to initiate a memory profiling server that will
+  allow you to inspect the state of Firefox's memory state.  While the server
+  is up, your Firefox instance will appear to be "locked up".
+</p>
+<p>
+  Once the server is up, you can visit it at http://127.0.0.1:8080 using
+  another browser.  To stop profiling and resume Firefox, visit
+  http://127.0.0.1:8080/stop using another browser.
+</p>
+<p>
+  <a href="#" id="start">Click here to initiate the server.</a>
+</p>
+</body>
+<script src="js/ext/jquery.js"></script>
+<script src="js/ext/io.js"></script>
+<script>
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Cu = Components.utils;
+
+(function importEndpoint(exports) {
+   var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
+                 .createInstance(Ci.nsIJSWeakRef);
+   exports.endpoint = factory.set();
+ })(this);
+
+function startServer() {
+  Cu.import("resource://jetpack/modules/setup.js");
+  var file = JetpackSetup.getExtensionDirectory();
+  file.append('content');
+  file.append('memory-profiler-server.js');
+  var code = FileIO.read(file, 'utf-8');
+  var filename = FileIO.path(file);
+  endpoint.profileMemory(code, filename);
+}
+
+$(window).ready(function() {
+  $('#start').click(startServer);
+});
+</script>
+</html>
