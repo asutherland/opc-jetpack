@@ -462,6 +462,13 @@ print("Now profiling memory.");
 profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
               "<string>");
 
+assertThrows(function() {
+               profileMemory("function handleError() {}; " +
+                             "iAmBadCode();", "<string>");
+             },
+             "Error: Profiling failed.",
+             "Profiling bad code should raise an exception.");
+
 print("Done profiling memory.");
 
 print("All tests passed!");

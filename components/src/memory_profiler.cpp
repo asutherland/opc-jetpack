@@ -375,6 +375,11 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   return wasSuccessful;
 }
 
+static void reportError(JSContext *cx, const char *message,
+                        JSErrorReport *report)
+{
+}
+
 JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
                      jsval *argv, jsval *rval)
 {
@@ -390,6 +395,7 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   }
   JS_SetOptions(freshCx, JSOPTION_VAROBJFIX);
   JS_SetVersion(freshCx, JSVERSION_LATEST);
+  JS_SetErrorReporter(freshCx, reportError);
   JS_BeginRequest(freshCx);
 
   JSObject *newObj = JS_NewObject(freshCx, &TCB_global_class, NULL, NULL);
