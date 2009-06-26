@@ -7,6 +7,11 @@
 #include "nsServiceManagerUtils.h"
 #include "nsComponentManagerUtils.h"
 
+static JSFunctionSpec endpointFunctions[] = {
+  JS_FS("wrap",     wrapObject,      2, 0, 0),
+  JS_FS_END
+};
+
 nsJSWeakRef::nsJSWeakRef()
 {
 }
@@ -43,28 +48,19 @@ NS_IMETHODIMP nsJSWeakRef::Set()
   if(NS_FAILED(rv) || !rval)
     return NS_ERROR_FAILURE;
 
-  // get argc and argv and verify arg count
-  PRUint32 argc;
-  rv = cc->GetArgc(&argc);
-  if(NS_FAILED(rv))
-    return rv;
+  JSObject *endpoint = JS_NewObject(cx, NULL, NULL, NULL);
+  if (endpoint == NULL) {
+    return NS_ERROR_FAILURE;
+  }
 
-  if (argc < 2)
-    return NS_ERROR_XPC_NOT_ENOUGH_ARGS;
+  *rval = OBJECT_TO_JSVAL(endpoint);
 
-  jsval *argv;
-  rv = cc->GetArgvPtr(&argv);
-  if (NS_FAILED(rv))
-    return rv;
+  if (!JS_DefineFunctions(cx, endpoint, endpointFunctions)) {
+    // The JS exception state was set.
+    cc->SetReturnValueWasSet(PR_FALSE);
+    return NS_OK;
+  }
 
-  if (!JSVAL_IS_OBJECT(argv[0]))
-    return NS_ERROR_ILLEGAL_VALUE;
-
-  if (!JSVAL_IS_OBJECT(argv[1]))
-    return NS_ERROR_ILLEGAL_VALUE;
-
-  JSObject *wrapped = wrapObject(cx, argv[0], argv[1]);
-  *rval = OBJECT_TO_JSVAL(wrapped);
   cc->SetReturnValueWasSet(PR_TRUE);
 
   return NS_OK;

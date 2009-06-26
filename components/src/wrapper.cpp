@@ -1,3 +1,39 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is Ubiquity.
+ *
+ * The Initial Developer of the Original Code is Mozilla.
+ * Portions created by the Initial Developer are Copyright (C) 2007
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Atul Varma <atul@mozilla.com>
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
 #include "wrapper.h"
 
 // Reserved slot ID for the resolver (meta) object
@@ -32,11 +68,7 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
   JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
 
   uintN allArgc = argc + 2;
-  jsval allArgv[10];
-  if (allArgc > 10) {
-    JS_ReportError(cx, "Didn't expect so many args!");
-    return JS_FALSE;
-  }
+  jsval allArgv[allArgc];
 
   if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, allArgv))
     return JS_FALSE;
@@ -51,14 +83,53 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
 }
 
 static JSBool
-enumerate(JSContext *cx, JSObject *obj)
-{
-  if (resolverHasMethod(cx, obj, "enumerate")) {
+enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
+          jsval *statep, jsid *idp)
+{  
+  switch (enum_op) {
+  case JSENUMERATE_INIT:
+    if (resolverHasMethod(cx, obj, "enumerate")) {
+      if (!delegateToResolver(cx, obj, "enumerate", 0, NULL, statep))
+        return JS_FALSE;
+      if (!JSVAL_IS_OBJECT(*statep)) {
+        JS_ReportError(cx, "Expected enumerate() to return an iterator.");
+        return JS_FALSE;
+      }
+      *idp = JSVAL_ZERO;
+      JS_AddRoot(cx, statep);
+      return JS_TRUE;
+    }
+    // TODO: Default behavior?
+    JS_ReportError(cx, "Enumeration is not implemented on this object.");
+    return JS_FALSE;
+  case JSENUMERATE_NEXT:
     jsval rval;
-    if (!delegateToResolver(cx, obj, "enumerate", 0, NULL, &rval))
+    JSObject *iterator = JSVAL_TO_OBJECT(*statep);
+    if (!JS_CallFunctionName(cx, iterator, "next", 0, NULL, &rval)) {
+      if (JS_IsExceptionPending(cx)) {
+        jsval exception;
+        if (!JS_GetPendingException(cx, &exception))
+          return JS_FALSE;
+        if (!JSVAL_IS_OBJECT(exception))
+          return JS_FALSE;
+        JSClass *clasp = JS_GET_CLASS(cx, JSVAL_TO_OBJECT(exception));
+        if (clasp &&
+            JSCLASS_CACHED_PROTO_KEY(clasp) == JSProto_StopIteration) {
+          JS_ClearPendingException(cx);
+          *statep = JSVAL_NULL;
+          JS_RemoveRoot(cx, statep);
+          return JS_TRUE;
+        }
+      }
       return JS_FALSE;
+    }
+    if (!JS_ValueToId(cx, rval, idp))
+      return JS_FALSE;
+    return JS_TRUE;
+  case JSENUMERATE_DESTROY:
+    JS_RemoveRoot(cx, statep);
+    return JS_TRUE;
   }
-  return JS_EnumerateStub(cx, obj);
 }
 
 static JSBool
@@ -155,6 +226,9 @@ checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
 static JSObject *
 wrappedObject(JSContext *cx, JSObject *obj) {
   jsval wrappee;
+  // TODO: This function will be setting an error if it fails;
+  // not sure if wrappedObject() handlers are allowed to raise
+  // exceptions or not.
   if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, &wrappee))
     return obj;
   return JSVAL_TO_OBJECT(wrappee);
@@ -254,19 +328,19 @@ iteratorObject(JSContext *cx, JSObject *obj, JSBool keysonly)
   return NULL;
 }
 
-JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
+JSExtendedClass sFlexibleWrapper_JSClass = {
   // JSClass (JSExtendedClass.base) initialization
-  { "XPCFlexibleWrapper",
+  { "FlexibleWrapper",
     JSCLASS_NEW_RESOLVE | JSCLASS_IS_EXTENDED |
-    JSCLASS_HAS_RESERVED_SLOTS(2),
-    addProperty,        delProperty,
-    getProperty,        setProperty,
-    enumerate,          (JSResolveOp)resolve,
-    convert,            JS_FinalizeStub,
-    NULL,               checkAccess,
-    call,               construct,
-    NULL,               NULL,
-    NULL,               NULL
+    JSCLASS_NEW_ENUMERATE | JSCLASS_HAS_RESERVED_SLOTS(2),
+    addProperty,              delProperty,
+    getProperty,              setProperty,
+    (JSEnumerateOp)enumerate, (JSResolveOp)resolve,
+    convert,                  JS_FinalizeStub,
+    NULL,                     checkAccess,
+    call,                     construct,
+    NULL,                     NULL,
+    NULL,                     NULL
   },
   // JSExtendedClass initialization
   equality,
@@ -277,15 +351,62 @@ JSExtendedClass sXPC_FlexibleWrapper_JSClass = {
   JSCLASS_NO_RESERVED_MEMBERS
 };
 
-JSObject *wrapObject(JSContext *cx, jsval object, jsval resolver)
+static JSBool getWrappedComponent(JSContext *cx, uintN argc, jsval *argv,
+                                  jsval *rval, uint32 slotIndex)
 {
-  JSObject *obj = JS_NewObjectWithGivenProto(
+  JSObject *wrapped;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "o", &wrapped))
+    return JS_FALSE;
+
+  if (JS_GetClass(cx, wrapped) == &sFlexibleWrapper_JSClass.base) {
+    if (!JS_GetReservedSlot(cx, wrapped, slotIndex, rval))
+      return JS_FALSE;
+    return JS_TRUE;
+  }
+
+  *rval = JSVAL_NULL;
+  return JS_TRUE;
+}
+
+JSBool getWrapper(JSContext *cx, JSObject *obj, uintN argc,
+                  jsval *argv, jsval *rval)
+{
+  return getWrappedComponent(cx, argc, argv, rval, SLOT_RESOLVER);
+}
+
+JSBool unwrapObject(JSContext *cx, JSObject *obj, uintN argc,
+                    jsval *argv, jsval *rval)
+{
+  return getWrappedComponent(cx, argc, argv, rval, SLOT_WRAPPEE);
+}
+
+JSBool wrapObject(JSContext *cx, JSObject *obj, uintN argc,
+                  jsval *argv, jsval *rval)
+{
+  JSObject *wrappee;
+  JSObject *resolver;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "oo", &wrappee, &resolver))
+    return JS_FALSE;
+
+  JSObject *wrapper = JS_NewObjectWithGivenProto(
     cx,
-    &sXPC_FlexibleWrapper_JSClass.base,
+    &sFlexibleWrapper_JSClass.base,
     NULL,
     JS_GetScopeChain(cx)
     );
-  JS_SetReservedSlot(cx, obj, SLOT_RESOLVER, resolver);
-  JS_SetReservedSlot(cx, obj, SLOT_WRAPPEE, object);
-  return obj;
+  if (wrapper == NULL) {
+    JS_ReportError(cx, "Creating new wrapper failed.");
+    return JS_FALSE;
+  }
+
+  if (!JS_SetReservedSlot(cx, wrapper, SLOT_RESOLVER,
+                          OBJECT_TO_JSVAL(resolver)) ||
+      !JS_SetReservedSlot(cx, wrapper, SLOT_WRAPPEE,
+                          OBJECT_TO_JSVAL(wrappee)))
+    return JS_FALSE;
+
+  *rval = OBJECT_TO_JSVAL(wrapper);
+  return JS_TRUE;
 }

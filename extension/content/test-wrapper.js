@@ -15,7 +15,8 @@ const Cu = Components.utils;
 function wrap(object, resolver) {
   var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
                 .createInstance(Ci.nsIJSWeakRef);
-  return factory.set(object, resolver);
+  var endpoint = factory.set();
+  return endpoint.wrap(object, resolver);
 }
 
 function assert(a, msg) {
