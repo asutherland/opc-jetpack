@@ -400,21 +400,17 @@ def xpcom(options):
     options.xpcshell = os.path.join(options.objdir, "dist", "bin",
                                     "xpcshell")
 
-    script = """
-      const Cc = Components.classes;
-      const Ci = Components.interfaces;
-      var xulr = Cc['@mozilla.org/xre/app-info;1']
-                 .getService(Ci.nsIXULRuntime);
-      var json = Cc["@mozilla.org/dom/json;1"]
-                 .createInstance(Ci.nsIJSON);
-      dump(json.encode({os: xulr.OS, abi: xulr.XPCOMABI}));
-    """
-
-    popen = subprocess.Popen([options.xpcshell, "-e", script],
-                             stdout = subprocess.PIPE)
-    xpcom_info = Bunch(simplejson.loads(popen.stdout.read()))
+    xpcom_info = Bunch()
     xpcom_info.components_dir = os.path.join(options.objdir, "dist",
                                              "bin", "components")
+
+    autoconf = open(os.path.join(options.objdir, "config", "autoconf.mk"),
+                    "r").readlines()
+    for line in autoconf:
+        if line.startswith("OS_TARGET"):
+            xpcom_info.os = line.split("=")[1].strip()
+        elif line.startswith("TARGET_XPCOM_ABI"):
+            xpcom_info.abi = line.split("=")[1].strip()
 
     platform = "%(os)s_%(abi)s" % xpcom_info
     print "Building XPCOM binary components for %s" % platform
@@ -461,3 +457,10 @@ def xpcom(options):
         fullpath = os.path.join(xpcom_info.components_dir, filename)
         if os.path.exists(fullpath):
             os.unlink(fullpath)
+
+    # Now run unit tests via xpcshell.
+
+    run_program([options.xpcshell,
+                 os.path.join(options.my_dir, "extension",
+                              "content", "test-wrapper.js")],
+                cwd=os.path.dirname(options.xpcshell))
