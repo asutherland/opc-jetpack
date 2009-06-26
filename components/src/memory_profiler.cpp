@@ -238,8 +238,14 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
 
-    if (!getPropertiesInfo(cx, info, target, targetCx))
-      return JS_FALSE;
+    // If this is a wrapper, don't worry about getting the
+    // properties--assume the caller will get around to
+    // inspecting the wrappee.
+    if (!((classp->flags & JSCLASS_IS_EXTENDED) &&
+          ((JSExtendedClass *) classp)->wrappedObject)) {
+      if (!getPropertiesInfo(cx, info, target, targetCx))
+        return JS_FALSE;
+    }
 
     *rval = OBJECT_TO_JSVAL(info);
   } else
