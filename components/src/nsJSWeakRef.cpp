@@ -8,7 +8,9 @@
 #include "nsComponentManagerUtils.h"
 
 static JSFunctionSpec endpointFunctions[] = {
-  JS_FS("wrap",     wrapObject,      2, 0, 0),
+  JS_FS("wrap",       wrapObject,      2, JSPROP_ENUMERATE, 0),
+  JS_FS("unwrap",     unwrapObject,    1, JSPROP_ENUMERATE, 0),
+  JS_FS("getWrapper", getWrapper,      1, JSPROP_ENUMERATE, 0),
   JS_FS_END
 };
 

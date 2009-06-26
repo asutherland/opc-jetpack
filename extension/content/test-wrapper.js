@@ -12,12 +12,18 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
-function wrap(object, resolver) {
-  var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
-                .createInstance(Ci.nsIJSWeakRef);
-  var endpoint = factory.set();
-  return endpoint.wrap(object, resolver);
-}
+(function importEndpoint(exports) {
+   var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
+                 .createInstance(Ci.nsIJSWeakRef);
+   var endpoint = factory.set();
+   for (name in endpoint) {
+     if (endpoint.hasOwnProperty(name)) {
+       var obj = endpoint[name];
+       if (typeof(obj) == "function")
+	 exports[name] = obj;
+     }
+   }
+ })(this);
 
 function assert(a, msg) {
   if (!a)
