@@ -4,8 +4,6 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
-#define SERVER_FILENAME "memory_profiler_server.js"
-
 // Private structure to track the state of tracing the JS heap.
 
 typedef struct TracingState {
@@ -305,6 +303,12 @@ static JSFunctionSpec server_global_functions[] = {
 JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
                      jsval *argv, jsval *rval)
 {
+  JSString *code;
+  const char *filename;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss", &code, &filename))
+    return JS_FALSE;
+
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
                          NULL, sizeof(JSDHashEntryStub),
                          JS_DHASH_DEFAULT_CAPACITY(100))) {
@@ -346,22 +350,10 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
     return JS_FALSE;
 
-  FILE *f = fopen(SERVER_FILENAME, "r");
-  if (!f) {
-    JS_ReportError(cx, "Couldn't open " SERVER_FILENAME);
-    return JS_FALSE;
-  }
-
-  fseek(f, 0, SEEK_END);
-  long fileSize = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  
-  char source[fileSize];
-  fread(source, fileSize, 1, f);
-  fclose(f);
-
-  if (!JS_EvaluateScript(serverCx, serverGlobal, source,
-                         fileSize, SERVER_FILENAME, 1,
+  if (!JS_EvaluateScript(serverCx, serverGlobal,
+                         JS_GetStringBytes(code),
+                         JS_GetStringLength(code),
+                         filename, 1,
                          &serverRval)) {
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Running server script failed.");

@@ -402,4 +402,58 @@ function testReadOnlyDomWrapper() {
 if (this.window)
   testReadOnlyDomWrapper();
 
+// MEMORY PROFILING TESTS
+
+// This function's source code is injected into the separate JS
+// runtime of the memory profiler.
+function memoryProfilingTests(global) {
+  // This function is called by the profiling runtime whenever an
+  // uncaught exception occurs.
+  global.handleError = function handleError() {
+    printTraceback(lastExceptionTraceback);
+    print(lastException);
+  };
+
+  // This function uses the Python-inspired traceback functionality of the
+  // playground to print a stack trace that looks much like Python's.
+  function printTraceback(frame) {
+    print("Traceback (most recent call last):");
+    if (frame === undefined)
+      frame = stack();
+    var lines = [];
+    while (frame) {
+      var line = ('  File "' + frame.filename + '", line ' +
+                  frame.lineNo + ', in ' + frame.functionName);
+      lines.splice(0, 0, line);
+      frame = frame.caller;
+    }
+    print(lines.join('\n'));
+  }
+
+  var visited = {};
+
+  function recursiveGetInfo(id) {
+    var info = getObjectInfo(id);
+    if (info) {
+      for (var i = 0; i < roots.length; i++) {
+        recursiveGetInfo();
+      }
+    }
+  }
+
+  var leftToVisit = getGCRoots();
+  while (leftToVisit.length > 0) {
+    var id = leftToVisit.pop();
+    if (!(id in visited)) {
+      visited[id] = true;
+      var info = getObjectInfo(id);
+      if (info)
+        leftToVisit = leftToVisit.concat(info.children);
+    }
+  }
+}
+
+profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
+              "<string>");
+
 print("All tests passed!");
