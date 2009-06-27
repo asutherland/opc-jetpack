@@ -457,9 +457,11 @@ function memoryProfilingTests(global) {
   print("Successfully visited " + visitedCount + " objects.");
 }
 
-print("Now profiling memory.");
+profileMemory("if (!getObjectInfo('blarg')) throw new Error()",
+              "<string>",
+              {blarg: {}});
 
-profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
+profileMemory("if (getObjectInfo('oof')) throw new Error()",
               "<string>");
 
 assertThrows(function() {
@@ -468,6 +470,11 @@ assertThrows(function() {
              },
              "Error: Profiling failed.",
              "Profiling bad code should raise an exception.");
+
+print("Now profiling memory.");
+
+profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
+              "<string>");
 
 print("Done profiling memory.");
 

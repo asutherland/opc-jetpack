@@ -16,6 +16,9 @@ typedef struct TracingState {
   // Runtime that we're tracing.
   JSRuntime *runtime;
 
+  // Mapping from strings to objects for the profiler's convenience.
+  JSObject *namedObjects;
+
   // Structure required to use JS tracing functions.
   JSTracer tracer;
 };
@@ -265,13 +268,56 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
+static JSBool lookupNamedObject(JSContext *cx, const char *name,
+                                uint32 *id)
+{
+  *id = 0;
+
+  if (tracingState.namedObjects == NULL)
+    return JS_TRUE;
+
+  JSBool found;
+  if (!JS_HasProperty(tracingState.tracer.context,
+                      tracingState.namedObjects,
+                      name,
+                      &found)) {
+    JS_ReportError(cx, "JS_HasProperty() failed.");
+    return JS_FALSE;
+  }
+
+  if (!found)
+    return JS_TRUE;
+
+  jsval val;
+  if (!JS_LookupProperty(tracingState.tracer.context,
+                         tracingState.namedObjects,
+                         name,
+                         &val)) {
+    JS_ReportError(cx, "JS_LookupProperty failed.");
+    return JS_FALSE;
+  }
+
+  if (!JSVAL_IS_OBJECT(val))
+    return JS_TRUE;
+
+  JSObject *obj = JSVAL_TO_OBJECT(val);
+  *id = (unsigned int) obj;
+
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
   uint32 id;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
-    return JS_FALSE;
+  if (argc >= 1 && JSVAL_IS_STRING(argv[0])) {
+    const char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
+    if (!lookupNamedObject(cx, name, &id))
+      return JS_FALSE;
+  } else
+    if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
+      return JS_FALSE;
 
   JSDHashEntryStub *entry = (JSDHashEntryStub *)
     JS_DHashTableOperate(&tracingState.visited,
@@ -416,8 +462,10 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   JSString *code;
   const char *filename;
+  JSObject *namedObjects = NULL;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "Ss", &code, &filename))
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss/o", &code, &filename,
+                           &namedObjects))
     return JS_FALSE;
 
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
@@ -429,6 +477,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   tracingState.runtime = JS_GetRuntime(cx);
   tracingState.result = JS_TRUE;
+  tracingState.namedObjects = namedObjects;
   tracingState.tracer.context = cx;
   tracingState.tracer.callback = visitedBuilder;
   JS_TraceRuntime(&tracingState.tracer);
