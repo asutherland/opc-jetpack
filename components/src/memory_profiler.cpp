@@ -142,6 +142,17 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
   JSScript *script = JS_GetFunctionScript(targetCx, fun);
   // script is null for native code.      
   if (script) {
+    jsval name = JSVAL_NULL;
+
+    JSString *targetFuncName = JS_GetFunctionId(fun);
+    if (targetFuncName) {
+      JSString *funcName = JS_NewUCStringCopyZ(
+        cx,
+        JS_GetStringChars(targetFuncName)
+        );
+      name = STRING_TO_JSVAL(funcName);
+    }
+
     JSString *filename = JS_NewStringCopyZ(
       cx,
       JS_GetScriptFilename(targetCx, script)
@@ -149,7 +160,9 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
     uintN lineStart = JS_GetScriptBaseLineNumber(targetCx, script);
     uintN lineEnd = (lineStart +
                      JS_GetScriptLineExtent(targetCx, script) - 1);
-    if (!JS_DefineProperty(cx, info, "filename",
+    if (!JS_DefineProperty(cx, info, "name", name,
+                           NULL, NULL, JSPROP_ENUMERATE) ||
+        !JS_DefineProperty(cx, info, "filename",
                            STRING_TO_JSVAL(filename),
                            NULL, NULL, JSPROP_ENUMERATE) ||
         !JS_DefineProperty(cx, info, "lineStart",
