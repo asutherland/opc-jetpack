@@ -462,10 +462,11 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   JSString *code;
   const char *filename;
+  uint32 lineNumber = 1;
   JSObject *namedObjects = NULL;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "Ss/o", &code, &filename,
-                           &namedObjects))
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uo", &code, &filename,
+                           &lineNumber, &namedObjects))
     return JS_FALSE;
 
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
@@ -515,7 +516,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   if (!JS_EvaluateScript(serverCx, serverGlobal,
                          JS_GetStringBytes(code),
                          JS_GetStringLength(code),
-                         filename, 1,
+                         filename, lineNumber,
                          &serverRval)) {
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Profiling failed.");

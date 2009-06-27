@@ -405,7 +405,7 @@ if (this.window)
 // MEMORY PROFILING TESTS
 
 function runMemoryProfilingTest(func, namedObjects) {
-  function injectIntoContext(global) {
+  function injectErrorReportingIntoContext(global) {
     // This function is called by the profiling runtime whenever an
     // uncaught exception occurs.
     global.handleError = function handleError() {
@@ -430,13 +430,17 @@ function runMemoryProfilingTest(func, namedObjects) {
     }
   }
 
-  var code = injectIntoContext.toString();
+  var code = injectErrorReportingIntoContext.toString();
+
+  // Remove newlines from error reporting code so that the function
+  // code we put after it retains its original line numbering.
   code = "(" + code.replace(/\n/g, ";") + ")(this);";
   code += "(" + func.toString() + ")();";
 
   var funcInfo = functionInfo(func);
 
-  profileMemory(code, funcInfo.filename, namedObjects);
+  profileMemory(code, funcInfo.filename, funcInfo.lineNumber,
+                namedObjects);
 }
 
 // This function's source code is injected into the separate JS
@@ -480,7 +484,7 @@ assert(
   );
 
 profileMemory("if (!getObjectInfo('blarg')) throw new Error()",
-              "<string>",
+              "<string>", 1,
               {blarg: {}});
 
 profileMemory("if (getObjectInfo('oof')) throw new Error()",
