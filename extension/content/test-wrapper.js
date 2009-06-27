@@ -404,32 +404,44 @@ if (this.window)
 
 // MEMORY PROFILING TESTS
 
+function runMemoryProfilingTest(func, namedObjects) {
+  function injectIntoContext(global) {
+    // This function is called by the profiling runtime whenever an
+    // uncaught exception occurs.
+    global.handleError = function handleError() {
+      printTraceback(lastExceptionTraceback);
+      print(lastException);
+    };
+
+    // This function uses the Python-inspired traceback functionality of the
+    // playground to print a stack trace that looks much like Python's.
+    function printTraceback(frame) {
+      print("Traceback (most recent call last):");
+      if (frame === undefined)
+        frame = stack();
+      var lines = [];
+      while (frame) {
+        var line = ('  File "' + frame.filename + '", line ' +
+                    frame.lineNo + ', in ' + frame.functionName);
+        lines.splice(0, 0, line);
+        frame = frame.caller;
+      }
+      print(lines.join('\n'));
+    }
+  }
+
+  var code = injectIntoContext.toString();
+  code = "(" + code.replace(/\n/g, ";") + ")(this);";
+  code += "(" + func.toString() + ")();";
+
+  var funcInfo = functionInfo(func);
+
+  profileMemory(code, funcInfo.filename, namedObjects);
+}
+
 // This function's source code is injected into the separate JS
 // runtime of the memory profiler.
 function memoryProfilingTests(global) {
-  // This function is called by the profiling runtime whenever an
-  // uncaught exception occurs.
-  global.handleError = function handleError() {
-    printTraceback(lastExceptionTraceback);
-    print(lastException);
-  };
-
-  // This function uses the Python-inspired traceback functionality of the
-  // playground to print a stack trace that looks much like Python's.
-  function printTraceback(frame) {
-    print("Traceback (most recent call last):");
-    if (frame === undefined)
-      frame = stack();
-    var lines = [];
-    while (frame) {
-      var line = ('  File "' + frame.filename + '", line ' +
-                  frame.lineNo + ', in ' + frame.functionName);
-      lines.splice(0, 0, line);
-      frame = frame.caller;
-    }
-    print(lines.join('\n'));
-  }
-
   var visited = {};
 
   function recursiveGetInfo(id) {
@@ -483,8 +495,7 @@ assertThrows(function() {
 
 print("Now profiling memory.");
 
-profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
-              "<string>");
+runMemoryProfilingTest(memoryProfilingTests);
 
 print("Done profiling memory.");
 
