@@ -142,6 +142,9 @@ StatusBar.prototype = {
                 iframe.contentDocument.documentElement.style.width;
             },
             false,
+            // TODO: do we need to set this argument (allow untrusted events)
+            // to true?  Test without it to see if we can nevertheless see
+            // events that bubble up from the document.
             true
           );
         },
