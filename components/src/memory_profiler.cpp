@@ -124,6 +124,45 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
                            NULL, NULL, JSPROP_ENUMERATE);
 }
 
+static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
+                              JSObject *target, JSContext *targetCx)
+{
+  // Thanks to dbaron's leakmon code for this:
+  //
+  // http://hg.mozilla.org/users/dbaron_mozilla.com/leak-monitor/file/88274af9f629/src/leakmonJSObjectInfo.cpp#l208
+
+  JSFunction *fun = JS_ValueToFunction(
+    targetCx,
+    OBJECT_TO_JSVAL(target)
+    );
+  if (fun == NULL) {
+    JS_ReportError(cx, "JS_ValueToFunction() failed.");
+    return JS_FALSE;
+  }
+  JSScript *script = JS_GetFunctionScript(targetCx, fun);
+  // script is null for native code.      
+  if (script) {
+    JSString *filename = JS_NewStringCopyZ(
+      cx,
+      JS_GetScriptFilename(targetCx, script)
+      );
+    uintN lineStart = JS_GetScriptBaseLineNumber(targetCx, script);
+    uintN lineEnd = (lineStart +
+                     JS_GetScriptLineExtent(targetCx, script) - 1);
+    if (!JS_DefineProperty(cx, info, "filename",
+                           STRING_TO_JSVAL(filename),
+                           NULL, NULL, JSPROP_ENUMERATE) ||
+        !JS_DefineProperty(cx, info, "lineStart",
+                           INT_TO_JSVAL(lineStart),
+                           NULL, NULL, JSPROP_ENUMERATE) ||
+        !JS_DefineProperty(cx, info, "lineStart",
+                           INT_TO_JSVAL(lineStart),
+                           NULL, NULL, JSPROP_ENUMERATE))
+      return JS_FALSE;
+  }
+  return JS_TRUE;
+}
+
 static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
                                 JSObject *target, JSContext *targetCx)
 {
@@ -244,6 +283,10 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
     }
+
+    if (JS_ObjectIsFunction(targetCx, target))
+      if (!getFunctionInfo(cx, info, target, targetCx))
+        return JS_FALSE;
 
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
