@@ -238,6 +238,17 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
+static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
+                                 const char *objName, JSObject *obj)
+{
+  if (obj != NULL)
+    if (!JS_DefineProperty(cx, info, objName,
+                           INT_TO_JSVAL((unsigned int) obj),
+                           NULL, NULL, JSPROP_ENUMERATE))
+      return JS_FALSE;
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -283,6 +294,13 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
     }
+
+    maybeIncludeObject(cx, info, "parent",
+                       JS_GetParent(targetCx, target));
+    maybeIncludeObject(cx, info, "prototype",
+                       JS_GetPrototype(targetCx, target));
+    // TODO: We used to include 'constructor' here too, but
+    // we ran into a problem with Block objects, so removed it.
 
     if (JS_ObjectIsFunction(targetCx, target))
       if (!getFunctionInfo(cx, info, target, targetCx))
