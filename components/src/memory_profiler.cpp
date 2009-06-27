@@ -142,6 +142,10 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
   // leakmon uses it, so it might be OK if we do too:
   //
   // http://hg.mozilla.org/users/dbaron_mozilla.com/leak-monitor/file/88274af9f629/src/leakmonJSObjectInfo.cpp#l208
+  //
+  // It looks like JS_NewPropertyIterator() solves this issue and that
+  // we should use it, but I keep getting an assertion in JS_NextProperty()
+  // at "JS_ASSERT(scope->object == obj)" when doing this.
 
   JSIdArray *ids = JS_Enumerate(targetCx, target);
   if (ids == NULL)
