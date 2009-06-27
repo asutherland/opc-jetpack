@@ -122,17 +122,21 @@ StatusBar.prototype = {
             iframe.contentDocument.body.style.padding = 0;
             iframe.contentDocument.body.style.margin = 0;
 
+            // Listen for DOM mutation events on the document's style attribute
+            // and update the iframe's width when its document's width changes.
             iframe.contentDocument.addEventListener(
               "DOMAttrModified",
               function(evt) {
-                if (evt.attrName != "style")
+                if (evt.target != iframe.contentDocument.documentElement ||
+                    evt.attrName != "style")
                   return;
 
+                // Update the iframe's width to match the width of its document.
                 // TODO: diff evt.oldValue and evt.newValue to determine whether
                 // or not the width CSS property changed, since we should only
                 // update the iframe's width if it's the property that changed.
-                let width = iframe.contentDocument.documentElement.style.width;
-                iframe.style.width = width;
+                iframe.style.width =
+                  iframe.contentDocument.documentElement.style.width;
               },
               false,
               true
