@@ -95,6 +95,8 @@ JSBool TCB_enumerate(JSContext *cx, JSObject *obj, uintN argc,
 
   JSObject *array = JS_NewArrayObject(cx, ids->length, ids->vector);
   *rval = OBJECT_TO_JSVAL(array);
+
+  JS_DestroyIdArray(cx, ids);
   return JS_TRUE;
 }
 

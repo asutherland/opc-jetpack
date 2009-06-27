@@ -203,6 +203,7 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
   if (ids == NULL)
     return JS_TRUE;
 
+  // TODO: If we bail, we need to clean up after ourselves here.
   for (int i = 0; i < ids->length; i++) {
     jsval id;
     if (!JS_IdToValue(targetCx, ids->vector[i], &id)) {
@@ -247,6 +248,8 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
           JSPROP_ENUMERATE))
         return JS_FALSE;
   }
+
+  JS_DestroyIdArray(targetCx, ids);
 
   return JS_TRUE;
 }
