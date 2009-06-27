@@ -93,7 +93,10 @@ StatusBar.prototype = {
       embedIframe();
 
     function embedIframe() {
-      iframe.setAttribute("width", width);
+      // The width we get here is an integer number of pixels, so we have to
+      // convert it to a CSS value before setting style.width to it.
+      iframe.style.width = width + "px";
+
       iframe.setAttribute("height", statusBar.boxObject.height);
       iframe.setAttribute("src", url);
       iframe.style.overflow = "hidden";
@@ -118,6 +121,22 @@ StatusBar.prototype = {
             iframe.style.marginRight = "4px";
             iframe.contentDocument.body.style.padding = 0;
             iframe.contentDocument.body.style.margin = 0;
+
+            iframe.contentDocument.addEventListener(
+              "DOMAttrModified",
+              function(evt) {
+                if (evt.attrName != "style")
+                  return;
+
+                // TODO: diff evt.oldValue and evt.newValue to determine whether
+                // or not the width CSS property changed, since we should only
+                // update the iframe's width if it's the property that changed.
+                let width = iframe.contentDocument.documentElement.style.width;
+                iframe.style.width = width;
+              },
+              false,
+              true
+            );
           }
         },
         true
