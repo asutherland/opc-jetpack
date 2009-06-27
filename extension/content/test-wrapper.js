@@ -457,6 +457,16 @@ function memoryProfilingTests(global) {
   print("Successfully visited " + visitedCount + " objects.");
 }
 
+assert(
+  functionInfo(memoryProfilingTests).filename.indexOf("test-wrapper") > 0,
+  "functionInfo() must contain accurate filename component."
+  );
+
+assert(
+  functionInfo(memoryProfilingTests).lineNumber > 0,
+  "functionInfo() must contain accurate line number component."
+  );
+
 profileMemory("if (!getObjectInfo('blarg')) throw new Error()",
               "<string>",
               {blarg: {}});

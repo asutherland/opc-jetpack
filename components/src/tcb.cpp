@@ -145,12 +145,22 @@ JSBool TCB_functionInfo(JSContext *cx, JSObject *obj, uintN argc,
     filenameVal = STRING_TO_JSVAL(filenameStr);
   }
 
-  // TODO: Check for return values here.
-  JSObject *funcInfo = JS_NewObject(cx, NULL, NULL, NULL);
-  JS_DefineProperty(cx, funcInfo, "filename", filenameVal,
-                    NULL, NULL, 0);
+  uintN lineNumber = JS_GetScriptBaseLineNumber(cx, script);
 
+  JSObject *funcInfo = JS_NewObject(cx, NULL, NULL, NULL);
+  if (funcInfo == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
   *rval = OBJECT_TO_JSVAL(funcInfo);
+
+  if (!JS_DefineProperty(cx, funcInfo, "filename", filenameVal,
+                         NULL, NULL, JSPROP_ENUMERATE) ||
+      !JS_DefineProperty(cx, funcInfo, "lineNumber",
+                         INT_TO_JSVAL(lineNumber), NULL, NULL,
+                         JSPROP_ENUMERATE))
+    return JS_FALSE;
+
   return JS_TRUE;
 }
 
