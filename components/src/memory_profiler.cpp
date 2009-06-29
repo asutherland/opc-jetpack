@@ -306,8 +306,11 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
   return JS_TRUE;
 }
 
-static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
-                         jsval *argv, jsval *rval)
+// Given a named object string or an object ID, get the object in
+// the JS runtime we're profiling and put it in rval. If it doesn't
+// exist, put JSVAL_NULL in rval. If an error occurs, return JS_FALSE.
+static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
+                          jsval *rval)
 {
   uint32 id;
 
@@ -328,11 +331,27 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry)) {
+  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry))
+    *rval = OBJECT_TO_JSVAL((JSObject *) id);
+  else
+    *rval = JSVAL_NULL;
+
+  return JS_TRUE;
+}
+
+static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
+                         jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
     JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
     *rval = OBJECT_TO_JSVAL(info);
 
-    JSObject *target = (JSObject *) id;
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
     JSContext *targetCx = tracingState.tracer.context;
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
