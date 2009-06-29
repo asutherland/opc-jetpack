@@ -42,20 +42,40 @@ function wrapJSONP(path, json) {
     }
 }
 
+var dump = {}; // hold the entire set of objects
+function dumpObject(objNum) {
+    try {
+        if (dump[objNum]) return; // got it
+        var objInfo = getObjectInfo(objNum);
+        if (objInfo) {
+            dump[objNum] = objInfo;
+
+            if (objInfo.children) {
+                for (var i = 0; i < objInfo.children.length; i++) {
+                    dumpObject(objInfo.children[i]);
+                }
+            }
+        }
+    } catch (e) {
+        console.log("Bad dumping! ", objNum);
+    }
+}
+
 // This is just a test to exercise the code a bit.
 JSON.stringify(getObjectInfo(getGCRoots()[0]));
 
 var socket = new ServerSocket();
 
 var IP = "127.0.0.1";
-var PORT = 8080;
+var PORT = 8888;
 var BASE_URL = "http://" + IP + ":" + PORT;
 var HELP = [
   "REST API methods available:",
   "",
-  "  /gc-roots      JSON array of GC root object IDs.",
-  "  /objects/{ID}  JSON metadata about the given object ID.",
-  "  /stop          Stops the server."];
+  "  /gc-roots       JSON array of GC root object IDs.",
+  "  /dump-root/{ID} JSON array of metadata for given GC root.",
+  "  /objects/{ID}   JSON metadata about the given object ID.",
+  "  /stop           Stops the server."];
 
 HELP = HELP.join("\r\n");
 
@@ -108,6 +128,15 @@ function processRequest(socket) {
     } else {
         if (path.indexOf("/gc-roots") == 0) {
             toSend = JSON.stringify(getGCRoots());
+        } else if (path.indexOf("/dump-root/") == 0) {
+            var objNum = path.match(/^\/dump-root\/(\d+)/);
+            if (objNum) {
+                objNum = objNum[1];
+                debug("Dumping root object with ID: " + objNum);
+                dump = {};
+                dumpObject(objNum); // recursively get everything
+                toSend = JSON.stringify({ id: objNum, heap: dump });
+            }
         } else {
             var objNum = path.match(/^\/objects\/(\d+)/);
             if (objNum) {
