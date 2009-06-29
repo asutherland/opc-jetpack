@@ -465,6 +465,7 @@ function memoryProfilingTests(global) {
       visited[id] = true;
       visitedCount++;
       var info = getObjectInfo(id);
+      getObjectProperties(id);
       if (info)
         leftToVisit = leftToVisit.concat(info.children);
     }

@@ -171,27 +171,17 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
         !JS_DefineProperty(cx, info, "lineStart",
                            INT_TO_JSVAL(lineStart),
                            NULL, NULL, JSPROP_ENUMERATE) ||
-        !JS_DefineProperty(cx, info, "lineStart",
-                           INT_TO_JSVAL(lineStart),
+        !JS_DefineProperty(cx, info, "lineEnd",
+                           INT_TO_JSVAL(lineEnd),
                            NULL, NULL, JSPROP_ENUMERATE))
       return JS_FALSE;
   }
   return JS_TRUE;
 }
 
-static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
+static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
                                 JSObject *target, JSContext *targetCx)
 {
-  JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
-  if (propInfo == NULL) {
-    JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
-  }
-
-  if (!JS_DefineProperty(cx, info, "properties", OBJECT_TO_JSVAL(propInfo),
-                         NULL, NULL, JSPROP_ENUMERATE))
-    return JS_FALSE;
-
   // TODO: It'd be nice if we could use the OBJ_IS_NATIVE() macro here,
   // but that appears to be defined in a private header, jsobj.h. Still,
   // leakmon uses it, so it might be OK if we do too:
@@ -339,6 +329,34 @@ static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
   return JS_TRUE;
 }
 
+static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
+                               jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
+    JSContext *targetCx = tracingState.tracer.context;
+
+    JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
+    if (propInfo == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+
+    *rval = OBJECT_TO_JSVAL(propInfo);
+
+    if (!getPropertiesInfo(cx, propInfo, target, targetCx))
+      return JS_FALSE;
+  } else
+    *rval = JSVAL_NULL;
+
+  return JSVAL_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -390,18 +408,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
 
-    // If this is a wrapper, don't worry about getting the
-    // properties--assume the caller will get around to
-    // inspecting the wrappee.
     if (((classp->flags & JSCLASS_IS_EXTENDED) &&
           ((JSExtendedClass *) classp)->wrappedObject)) {
       if (!maybeIncludeObject(
             cx, info, "wrappedObject",
             ((JSExtendedClass *) classp)->wrappedObject(targetCx, target)
             ))
-        return JS_FALSE;
-    } else {
-      if (!getPropertiesInfo(cx, info, target, targetCx))
         return JS_FALSE;
     }
 
@@ -467,9 +479,10 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
 }
 
 static JSFunctionSpec server_global_functions[] = {
-  JS_FS("ServerSocket",   createServerSocket, 0, 0, 0),
-  JS_FS("getGCRoots",     getGCRoots,         0, 0, 0),
-  JS_FS("getObjectInfo",  getObjInfo,         1, 0, 0),
+  JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
+  JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
+  JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
+  JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
   JS_FS_END
 };
 
