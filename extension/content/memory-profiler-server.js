@@ -133,7 +133,7 @@ function processRequest(socket) {
         } else if (path.indexOf("/dump-root/") == 0) {
             var objNum = path.match(/^\/dump-root\/(\d+)/);
             if (objNum) {
-                objNum = objNum[1];
+                objNum = parseInt(objNum[1]);
                 debug("Dumping root object with ID: " + objNum);
                 dump = {};
                 dumpObject(objNum); // recursively get everything
@@ -143,7 +143,7 @@ function processRequest(socket) {
             var objNum = path.match(/^\/objects\/(\d+)/);
             if (objNum) {
               //throw new Error('wut');
-              objNum = objNum[1];
+              objNum = parseInt(objNum[1]);
               debug(objNum);
               var objInfo = getObjectInfo(objNum);
               if (objInfo) {
