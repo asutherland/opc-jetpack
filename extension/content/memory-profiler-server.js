@@ -125,6 +125,8 @@ function processRequest(socket) {
         toSend = HELP;
     } else if (path.indexOf("/stop") == 0) {
         toSend = "Stopping server now!";
+    } else if (path.indexOf("/ping") == 0) {
+        toSend = "'Ping!'";
     } else {
         if (path.indexOf("/gc-roots") == 0) {
             toSend = JSON.stringify(getGCRoots());
