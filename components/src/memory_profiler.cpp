@@ -16,6 +16,9 @@ typedef struct TracingState {
   // Runtime that we're tracing.
   JSRuntime *runtime;
 
+  // Mapping from strings to objects for the profiler's convenience.
+  JSObject *namedObjects;
+
   // Structure required to use JS tracing functions.
   JSTracer tracer;
 };
@@ -168,27 +171,17 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
         !JS_DefineProperty(cx, info, "lineStart",
                            INT_TO_JSVAL(lineStart),
                            NULL, NULL, JSPROP_ENUMERATE) ||
-        !JS_DefineProperty(cx, info, "lineStart",
-                           INT_TO_JSVAL(lineStart),
+        !JS_DefineProperty(cx, info, "lineEnd",
+                           INT_TO_JSVAL(lineEnd),
                            NULL, NULL, JSPROP_ENUMERATE))
       return JS_FALSE;
   }
   return JS_TRUE;
 }
 
-static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
+static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
                                 JSObject *target, JSContext *targetCx)
 {
-  JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
-  if (propInfo == NULL) {
-    JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
-  }
-
-  if (!JS_DefineProperty(cx, info, "properties", OBJECT_TO_JSVAL(propInfo),
-                         NULL, NULL, JSPROP_ENUMERATE))
-    return JS_FALSE;
-
   // TODO: It'd be nice if we could use the OBJ_IS_NATIVE() macro here,
   // but that appears to be defined in a private header, jsobj.h. Still,
   // leakmon uses it, so it might be OK if we do too:
@@ -203,6 +196,7 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
   if (ids == NULL)
     return JS_TRUE;
 
+  // TODO: If we bail, we need to clean up after ourselves here.
   for (int i = 0; i < ids->length; i++) {
     jsval id;
     if (!JS_IdToValue(targetCx, ids->vector[i], &id)) {
@@ -248,6 +242,8 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *info,
         return JS_FALSE;
   }
 
+  JS_DestroyIdArray(targetCx, ids);
+
   return JS_TRUE;
 }
 
@@ -262,13 +258,59 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
-static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
-                         jsval *argv, jsval *rval)
+static JSBool lookupNamedObject(JSContext *cx, const char *name,
+                                uint32 *id)
+{
+  *id = 0;
+
+  if (tracingState.namedObjects == NULL)
+    return JS_TRUE;
+
+  JSBool found;
+  if (!JS_HasProperty(tracingState.tracer.context,
+                      tracingState.namedObjects,
+                      name,
+                      &found)) {
+    JS_ReportError(cx, "JS_HasProperty() failed.");
+    return JS_FALSE;
+  }
+
+  if (!found)
+    return JS_TRUE;
+
+  jsval val;
+  if (!JS_LookupProperty(tracingState.tracer.context,
+                         tracingState.namedObjects,
+                         name,
+                         &val)) {
+    JS_ReportError(cx, "JS_LookupProperty failed.");
+    return JS_FALSE;
+  }
+
+  if (!JSVAL_IS_OBJECT(val))
+    return JS_TRUE;
+
+  JSObject *obj = JSVAL_TO_OBJECT(val);
+  *id = (unsigned int) obj;
+
+  return JS_TRUE;
+}
+
+// Given a named object string or an object ID, get the object in
+// the JS runtime we're profiling and put it in rval. If it doesn't
+// exist, put JSVAL_NULL in rval. If an error occurs, return JS_FALSE.
+static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
+                          jsval *rval)
 {
   uint32 id;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
-    return JS_FALSE;
+  if (argc >= 1 && JSVAL_IS_STRING(argv[0])) {
+    const char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
+    if (!lookupNamedObject(cx, name, &id))
+      return JS_FALSE;
+  } else
+    if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
+      return JS_FALSE;
 
   JSDHashEntryStub *entry = (JSDHashEntryStub *)
     JS_DHashTableOperate(&tracingState.visited,
@@ -279,11 +321,55 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry)) {
+  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry))
+    *rval = OBJECT_TO_JSVAL((JSObject *) id);
+  else
+    *rval = JSVAL_NULL;
+
+  return JS_TRUE;
+}
+
+static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
+                               jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
+    JSContext *targetCx = tracingState.tracer.context;
+
+    JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
+    if (propInfo == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+
+    *rval = OBJECT_TO_JSVAL(propInfo);
+
+    if (!getPropertiesInfo(cx, propInfo, target, targetCx))
+      return JS_FALSE;
+  } else
+    *rval = JSVAL_NULL;
+
+  return JSVAL_TRUE;
+}
+
+static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
+                         jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
     JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
     *rval = OBJECT_TO_JSVAL(info);
 
-    JSObject *target = (JSObject *) id;
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
     JSContext *targetCx = tracingState.tracer.context;
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
@@ -322,12 +408,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
 
-    // If this is a wrapper, don't worry about getting the
-    // properties--assume the caller will get around to
-    // inspecting the wrappee.
-    if (!((classp->flags & JSCLASS_IS_EXTENDED) &&
+    if (((classp->flags & JSCLASS_IS_EXTENDED) &&
           ((JSExtendedClass *) classp)->wrappedObject)) {
-      if (!getPropertiesInfo(cx, info, target, targetCx))
+      if (!maybeIncludeObject(
+            cx, info, "wrappedObject",
+            ((JSExtendedClass *) classp)->wrappedObject(targetCx, target)
+            ))
         return JS_FALSE;
     }
 
@@ -393,9 +479,10 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
 }
 
 static JSFunctionSpec server_global_functions[] = {
-  JS_FS("ServerSocket",   createServerSocket, 0, 0, 0),
-  JS_FS("getGCRoots",     getGCRoots,         0, 0, 0),
-  JS_FS("getObjectInfo",  getObjInfo,         1, 0, 0),
+  JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
+  JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
+  JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
+  JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
   JS_FS_END
 };
 
@@ -407,8 +494,11 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   JSString *code;
   const char *filename;
+  uint32 lineNumber = 1;
+  JSObject *namedObjects = NULL;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "Ss", &code, &filename))
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uo", &code, &filename,
+                           &lineNumber, &namedObjects))
     return JS_FALSE;
 
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
@@ -420,6 +510,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   tracingState.runtime = JS_GetRuntime(cx);
   tracingState.result = JS_TRUE;
+  tracingState.namedObjects = namedObjects;
   tracingState.tracer.context = cx;
   tracingState.tracer.callback = visitedBuilder;
   JS_TraceRuntime(&tracingState.tracer);
@@ -457,7 +548,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   if (!JS_EvaluateScript(serverCx, serverGlobal,
                          JS_GetStringBytes(code),
                          JS_GetStringLength(code),
-                         filename, 1,
+                         filename, lineNumber,
                          &serverRval)) {
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Profiling failed.");

@@ -93,32 +93,56 @@ StatusBar.prototype = {
       embedIframe();
 
     function embedIframe() {
-      iframe.setAttribute("width", width);
+      // The width we get here is an integer number of pixels, so we have to
+      // convert it to a CSS value before setting style.width to it.
+      iframe.style.width = width + "px";
+
       iframe.setAttribute("height", statusBar.boxObject.height);
       iframe.setAttribute("src", url);
       iframe.style.overflow = "hidden";
       iframe.addEventListener(
         "DOMContentLoaded",
         function onPanelLoad(evt) {
-          if (evt.originalTarget.nodeName == "#document") {
-            iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
-            self._injectPanelWindowFunctions(iframe);
+          if (evt.originalTarget.nodeName != "#document")
+            return;
 
-            if (Extension.OS == "Darwin") {
-              iframe.contentDocument.documentElement.style.MozAppearance = "statusbar";
-              iframe.contentDocument.documentElement.style.marginTop = "-1px";
-              iframe.contentDocument.documentElement.style.height = "100%";
-            }
-            else {
-              self._copyBackground(iframe.parentNode,
-                                   iframe.contentDocument.body);
-            }
+          iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
+          self._injectPanelWindowFunctions(iframe);
 
-            iframe.style.marginLeft = "4px";
-            iframe.style.marginRight = "4px";
-            iframe.contentDocument.body.style.padding = 0;
-            iframe.contentDocument.body.style.margin = 0;
+          if (Extension.OS == "Darwin") {
+            iframe.contentDocument.documentElement.style.MozAppearance =
+              "statusbar";
+            iframe.contentDocument.documentElement.style.marginTop = "-1px";
+            iframe.contentDocument.documentElement.style.height = "100%";
           }
+          else {
+            self._copyBackground(iframe.parentNode,
+                                 iframe.contentDocument.body);
+          }
+
+          iframe.style.marginLeft = "4px";
+          iframe.style.marginRight = "4px";
+          iframe.contentDocument.body.style.padding = 0;
+          iframe.contentDocument.body.style.margin = 0;
+
+          // Listen for DOM mutation events on the document's style attribute
+          // and update the iframe's width when its document's width changes.
+          iframe.contentDocument.addEventListener(
+            "DOMAttrModified",
+            function(evt) {
+              if (evt.target != iframe.contentDocument.documentElement ||
+                  evt.attrName != "style")
+                return;
+
+              // Update the iframe's width to match the width of its document.
+              // TODO: diff evt.oldValue and evt.newValue to determine whether
+              // or not the width CSS property changed, since we should only
+              // update the iframe's width if it's the property that changed.
+              iframe.style.width =
+                iframe.contentDocument.documentElement.style.width;
+            },
+            false
+          );
         },
         true
       );

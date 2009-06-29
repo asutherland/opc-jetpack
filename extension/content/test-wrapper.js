@@ -404,32 +404,48 @@ if (this.window)
 
 // MEMORY PROFILING TESTS
 
+function runMemoryProfilingTest(func, namedObjects) {
+  function injectErrorReportingIntoContext(global) {
+    // This function is called by the profiling runtime whenever an
+    // uncaught exception occurs.
+    global.handleError = function handleError() {
+      printTraceback(lastExceptionTraceback);
+      print(lastException);
+    };
+
+    // This function uses the Python-inspired traceback functionality of the
+    // playground to print a stack trace that looks much like Python's.
+    function printTraceback(frame) {
+      print("Traceback (most recent call last):");
+      if (frame === undefined)
+        frame = stack();
+      var lines = [];
+      while (frame) {
+        var line = ('  File "' + frame.filename + '", line ' +
+                    frame.lineNo + ', in ' + frame.functionName);
+        lines.splice(0, 0, line);
+        frame = frame.caller;
+      }
+      print(lines.join('\n'));
+    }
+  }
+
+  var code = injectErrorReportingIntoContext.toString();
+
+  // Remove newlines from error reporting code so that the function
+  // code we put after it retains its original line numbering.
+  code = "(" + code.replace(/\n/g, ";") + ")(this);";
+  code += "(" + func.toString() + ")();";
+
+  var funcInfo = functionInfo(func);
+
+  profileMemory(code, funcInfo.filename, funcInfo.lineNumber,
+                namedObjects);
+}
+
 // This function's source code is injected into the separate JS
 // runtime of the memory profiler.
 function memoryProfilingTests(global) {
-  // This function is called by the profiling runtime whenever an
-  // uncaught exception occurs.
-  global.handleError = function handleError() {
-    printTraceback(lastExceptionTraceback);
-    print(lastException);
-  };
-
-  // This function uses the Python-inspired traceback functionality of the
-  // playground to print a stack trace that looks much like Python's.
-  function printTraceback(frame) {
-    print("Traceback (most recent call last):");
-    if (frame === undefined)
-      frame = stack();
-    var lines = [];
-    while (frame) {
-      var line = ('  File "' + frame.filename + '", line ' +
-                  frame.lineNo + ', in ' + frame.functionName);
-      lines.splice(0, 0, line);
-      frame = frame.caller;
-    }
-    print(lines.join('\n'));
-  }
-
   var visited = {};
 
   function recursiveGetInfo(id) {
@@ -449,6 +465,7 @@ function memoryProfilingTests(global) {
       visited[id] = true;
       visitedCount++;
       var info = getObjectInfo(id);
+      getObjectProperties(id);
       if (info)
         leftToVisit = leftToVisit.concat(info.children);
     }
@@ -457,9 +474,21 @@ function memoryProfilingTests(global) {
   print("Successfully visited " + visitedCount + " objects.");
 }
 
-print("Now profiling memory.");
+assert(
+  functionInfo(memoryProfilingTests).filename.indexOf("test-wrapper") > 0,
+  "functionInfo() must contain accurate filename component."
+  );
 
-profileMemory("(" + memoryProfilingTests.toString() + ")(this);",
+assert(
+  functionInfo(memoryProfilingTests).lineNumber > 0,
+  "functionInfo() must contain accurate line number component."
+  );
+
+profileMemory("if (!getObjectInfo('blarg')) throw new Error()",
+              "<string>", 1,
+              {blarg: {}});
+
+profileMemory("if (getObjectInfo('oof')) throw new Error()",
               "<string>");
 
 assertThrows(function() {
@@ -468,6 +497,10 @@ assertThrows(function() {
              },
              "Error: Profiling failed.",
              "Profiling bad code should raise an exception.");
+
+print("Now profiling memory.");
+
+runMemoryProfilingTest(memoryProfilingTests);
 
 print("Done profiling memory.");
 
