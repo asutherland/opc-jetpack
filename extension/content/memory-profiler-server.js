@@ -43,12 +43,77 @@ function wrapJSONP(path, json) {
 }
 
 var dump = {}; // hold the entire set of objects
+var meta = {};
+var totalBytes = 0;
+var filter = false;
+
+function getObjectInfoAndProperties(objNum) {
+    var o = getObjectInfo(objNum);
+    var properties = getObjectProperties(objNum);
+    if (properties) o.properties = properties;
+    return o;
+}
+
+var f = {};
 function dumpObject(objNum) {
+    //debug("dumping: " + objNum);
     try {
         if (dump[objNum]) return; // got it
-        var objInfo = getObjectInfo(objNum);
+        var objInfo = getObjectInfoAndProperties(objNum);
+
         if (objInfo) {
-            dump[objNum] = objInfo;
+            if (filter && objInfo.filename && (objInfo.filename.indexOf("chrome:") >= 0 || objInfo.filename.indexOf("file:") >= 0 || objInfo.filename.indexOf("/ns") >= 0 || objInfo.filename.indexOf("/XPCOMUtils.jsm") >= 0 || objInfo.filename.indexOf("/aboutRobots.js") >= 0)) return;
+            
+            if (filter && objInfo.nativeClass && (objInfo.nativeClass.indexOf("XPC") >= 0)) return;
+            
+            // if (objInfo.nativeClass == "Function" || objInfo.nativeClass == "Object") {
+            //     debug(JSON.stringify(objInfo));
+            //     return;
+            // }
+            
+            if (objInfo.filename == "") {
+                debug(JSON.stringify(objInfo));
+            }
+
+            if (objInfo.filename) {
+                if (!f[objInfo.filename]) {
+                    debug("Filename: " + objInfo.filename);
+                    f[objInfo.filename] = true;
+                }
+            // } else {
+            //     debug("Class: " + objInfo.nativeClass);
+            }
+
+            // file data
+            var key = [objInfo.filename, objInfo.lineStart].join(':');
+            if (meta[key]) {
+                meta[key].count++;
+                meta[key].size += objInfo.size;
+                if (!meta[key].filename && objInfo.filename) {
+                    meta[key].filename = objInfo.filename;
+                }
+                if (!meta[key].name && objInfo.name) {
+                    meta[key].name = objInfo.name;
+                }
+                if (!meta[key].lineStart && objInfo.lineStart) {
+                    meta[key].lineStart = objInfo.lineStart;
+                }
+            } else {
+                meta[key] = {
+                    count: 1,
+                    size: objInfo.size,
+                    filename: objInfo.filename,
+                    lineStart: objInfo.lineStart,
+                    name: objInfo.name
+                }
+            }
+            
+            if (objInfo.size) {
+                totalBytes += objInfo.size;
+            }
+
+            dump[objNum] = true;
+            //dump[objNum] = objInfo;
 
             if (objInfo.children) {
                 for (var i = 0; i < objInfo.children.length; i++) {
@@ -57,12 +122,14 @@ function dumpObject(objNum) {
             }
         }
     } catch (e) {
-        console.log("Bad dumping! ", objNum);
+        print("Bad dumping! " + objNum + " Error: " + e);
     }
 }
 
 // This is just a test to exercise the code a bit.
-JSON.stringify(getObjectInfo(getGCRoots()[0]));
+//JSON.stringify(getObjectInfo(getGCRoots()[0]));
+
+// -- KICK IT OFF 
 
 var socket = new ServerSocket();
 
@@ -73,8 +140,10 @@ var HELP = [
   "REST API methods available:",
   "",
   "  /gc-roots       JSON array of GC root object IDs.",
+  "  /dump-roots?filter=t|f Do a huge heap dump.",
   "  /dump-root/{ID} JSON array of metadata for given GC root.",
   "  /objects/{ID}   JSON metadata about the given object ID.",
+  "  /ping           Test to see if the connection is on.",
   "  /stop           Stops the server."];
 
 HELP = HELP.join("\r\n");
@@ -126,18 +195,33 @@ function processRequest(socket) {
     } else if (path.indexOf("/stop") == 0) {
         toSend = "Stopping server now!";
     } else if (path.indexOf("/ping") == 0) {
-        toSend = "'Ping!'";
+        toSend = "'pong'";
     } else {
         if (path.indexOf("/gc-roots") == 0) {
             toSend = JSON.stringify(getGCRoots());
+        } else if (path.indexOf("/dump-roots") == 0) {
+            if (path.indexOf("filter=true") > 0) filter = true;
+
+            var roots = getGCRoots();
+            debug("Dumping root objects...");
+            dump = {};
+            classData = {};
+
+            for (var i = 0; i < roots.length; i++) {
+                debug("root: " + i + " of " + roots.length + " id: " + roots[i]);
+                dumpObject(roots[i]);
+            }
+            debug("TOTAL BYTES: " + totalBytes);
+            toSend = JSON.stringify({ meta: meta, totalBytes: totalBytes });
         } else if (path.indexOf("/dump-root/") == 0) {
             var objNum = path.match(/^\/dump-root\/(\d+)/);
             if (objNum) {
                 objNum = parseInt(objNum[1]);
                 debug("Dumping root object with ID: " + objNum);
                 dump = {};
+                //meta = {};
                 dumpObject(objNum); // recursively get everything
-                toSend = JSON.stringify({ id: objNum, heap: dump });
+                toSend = JSON.stringify({ id: objNum, heap: dump, classData: classData, meta: meta });
             }
         } else {
             var objNum = path.match(/^\/objects\/(\d+)/);
@@ -145,7 +229,8 @@ function processRequest(socket) {
               //throw new Error('wut');
               objNum = parseInt(objNum[1]);
               debug(objNum);
-              var objInfo = getObjectInfo(objNum);
+
+              var objInfo = getObjectInfoAndProperties(objNum);
               if (objInfo) {
                 toSend = JSON.stringify(objInfo);
               } else {
@@ -195,4 +280,5 @@ while (keepGoing) {
   }
 }
 
+print("Closing socket.");
 socket.close();
