@@ -142,6 +142,15 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
     JS_ReportError(cx, "JS_ValueToFunction() failed.");
     return JS_FALSE;
   }
+
+  if (!JS_DefineProperty(
+        cx, info, "functionSize",
+        INT_TO_JSVAL(JS_GetFunctionTotalSize(targetCx, fun)),
+        NULL, NULL, JSPROP_ENUMERATE)) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
   JSScript *script = JS_GetFunctionScript(targetCx, fun);
   // script is null for native code.      
   if (script) {
@@ -154,6 +163,14 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
         JS_GetStringChars(targetFuncName)
         );
       name = STRING_TO_JSVAL(funcName);
+    }
+
+    if (!JS_DefineProperty(
+          cx, info, "scriptSize",
+          INT_TO_JSVAL(JS_GetScriptTotalSize(targetCx, script)),
+          NULL, NULL, JSPROP_ENUMERATE)) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
     }
 
     JSString *filename = JS_NewStringCopyZ(
