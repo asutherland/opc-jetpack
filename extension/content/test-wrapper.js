@@ -458,7 +458,10 @@ function memoryProfilingTests(global) {
   }
 
   var visitedCount = 0;
-  var leftToVisit = getGCRoots();
+  var namedObjects = getNamedObjects();
+  var leftToVisit = [namedObjects[name] for (name in namedObjects)];
+  if (leftToVisit.length == 0)
+    leftToVisit = getGCRoots();
   while (leftToVisit.length > 0) {
     var id = leftToVisit.pop();
     if (!(id in visited)) {
@@ -466,8 +469,12 @@ function memoryProfilingTests(global) {
       visitedCount++;
       var info = getObjectInfo(id);
       //getObjectProperties(id);
-      if (info)
+      if (info) {
         leftToVisit = leftToVisit.concat(info.children);
+//        if (info.name && info.filename &&
+//            info.filename.indexOf("http") == "0")
+//          print(JSON.stringify(info));
+      }
     }
   }
 
@@ -500,7 +507,31 @@ assertThrows(function() {
 
 print("Now profiling memory.");
 
-runMemoryProfilingTest(memoryProfilingTests);
+function getBrowserWindows() {
+  var windows = {};
+  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+           .getService(Ci.nsIWindowMediator);
+  var enumerator = wm.getEnumerator("navigator:browser");
+  while(enumerator.hasMoreElements()) {
+    var win = enumerator.getNext();
+    if (win.gBrowser) {
+      var browser = win.gBrowser;
+      for (var i = 0; i < browser.browsers.length; i++) {
+        var page = browser.browsers[i];
+        var location = page.contentWindow.location;
+        var name = location.href;
+        while (name in windows) {
+          name += "_";
+        }
+        windows[name] = page.contentWindow.wrappedJSObject;
+      }
+    }
+  }
+  return windows;
+}
+
+runMemoryProfilingTest(memoryProfilingTests,
+                       getBrowserWindows());
 
 print("Done profiling memory.");
 

@@ -142,6 +142,15 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
     JS_ReportError(cx, "JS_ValueToFunction() failed.");
     return JS_FALSE;
   }
+
+  if (!JS_DefineProperty(
+        cx, info, "functionSize",
+        INT_TO_JSVAL(JS_GetFunctionTotalSize(targetCx, fun)),
+        NULL, NULL, JSPROP_ENUMERATE)) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
   JSScript *script = JS_GetFunctionScript(targetCx, fun);
   // script is null for native code.      
   if (script) {
@@ -154,6 +163,14 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
         JS_GetStringChars(targetFuncName)
         );
       name = STRING_TO_JSVAL(funcName);
+    }
+
+    if (!JS_DefineProperty(
+          cx, info, "scriptSize",
+          INT_TO_JSVAL(JS_GetScriptTotalSize(targetCx, script)),
+          NULL, NULL, JSPROP_ENUMERATE)) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
     }
 
     JSString *filename = JS_NewStringCopyZ(
@@ -258,6 +275,15 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
+static JSBool maybeIncludeObjectOp(JSContext *cx, JSObject *info,
+                                   const char *objName, JSObjectOp objOp,
+                                   JSContext *targetCx, JSObject *target)
+{
+  if (objOp)
+    return maybeIncludeObject(cx, info, objName, objOp(targetCx, target));
+  return JS_TRUE;
+}
+
 static JSBool lookupNamedObject(JSContext *cx, const char *name,
                                 uint32 *id)
 {
@@ -357,6 +383,23 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
   return JSVAL_TRUE;
 }
 
+static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
+                              jsval *argv, jsval *rval)
+{
+  JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+  *rval = OBJECT_TO_JSVAL(info);
+ 
+  if (tracingState.namedObjects != NULL) {
+    JSContext *targetCx = tracingState.tracer.context;
+    JSObject *target = tracingState.namedObjects;
+
+    if (!getPropertiesInfo(cx, info, target, targetCx))
+      return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -373,6 +416,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     JSContext *targetCx = tracingState.tracer.context;
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
+      if (!JS_DefineProperty(cx, info, "id",
+                             INT_TO_JSVAL((unsigned int) target),
+                             NULL, NULL,
+                             JSPROP_ENUMERATE))
+        return JS_FALSE;
+
       // TODO: Should really be using an interned string here or something.
       JSString *name = JS_NewStringCopyZ(cx, classp->name);
       if (name == NULL) {
@@ -394,10 +443,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
       return JS_FALSE;
     }
 
-    maybeIncludeObject(cx, info, "parent",
-                       JS_GetParent(targetCx, target));
-    maybeIncludeObject(cx, info, "prototype",
-                       JS_GetPrototype(targetCx, target));
+    if (!maybeIncludeObject(cx, info, "parent",
+                            JS_GetParent(targetCx, target)) ||
+        !maybeIncludeObject(cx, info, "prototype",
+                            JS_GetPrototype(targetCx, target)))
+      return JS_FALSE;
+
     // TODO: We used to include 'constructor' here too, but
     // we ran into a problem with Block objects, so removed it.
 
@@ -407,6 +458,18 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
 
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
+
+    if (classp->flags & JSCLASS_IS_EXTENDED) {
+      JSExtendedClass *exClassp = (JSExtendedClass *) classp;
+
+      if (!maybeIncludeObjectOp(cx, info, "wrappedObject",
+                                exClassp->wrappedObject, targetCx, target) ||
+          !maybeIncludeObjectOp(cx, info, "outerObject",
+                                exClassp->outerObject, targetCx, target) ||
+          !maybeIncludeObjectOp(cx, info, "innerObject",
+                                exClassp->innerObject, targetCx, target))
+        return JS_FALSE;
+    }
 
     if (((classp->flags & JSCLASS_IS_EXTENDED) &&
           ((JSExtendedClass *) classp)->wrappedObject)) {
@@ -483,6 +546,7 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
+  JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
   JS_FS_END
 };
 

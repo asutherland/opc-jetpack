@@ -395,6 +395,7 @@ def xpcom(options):
 
     for dirname in ["srcdir", "objdir"]:
         options[dirname] = os.path.expanduser(options[dirname])
+        options[dirname] = os.path.abspath(options[dirname])
 
     resolve_options(options)
     options.xpcshell = os.path.join(options.objdir, "dist", "bin",
