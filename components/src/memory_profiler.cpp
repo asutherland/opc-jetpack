@@ -258,6 +258,15 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
+static JSBool maybeIncludeObjectOp(JSContext *cx, JSObject *info,
+                                   const char *objName, JSObjectOp objOp,
+                                   JSContext *targetCx, JSObject *target)
+{
+  if (objOp)
+    return maybeIncludeObject(cx, info, objName, objOp(targetCx, target));
+  return JS_TRUE;
+}
+
 static JSBool lookupNamedObject(JSContext *cx, const char *name,
                                 uint32 *id)
 {
@@ -417,10 +426,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
       return JS_FALSE;
     }
 
-    maybeIncludeObject(cx, info, "parent",
-                       JS_GetParent(targetCx, target));
-    maybeIncludeObject(cx, info, "prototype",
-                       JS_GetPrototype(targetCx, target));
+    if (!maybeIncludeObject(cx, info, "parent",
+                            JS_GetParent(targetCx, target)) ||
+        !maybeIncludeObject(cx, info, "prototype",
+                            JS_GetPrototype(targetCx, target)))
+      return JS_FALSE;
+
     // TODO: We used to include 'constructor' here too, but
     // we ran into a problem with Block objects, so removed it.
 
@@ -430,6 +441,18 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
 
     if (!getChildrenInfo(cx, info, target, targetCx))
       return JS_FALSE;
+
+    if (classp->flags & JSCLASS_IS_EXTENDED) {
+      JSExtendedClass *exClassp = (JSExtendedClass *) classp;
+
+      if (!maybeIncludeObjectOp(cx, info, "wrappedObject",
+                                exClassp->wrappedObject, targetCx, target) ||
+          !maybeIncludeObjectOp(cx, info, "outerObject",
+                                exClassp->outerObject, targetCx, target) ||
+          !maybeIncludeObjectOp(cx, info, "innerObject",
+                                exClassp->innerObject, targetCx, target))
+        return JS_FALSE;
+    }
 
     if (((classp->flags & JSCLASS_IS_EXTENDED) &&
           ((JSExtendedClass *) classp)->wrappedObject)) {
