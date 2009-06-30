@@ -373,6 +373,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     JSContext *targetCx = tracingState.tracer.context;
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
+      if (!JS_DefineProperty(cx, info, "id",
+                             INT_TO_JSVAL((unsigned int) target),
+                             NULL, NULL,
+                             JSPROP_ENUMERATE))
+        return JS_FALSE;
+
       // TODO: Should really be using an interned string here or something.
       JSString *name = JS_NewStringCopyZ(cx, classp->name);
       if (name == NULL) {
