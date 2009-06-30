@@ -357,6 +357,23 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
   return JSVAL_TRUE;
 }
 
+static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
+                              jsval *argv, jsval *rval)
+{
+  JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+  *rval = OBJECT_TO_JSVAL(info);
+ 
+  if (tracingState.namedObjects != NULL) {
+    JSContext *targetCx = tracingState.tracer.context;
+    JSObject *target = tracingState.namedObjects;
+
+    if (!getPropertiesInfo(cx, info, target, targetCx))
+      return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -489,6 +506,7 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
+  JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
   JS_FS_END
 };
 
