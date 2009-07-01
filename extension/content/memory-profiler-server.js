@@ -49,14 +49,115 @@ var filter = false;
 
 function getObjectInfoAndProperties(objNum) {
     var o = getObjectInfo(objNum);
-    var properties = getObjectProperties(objNum);
-    if (properties) o.properties = properties;
-    return o;
+    if (!o) return;
+
+    if (o.wrappedObject) {
+        return getObjectInfoAndProperties(o.wrappedObject);
+    } else {
+        var properties = getObjectProperties(objNum);
+        if (properties) o.properties = properties;
+        return o;
+    }
+}
+
+/*
+ * From the object, get back to the "Window" object and then come down the path
+ */
+function roundupWindowObjects(objNum) {
+    var objInfo = getObjectInfoAndProperties(objNum);
+    //debug("ROUNDUP: " + JSON.stringify(objInfo));
+    if (!objInfo) return;
+
+    var windowObject;
+
+    if (objInfo.nativeClass == "Window") {
+        windowObject = objInfo;
+    } else {
+        var again = getObjectInfoAndProperties(objInfo.wrappedObject || objInfo.parent);
+        if (again && again.nativeClass == "Window") {
+            windowObject = again;
+            //debug(JSON.stringify(again));
+        }
+    }
+    
+    if (!windowObject) return;
+
+    // now we have the window object we can go down down down
+    // window.foo ->     
+    for (var key in windowObject.properties) {
+        traverseRoundup(windowObject.properties[key]);
+    }
+    
+    // debug("typeMap: " + JSON.stringify(typeMap));
+    // debug("typeSize: " + JSON.stringify(typeSize));
+}
+
+var typeMap = {};
+var typeSize = {};
+var typeCount = {};
+var roundup = {};
+
+function traverseRoundup(objNum) {
+    if (roundup[objNum]) return; // been here
+    roundup[objNum] = true;
+
+    var objInfo = getObjectInfoAndProperties(objNum);
+    if (!objInfo) return;
+    //debug("traverseRoundup: " + JSON.stringify(objInfo));
+    
+    if (objInfo.nativeClass == "Function" && objInfo.properties) { //} && objInfo.properties.prototype) {
+        //debug("Function: " + JSON.stringify(objInfo));
+        for (var key in objInfo.properties) {
+            if (key == "prototype") {
+                typeMap[objInfo.properties[key]] = objInfo;
+            }
+        }
+
+        if (objInfo.children) for (var x = 0; x < objInfo.children.length; x++) {
+            var kid = objInfo.children[x];
+            if (kid != objInfo.prototype && kid != objInfo.parent) { // not the parent scope or prototype chain
+                //debug("Kid got through 1: " + kid);
+                traverseRoundup(kid);
+            }
+        }
+    } else if (objInfo.nativeClass == "Array") {
+        //debug("Array: " + JSON.stringify(objInfo));
+        if (objInfo.children) for (var x = 0; x < objInfo.children.length; x++) {
+            //var kid = objInfo.children[x];
+            var kid = getObjectInfoAndProperties(objInfo.children[x]);
+
+            if (kid != objInfo.prototype && kid != objInfo.parent) { // not the parent scope or prototype chain
+                //debug("Kid got through 2: " + JSON.stringify(kid));
+                var arrayItem = getObjectInfoAndProperties(kid);
+                if (arrayItem && arrayItem.prototype) {
+                    if (typeSize[arrayItem.prototype]) {
+                        typeSize[arrayItem.prototype] += arrayItem.size;
+                        typeCount[arrayItem.prototype]++;
+                    } else {
+                        typeSize[arrayItem.prototype] = arrayItem.size;
+                        typeCount[arrayItem.prototype] = 1;
+                    }
+                }
+            }
+        }
+    } else if (objInfo.nativeClass == "Object") {
+        //debug("Object: " + JSON.stringify(objInfo));
+        if (objInfo.prototype) {
+            if (typeSize[objInfo.prototype]) {
+                typeSize[objInfo.prototype] += objInfo.size;
+                typeCount[objInfo.prototype]++;
+            } else {
+                typeSize[objInfo.prototype] = objInfo.size;
+                typeCount[objInfo.prototype] = 1;
+            }
+        }
+    }
 }
 
 var f = {};
 function dumpObject(objNum) {
     //debug("dumping: " + objNum);
+
     try {
         if (dump[objNum]) return; // got it
         var objInfo = getObjectInfoAndProperties(objNum);
@@ -71,20 +172,20 @@ function dumpObject(objNum) {
             //     return;
             // }
             
-            if (objInfo.filename == "") {
-                debug(JSON.stringify(objInfo));
-            }
+            // if (objInfo.filename && objInfo.filename.indexOf("sample") >= 0) {
+                //debug(JSON.stringify(objInfo));
+            // }
 
-            if (objInfo.filename) {
-                if (!f[objInfo.filename]) {
-                    debug("Filename: " + objInfo.filename);
-                    f[objInfo.filename] = true;
-                }
+            // if (objInfo.filename) {
+            //     if (!f[objInfo.filename]) {
+            //         debug("Filename: " + objInfo.filename);
+            //         f[objInfo.filename] = true;
+            //     }
             // } else {
             //     debug("Class: " + objInfo.nativeClass);
-            }
+            // }
 
-            // file data
+            // meta data
             var key = [objInfo.filename, objInfo.lineStart].join(':');
             if (meta[key]) {
                 meta[key].count++;
@@ -140,6 +241,7 @@ var HELP = [
   "REST API methods available:",
   "",
   "  /gc-roots       JSON array of GC root object IDs.",
+  "  /dump-win       Dump for the given tab",
   "  /dump-roots?filter=t|f Do a huge heap dump.",
   "  /dump-root/{ID} JSON array of metadata for given GC root.",
   "  /objects/{ID}   JSON metadata about the given object ID.",
@@ -193,19 +295,45 @@ function processRequest(socket) {
     if (path == "/") {
         toSend = HELP;
     } else if (path.indexOf("/stop") == 0) {
-        toSend = "Stopping server now!";
+        toSend = "'Stopping server now!'";
     } else if (path.indexOf("/ping") == 0) {
         toSend = "'pong'";
     } else {
         if (path.indexOf("/gc-roots") == 0) {
             toSend = JSON.stringify(getGCRoots());
+        } else if (path.indexOf("/dump-win") == 0) {
+            var windows = getNamedObjects();
+            var root;
+            var tabUrl;
+            debug(JSON.stringify(windows));
+            for (var k in windows) {
+                if (k.indexOf('chrome:') < 0) {
+                    tabUrl = k;
+                    root = windows[k];
+                    break;
+                }
+            }
+            // debug(windows['file:///SourceControl/memory/sample.html']);
+            // var root = windows['file:///SourceControl/memory/sample.html'];
+
+            debug("Dumping objects for sample...: " + root);
+            dump = {};
+            meta = {};
+
+            roundupWindowObjects(root);
+            dumpObject(root);
+
+            debug("TOTAL BYTES: " + totalBytes);
+            toSend = JSON.stringify({ meta:meta, totalBytes:totalBytes, typeSize:typeSize, typeCount:typeCount, typeMap:typeMap, tabUrl:tabUrl });
+            
+            //toSend = JSON.stringify(getNamedObjects());
         } else if (path.indexOf("/dump-roots") == 0) {
             if (path.indexOf("filter=true") > 0) filter = true;
 
             var roots = getGCRoots();
             debug("Dumping root objects...");
             dump = {};
-            classData = {};
+            meta = {};
 
             for (var i = 0; i < roots.length; i++) {
                 debug("root: " + i + " of " + roots.length + " id: " + roots[i]);
@@ -219,9 +347,10 @@ function processRequest(socket) {
                 objNum = parseInt(objNum[1]);
                 debug("Dumping root object with ID: " + objNum);
                 dump = {};
+                windowRollup = {};
                 //meta = {};
                 dumpObject(objNum); // recursively get everything
-                toSend = JSON.stringify({ id: objNum, heap: dump, classData: classData, meta: meta });
+                toSend = JSON.stringify({ id: objNum, heap: dump, meta: meta });
             }
         } else {
             var objNum = path.match(/^\/objects\/(\d+)/);
@@ -235,7 +364,7 @@ function processRequest(socket) {
                 toSend = JSON.stringify(objInfo);
               } else {
                 code = "404 Not Found";
-                toSend = "Object " + objNum + " does not exist.";
+                toSend = "'Object " + objNum + " does not exist.'";
               }
             }
         }
@@ -243,12 +372,12 @@ function processRequest(socket) {
 
     if (!toSend) {
       code = "404 Not Found";
-      toSend = "Not found, yo.";
+      toSend = "'Not found, yo.'";
     }
 
     // maybe wrap the response in JSONP
     toSend = wrapJSONP(path, toSend);
-    debug("toSend == " + toSend);
+    //debug("toSend == " + toSend);
 
     //print("headers: " + uneval(requestHeaders));
     var headerLines = ["HTTP/1.0 " + code,
@@ -265,9 +394,7 @@ function processRequest(socket) {
     handleError();
     try { conn.close(); } catch (e) {}
   }
-  if (path == "/stop")
-    return false;
-  return true;
+  return (path.indexOf("/stop") != 0);
 }
 
 var keepGoing = true;

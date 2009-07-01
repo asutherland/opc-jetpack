@@ -11,10 +11,11 @@
 <p>
   Once the server is up, you can visit it at http://127.0.0.1:8888 using
   another browser.  To stop profiling and resume Firefox, visit
-  http://127.0.0.1:8888/stop using another browser.
+  http://127.0.0.1:8888/stop using another browser (or click on the disconnect button in the tool).
 </p>
 <p>
-  <a href="#" id="start">Click here to initiate the server.</a>
+  <!-- <a href="#" id="start">Click here to initiate the server.</a> -->
+  <a href="#" id="startTab">Click here to initiate the server.</a>
 </p>
 </body>
 <script src="js/ext/jquery.js"></script>
@@ -40,8 +41,42 @@ function startServer() {
   endpoint.profileMemory(code, filename);
 }
 
+function startServerTab() {
+  Cu.import("resource://jetpack/modules/setup.js");
+  var file = JetpackSetup.getExtensionDirectory();
+  file.append('content');
+  file.append('memory-profiler-server.js');
+  var code = FileIO.read(file, 'utf-8');
+  var filename = FileIO.path(file);
+  endpoint.profileMemory(code, filename, 1, getBrowserWindows()); // { window: getTabContentWindow('www.google.com') });
+}
+
 $(window).ready(function() {
   $('#start').click(startServer);
+  $('#startTab').click(startServerTab);
 });
+
+function getBrowserWindows() {
+   var windows = {};
+   var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+            .getService(Ci.nsIWindowMediator);
+   var enumerator = wm.getEnumerator("navigator:browser");
+   while(enumerator.hasMoreElements()) {
+     var win = enumerator.getNext();
+     if (win.gBrowser) {
+       var browser = win.gBrowser;
+       for (var i = 0; i < browser.browsers.length; i++) {
+         var page = browser.browsers[i];
+         var location = page.contentWindow.location;
+         var name = location.href;
+         while (name in windows) {
+           name += "_";
+         }
+         windows[name] = page.contentWindow.wrappedJSObject;
+       }
+     }
+   }
+   return windows;
+}
 </script>
 </html>
