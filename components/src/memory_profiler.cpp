@@ -4,6 +4,13 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
+// TODO: This isn't actually safe, it just prints a warning message
+// whenever an integer is too big to fit into a jsval and returns
+// 0. Ideally this should be fixed to create a jsdouble * with the
+// integer's value.
+#define SAFE_INT_TO_JSVAL(i) (INT_FITS_IN_JSVAL(i) ? INT_TO_JSVAL(i) : \
+                              dealWithBigInt(i))
+
 // Private structure to track the state of tracing the JS heap.
 
 typedef struct TracingState {
@@ -34,6 +41,11 @@ typedef struct ChildTracingState {
 };
 
 static ChildTracingState childTracingState;
+
+static jsval dealWithBigInt(unsigned int i) {
+  printf("WARNING: Large int %u cannot fit in jsval.\n", i);
+  return JSVAL_ZERO;
+}
 
 // JSTraceCallback to build a hashtable of children.
 static void childCountBuilder(JSTracer *trc, void *thing, uint32 kind)
@@ -107,7 +119,7 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
   int currChild = 0;
   for (int i = 0; i < childTracingState.num; i++) {
     if (kinds[i] == JSTRACE_OBJECT) {
-      childrenVals[currChild] = INT_TO_JSVAL((unsigned int) things[i]);
+      childrenVals[currChild] = SAFE_INT_TO_JSVAL((unsigned int) things[i]);
       currChild += 1;
     }
   }
@@ -235,7 +247,7 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
     }
     if (JSVAL_IS_OBJECT(value)) {
       JSObject *valueObj = JSVAL_TO_OBJECT(value);
-      value = INT_TO_JSVAL((unsigned int) valueObj);
+      value = SAFE_INT_TO_JSVAL((unsigned int) valueObj);
     } else if (JSVAL_IS_STRING(value)) {
       JSString *valueStr = JS_NewUCStringCopyZ(
         cx,
@@ -269,7 +281,7 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
 {
   if (obj != NULL)
     if (!JS_DefineProperty(cx, info, objName,
-                           INT_TO_JSVAL((unsigned int) obj),
+                           SAFE_INT_TO_JSVAL((unsigned int) obj),
                            NULL, NULL, JSPROP_ENUMERATE))
       return JS_FALSE;
   return JS_TRUE;
@@ -417,7 +429,7 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
       if (!JS_DefineProperty(cx, info, "id",
-                             INT_TO_JSVAL((unsigned int) target),
+                             SAFE_INT_TO_JSVAL((unsigned int) target),
                              NULL, NULL,
                              JSPROP_ENUMERATE))
         return JS_FALSE;
@@ -509,7 +521,7 @@ static intN rootMapFun(void *rp, const char *name, void *data)
   // them.
 
   RootMapStruct *roots = (RootMapStruct *) data;
-  jsval id = INT_TO_JSVAL(*((unsigned int *)rp));
+  jsval id = SAFE_INT_TO_JSVAL(*((unsigned int *)rp));
   if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
     roots->rval = JS_FALSE;
     return JS_MAP_GCROOT_STOP;
