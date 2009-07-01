@@ -402,6 +402,21 @@ function testReadOnlyDomWrapper() {
 if (this.window)
   testReadOnlyDomWrapper();
 
+// SEAL TESTS
+
+(function testSeal() {
+   var obj = {boop: 1};
+   seal(obj);
+   assertEqual(obj.boop, 1);
+   assertThrows(
+     function() {
+       obj.boop = 5;
+     },
+     "Error: obj.boop is read-only"
+     );
+   assertEqual(obj.boop, 1);
+ })();
+
 // MEMORY PROFILING TESTS
 
 function runMemoryProfilingTest(func, namedObjects) {
