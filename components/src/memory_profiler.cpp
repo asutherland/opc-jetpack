@@ -208,6 +208,83 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
+static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
+                               jsid targetPropId, JSObject *target,
+                               JSContext *targetCx)
+{
+  jsval id;
+  if (!JS_IdToValue(targetCx, targetPropId, &id)) {
+    JS_ReportError(cx, "JS_IdToValue() failed.");
+    return JS_FALSE;
+  }
+
+  jsval value;
+  JSObject *valueObj;
+  if (!JS_LookupPropertyWithFlagsById(
+        targetCx,
+        target,
+        targetPropId,
+        JSRESOLVE_DETECTING,
+        &valueObj,
+        &value)) {
+    JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
+    return JS_FALSE;
+  }
+
+  if (JSVAL_IS_OBJECT(value)) {
+    JSObject *valueObj = JSVAL_TO_OBJECT(value);
+    value = SAFE_INT_TO_JSVAL((unsigned int) valueObj);
+  } else if (JSVAL_IS_STRING(value)) {
+    JSString *valueStr = JS_NewUCStringCopyZ(
+      cx,
+      JS_GetStringChars(JSVAL_TO_STRING(value))
+      );
+    if (valueStr == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+    value = STRING_TO_JSVAL(valueStr);
+  } else
+    value = JSVAL_NULL;
+
+  if (!JS_DefinePropertyById(
+        cx, propInfo,
+        // TODO: Is it OK to use this ID from a different JSRuntime?
+        targetPropId,
+        value,
+        NULL,
+        NULL,
+        JSPROP_ENUMERATE))
+    return JS_FALSE;
+
+  return JS_TRUE;
+}
+
+static JSBool getPropertiesInfo2(JSContext *cx, JSObject *propInfo,
+                                 JSObject *target, JSContext *targetCx)
+{
+  JSObject *iterator = JS_NewPropertyIterator(targetCx, target);
+  if (iterator == NULL)
+    return JS_TRUE;
+
+  jsid iterId;
+  while (1) {
+    if (!JS_NextProperty(targetCx, iterator, &iterId)) {
+      JS_ReportError(cx, "Iterating to next property failed.");
+      return JS_FALSE;
+    }
+    if (iterId == JSVAL_VOID)
+      break;
+
+    if (!copyPropertyInfo(cx, propInfo,
+                          iterId, target,
+                          targetCx))
+      return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
                                 JSObject *target, JSContext *targetCx)
 {
@@ -221,59 +298,23 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
   // we should use it, but I keep getting an assertion in JS_NextProperty()
   // at "JS_ASSERT(scope->object == obj)" when doing this.
 
+  JSBool success = JS_TRUE;
   JSIdArray *ids = JS_Enumerate(targetCx, target);
   if (ids == NULL)
     return JS_TRUE;
 
-  // TODO: If we bail, we need to clean up after ourselves here.
   for (int i = 0; i < ids->length; i++) {
-    jsval id;
-    if (!JS_IdToValue(targetCx, ids->vector[i], &id)) {
-      JS_ReportError(cx, "JS_IdToValue() failed.");
-      return JS_FALSE;
+    if (!copyPropertyInfo(cx, propInfo,
+                          ids->vector[i], target,
+                          targetCx)) {
+      success = JS_FALSE;
+      break;
     }
-
-    jsval value;
-    JSObject *valueObj;
-    if (!JS_LookupPropertyWithFlagsById(
-          targetCx,
-          target,
-          ids->vector[i],
-          JSRESOLVE_DETECTING,
-          &valueObj,
-          &value)) {
-      JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
-      return JS_FALSE;
-    }
-    if (JSVAL_IS_OBJECT(value)) {
-      JSObject *valueObj = JSVAL_TO_OBJECT(value);
-      value = SAFE_INT_TO_JSVAL((unsigned int) valueObj);
-    } else if (JSVAL_IS_STRING(value)) {
-      JSString *valueStr = JS_NewUCStringCopyZ(
-        cx,
-        JS_GetStringChars(JSVAL_TO_STRING(value))
-        );
-      if (valueStr == NULL) {
-        JS_ReportOutOfMemory(cx);
-        return JS_FALSE;
-      }
-      value = STRING_TO_JSVAL(valueStr);
-    } else
-      value = JSVAL_NULL;
-
-    if (!JS_DefinePropertyById(
-          cx, propInfo,
-          ids->vector[i],
-          value,
-          NULL,
-          NULL,
-          JSPROP_ENUMERATE))
-        return JS_FALSE;
   }
 
   JS_DestroyIdArray(targetCx, ids);
 
-  return JS_TRUE;
+  return success;
 }
 
 static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
@@ -371,9 +412,13 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
                                jsval *argv, jsval *rval)
 {
   jsval targetVal;
+  bool useGetPropertiesInfo2 = false;
 
   if (!getJSObject(cx, argc, argv, &targetVal))
     return JS_FALSE;
+  
+  if (argc > 1 && argv[1] == JSVAL_TRUE)
+    useGetPropertiesInfo2 = true;
 
   if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
     JSObject *target = JSVAL_TO_OBJECT(targetVal);
@@ -387,8 +432,13 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
 
     *rval = OBJECT_TO_JSVAL(propInfo);
 
-    if (!getPropertiesInfo(cx, propInfo, target, targetCx))
-      return JS_FALSE;
+    if (useGetPropertiesInfo2) {
+      if (!getPropertiesInfo2(cx, propInfo, target, targetCx))
+        return JS_FALSE;
+    } else {
+      if (!getPropertiesInfo(cx, propInfo, target, targetCx))
+        return JS_FALSE;
+    }
   } else
     *rval = JSVAL_NULL;
 
