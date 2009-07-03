@@ -42,8 +42,8 @@ sys := $(shell uname -s)
 
 ifeq ($(sys), Darwin)
   os = Darwin
-  compiler = gcc3
-  cxx = c++
+  compiler = gcc
+  cxx = g++
   so = dylib
   cppflags += -dynamiclib -DDEBUG
 else
@@ -111,13 +111,13 @@ ext_prefix = /opt/local
 
 headers = -I. \
           -Isrc/ \
-		  -I$(sdkdir)/include \
+	  -I$(sdkdir)/include \
           -I$(sdkdir)/include/system_wrappers \
           -I$(sdkdir)/include/xpcom \
           -I$(sdkdir)/include/string \
           -I$(sdkdir)/include/nspr \
           -I$(sdkdir)/sdk/include \
-		  -I$(ext_prefix)/include
+	  -I$(ext_prefix)/include
 
 # libraries
 libdirs := $(sdkdir)/lib $(sdkdir)/bin 

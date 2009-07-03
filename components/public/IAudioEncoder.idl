@@ -41,7 +41,7 @@
 interface IAudioEncoder : nsISupports
 {
     ACString createOgg();
-    void appendFrames(in ACString frames, in unsigned long count);
+    void appendFrames(in ACString frames);
     void finalize();
 };
 

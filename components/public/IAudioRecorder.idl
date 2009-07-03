@@ -44,4 +44,3 @@ interface IAudioRecorder : nsISupports
     nsIAsyncInputStream start();
     void stop();
 };
-

@@ -60,4 +60,4 @@ static nsModuleComponentInfo components[] =
   }
 };
 
-NS_IMPL_NSGETMODULE("nsJetpackAudio", components) 
+NS_IMPL_NSGETMODULE(nsJetpackAudio, components) 

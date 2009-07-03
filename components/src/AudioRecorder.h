@@ -65,6 +65,7 @@ public:
     AudioRecorder();
     NS_DECL_ISUPPORTS
     NS_DECL_IAUDIORECORDER
+
     nsCOMPtr<nsIAsyncInputStream> mPipeIn;
     nsCOMPtr<nsIAsyncOutputStream> mPipeOut;
 
@@ -74,7 +75,6 @@ private:
     PaStream *stream;
     
 protected:
-    nsresult BeginRecord();
     static int RecordCallback(const void *input, void *output,
         unsigned long framesPerBuffer,
         const PaStreamCallbackTimeInfo* timeInfo,

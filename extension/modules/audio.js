@@ -42,31 +42,81 @@
 
 var EXPORTED_SYMBOLS = ["Audio"];
 
-var Cc = Components.classes;
-var Ci = Components.interfaces;
-var CC = Components.Constructor;
-var Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Cr = Components.results;
+const CC = Components.Constructor;
+const En = Cc["@labs.mozilla.com/audio/encoder;1"].
+			getService(Ci.IAudioEncoder);
+const Re = Cc["@labs.mozilla.com/audio/recorder;1"].
             getService(Ci.IAudioRecorder);
-
+const Bi = CC("@mozilla.org/binaryinputstream;1",
+			"nsIBinaryInputStream",
+			"setInputStream");
+const Fi = CC("@mozilla.org/file/local;1",
+            "nsILocalFile",
+            "initWithPath");
+            
 function Audio() {
-    this.recorder = {
-        start: function() {
-            Re.start();
-        },
-
-        stop: function() {
-            let fPath = Re.stop();
-            let lFile = CC("@mozilla.org/file/local;1",
-                    "nsILocalFile", "initWithPath");
-            let src = new lFile(fPath);
-            let dst = getOrCreateDirectory();
-
-            src.moveTo(dst, '');
-            dst.append(src.leafName);
-            return dst.path;
-        }
-    };
+    this._path = null;
 }
+Audio.prototype = {
+    beginRecordToFile: function() {
+        //this._path = En.createOgg();
+        this._input = Re.start();
+        this._input.asyncWait(new inputStreamListener(), 0, 0, null);
+    },
+
+    stopRecordToFile: function() {
+        Re.stop();
+        /*
+        En.finalize();
+        
+        let src = new Fi(this._path);
+        let dst = getOrCreateDirectory();
+
+        En.finalize();
+        src.moveTo(dst, '');
+        dst.append(src.leafName);
+        return dst.path;
+        */
+    }
+}
+
+function inputStreamListener() {
+    this._data = [];
+}
+inputStreamListener.prototype = {
+	_readBytes: function(inputStream, count) {
+		return new Bi(inputStream).readByteArray(count);
+	},
+	
+	onInputStreamReady: function(input) {
+	    try {
+            this._readBytes(input, input.available());
+	    } catch (e) {
+	        dump("*** Exception " + e + " assuming stream was closed ***");
+	        input.close();
+	        return;
+	    }
+        
+        if (this._data.length % 2 == 0) {
+            /* Even bytes means we can write all channels now */
+        //    En.appendFrames(this._data);
+        } else {
+            /* Odd bytes, write as much as we can and do the rest later */
+        //    En.appendFrames(this._data.splice(0, this._data.length - 1));
+        }
+        input.asyncWait(this, 0, 0, null);
+	},
+	
+	QueryInterface: function(aIID) {
+	    if (aIID.equals(Ci.nsIInputStreamCallback) ||
+	        aIID.equals(Ci.nsISupports))
+	        return this;
+	    throw Cr.NS_ERROR_NO_INTERFACE;
+	}
+};
 
 function ensureDirectoryExists(aFile) {
     if (aFile.exists()) {
