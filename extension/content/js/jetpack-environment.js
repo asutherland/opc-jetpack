@@ -307,22 +307,7 @@ JetpackEnv.setFutures(
      return ss;
    },
 
-   "jetpack.slideBar": function(context) {
-     // Make sure the SlideBar is ready for this context
-     SlideBar.init();
-     SlideBar.load(context);
-
-     // When unloading the context, inform SlideBar which one it is
-     context.addUnloader(
-       {unload: function() {
-          SlideBar.unload(context);
-        }});
-
-     // Export functions while letting SlideBar know which context is used
-     return {
-       append: function(args) { SlideBar.append(context, args); }
-     };
-   },
+   "jetpack.slideBar": function(context) SlideBar.makeExported(context),
 
    "jetpack.audio": function(context) {
        Components.utils.import("resource://jetpack/modules/audio.js");

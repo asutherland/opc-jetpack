@@ -46,14 +46,25 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackEnv
 
-  // ==== {{{SlideBar.append}}} ====
-  // Append a new feature to SlideBar for the context and feature args
-  append: function SlideBar_append(context, args) {
-    // Remember which features have been appended
-    context.slideBar.appends.push(args);
+  // ==== {{{SlideBar.makeExported}}} ====
+  // Create an object to export for this new JetpackContext
+  makeExported: function Selection_makeExported(context) {
+    // Prepare SlideBar for the context's listeners
+    T.load(context);
 
-    // Add this new feature to all open windows
-    T.windows.forEach(function(window) T.addFeature(context, args, window));
+    // Add items for Jetpack features to access
+    let exportObj = {};
+
+    // Append a new feature to SlideBar for the feature args
+    exportObj.append = function(args) {
+      // Remember which features have been appended
+      context.slideBar.appends.push(args);
+
+      // Add this new feature to all open windows
+      T.windows.forEach(function(window) T.addFeature(context, args, window));
+    };
+
+    return exportObj;
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -72,6 +83,8 @@ let SlideBar = let (T = {
     // Listen in on when the runtime and browsers unload
     JetpackRuntime.addUnloader(T.uninit);
     T.watcher = new BrowserWatcher(T);
+
+    return T;
   },
 
   // ==== {{{SlideBar.uninit()}}} ====
@@ -92,6 +105,11 @@ let SlideBar = let (T = {
   // ==== {{{SlideBar.load()}}} ====
   // Prepare the JetpackContext for use with SlideBar
   load: function SlideBar_load(context) {
+    // Hook up the unloader to pass in the context
+    context.addUnloader({
+      unload: function() T.unload(context)
+    });
+
     // Keep track of all contexts to add their features to new windows
     T.contexts.push(context);
 
@@ -532,4 +550,4 @@ let SlideBar = let (T = {
     // Make a copy of the array as it might change as we remove features
     features.slice().forEach(function(feature) T.removeFeature(feature));
   }
-}) T;
+}) T.init();
