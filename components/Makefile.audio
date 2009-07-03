@@ -78,13 +78,13 @@ endif
 ###################################################################
 # Target and objects
 
-target = AudioRecorder
+target = JetpackAudio
 so_target = $(target:=.$(so))
 cpp_objects = $(cpp_sources:.cpp=.o)
 
 # source and path configurations
-idl = public/IAudioRecorder.idl
-cpp_sources = src/AudioRecorder.cpp src/AudioRecorderModule.cpp
+idl = public/IAudioRecorder.idl public/IAudioEncoder.idl
+cpp_sources = src/AudioRecorder.cpp src/AudioEncoder.cpp src/AudioModule.cpp
 
 sdkdir ?= ${MOZSDKDIR}
 destdir = ..
@@ -109,7 +109,8 @@ so_target = $(target:=.$(so))
 # prefix for portaudio and libogg/vorbis
 ext_prefix = /opt/local
 
-headers = -Isrc/ \
+headers = -I. \
+          -Isrc/ \
 		  -I$(sdkdir)/include \
           -I$(sdkdir)/include/system_wrappers \
           -I$(sdkdir)/include/xpcom \
@@ -162,7 +163,7 @@ build: $(so_target) $(idl_typelib)
 clean: 
 	rm -f $(so_target) \
           $(cpp_objects) \
-          IAudioRecorder.h IAudioRecorder.xpt $(target:=.res) fake.lib fake.exp
+          IAudioEncoder.h IAudioRecorder.h IAudioEncoder.xpt IAudioRecorder.xpt $(target:=.res) fake.lib fake.exp
 
 # rules to build the c headers and .xpt from idl
 $(idl_headers): $(idl)

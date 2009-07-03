@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,7 +12,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Audio Recorder
+ * The Original Code is Audio.
  *
  * The Initial Developer of the Original Code is
  * Mozilla Labs
@@ -35,13 +36,28 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "nsIAsyncInputStream.idl"
+#include "nsIGenericFactory.h"
+#include "AudioRecorder.h"
+#include "AudioEncoder.h"
 
-[scriptable, uuid(cb319cdf-badd-4549-b4d5-a10ff2498063)]
-interface IAudioRecorder : nsISupports
+NS_GENERIC_FACTORY_CONSTRUCTOR(AudioEncoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(AudioRecorder)
+
+static nsModuleComponentInfo components[] =
 {
-    nsIAsyncInputStream start();
-    void stop();
+  {
+    AUDIO_RECORDER_CLASSNAME,
+    AUDIO_RECORDER_CID,
+    AUDIO_RECORDER_CONTRACTID,
+    AudioRecorderConstructor,
+  },
+
+  {
+	AUDIO_ENCODER_CLASSNAME,
+	AUDIO_ENCODER_CID,
+	AUDIO_ENCODER_CONTRACTID,
+	AudioEncoderConstructor,
+  }
 };
 
+NS_IMPL_NSGETMODULE("nsJetpackAudio", components) 

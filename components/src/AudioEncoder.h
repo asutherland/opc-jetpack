@@ -11,7 +11,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Audio Recorder
+ * The Original Code is Audio Recorder.
  *
  * The Initial Developer of the Original Code is
  * Mozilla Labs
@@ -35,13 +35,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "nsIAsyncInputStream.idl"
+#ifndef AudioEncoder_h_
+#define AudioEncoder_h_
 
-[scriptable, uuid(cb319cdf-badd-4549-b4d5-a10ff2498063)]
-interface IAudioRecorder : nsISupports
+#include "IAudioEncoder.h"
+#include "sndfile.h"
+
+#include "prmem.h"
+#include "nsIFile.h"
+#include "nsCOMPtr.h"
+#include "nsAutoPtr.h"
+#include "nsStringAPI.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
+#include "nsComponentManagerUtils.h"
+
+#define AUDIO_ENCODER_CONTRACTID "@labs.mozilla.com/audio/encoder;1"
+#define AUDIO_ENCODER_CLASSNAME  "Audio Encoding Capability"
+#define AUDIO_ENCODER_CID { 0xb7182604, 0x7BE6, 0x4308, \
+                           { 0x81, 0x0C, 0x12, 0x8F, 0xD7, 0xD7, 0x76, 0xDE } }
+
+#define SAMPLE_RATE         (16000)
+#define SAMPLE_SILENCE      (0)
+#define NUM_CHANNELS        (2)
+#define FRAMES_PER_BUFFER   (1024)
+#define PA_SAMPLE_TYPE      paInt16
+
+class AudioEncoder : public IAudioEncoder
 {
-    nsIAsyncInputStream start();
-    void stop();
+public:
+    AudioEncoder();
+    NS_DECL_ISUPPORTS
+    NS_DECL_IAUDIOENCODER
+
+private:
+    ~AudioEncoder();
+    int encoding;
+    SNDFILE *outfile;
+
 };
 
+#define TABLE_SIZE 36
+static const char table[] = {
+    'a','b','c','d','e','f','g','h','i','j',
+    'k','l','m','n','o','p','q','r','s','t',
+    'u','v','w','x','y','z','0','1','2','3',
+    '4','5','6','7','8','9' 
+};
+
+#endif
