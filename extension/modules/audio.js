@@ -56,7 +56,11 @@ const Bi = CC("@mozilla.org/binaryinputstream;1",
 const Fi = CC("@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithPath");
-            
+
+const CT = Cc["@mozilla.org/thread-manager;1"].
+            getService().
+            currentThread;
+
 function Audio() {
     this._path = null;
 }
@@ -64,7 +68,7 @@ Audio.prototype = {
     beginRecordToFile: function() {
         //this._path = En.createOgg();
         this._input = Re.start();
-        this._input.asyncWait(new inputStreamListener(), 0, 0, null);
+        this._input.asyncWait(new inputStreamListener(), 0, 0, CT);
     },
 
     stopRecordToFile: function() {
@@ -107,7 +111,7 @@ inputStreamListener.prototype = {
             /* Odd bytes, write as much as we can and do the rest later */
         //    En.appendFrames(this._data.splice(0, this._data.length - 1));
         }
-        input.asyncWait(this, 0, 0, null);
+        input.asyncWait(this, 0, 0, CT);
 	},
 	
 	QueryInterface: function(aIID) {
