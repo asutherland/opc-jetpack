@@ -162,6 +162,9 @@ window.addLazyLoaders(
    "js/notifications.js": [
      "Notifications"
    ],
+   "js/selection.js": [
+     "Selection"
+   ],
    "js/slidebar.js": [
      "SlideBar"
    ],
@@ -290,6 +293,8 @@ JetpackEnv.setFutures(
      var loader = new SecurableModuleLoader(context.urlFactory);
      return {require: loader.require};
    },
+
+   "jetpack.selection": function(context) Selection.makeExported(context),
 
    "jetpack.storage.simple": function (context) {
      Components.utils.import("resource://jetpack/modules/simple-storage.js");
