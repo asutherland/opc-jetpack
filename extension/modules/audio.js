@@ -41,6 +41,7 @@
 //
 
 var EXPORTED_SYMBOLS = ["Audio"];
+var FILENAME = null;
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -61,34 +62,27 @@ const CT = Cc["@mozilla.org/thread-manager;1"].
             getService().
             currentThread;
 
-function Audio() {
-    this._path = null;
-}
+function Audio() {}
 Audio.prototype = {
     beginRecordToFile: function() {
-        //this._path = En.createOgg();
         this._input = Re.start();
         this._input.asyncWait(new inputStreamListener(), 0, 0, CT);
     },
 
     stopRecordToFile: function() {
         Re.stop();
-        /*
-        En.finalize();
-        
-        let src = new Fi(this._path);
+
+        let src = new Fi(FILENAME);
         let dst = getOrCreateDirectory();
 
-        En.finalize();
         src.moveTo(dst, '');
         dst.append(src.leafName);
         return dst.path;
-        */
     }
 }
 
 function inputStreamListener() {
-    this._data = [];
+    this._data = '';
 }
 inputStreamListener.prototype = {
 	_readBytes: function(inputStream, count) {
@@ -96,20 +90,27 @@ inputStreamListener.prototype = {
 	},
 	
 	onInputStreamReady: function(input) {
+		if (!FILENAME) {
+			FILENAME = En.createOgg();
+		}
+		
 	    try {
-            this._readBytes(input, input.available());
+            let bytes = this._readBytes(input, input.available());
+			this._data += bytes.join('');
 	    } catch (e) {
-	        dump("*** Exception " + e + " assuming stream was closed ***");
+	        dump("*** Exception " + e + " assuming stream was closed ***" + "\n");
 	        input.close();
+			En.finalize();
 	        return;
 	    }
         
         if (this._data.length % 2 == 0) {
             /* Even bytes means we can write all channels now */
-        //    En.appendFrames(this._data);
+            En.appendFrames(this._data);
         } else {
             /* Odd bytes, write as much as we can and do the rest later */
-        //    En.appendFrames(this._data.splice(0, this._data.length - 1));
+            En.appendFrames(this._data.substr(0, this._data.length - 1));
+			this._data = this._data.substr(-1, 1);
         }
         input.asyncWait(this, 0, 0, CT);
 	},

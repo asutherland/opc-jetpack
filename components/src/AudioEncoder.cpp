@@ -125,24 +125,35 @@ AudioEncoder::CreateOgg(nsACString& file)
  */
 NS_IMETHODIMP
 AudioEncoder::AppendFrames(const nsACString& frames)
-{	
-	if (!encoding) {
-		fprintf(stderr, "JEP Audio:: Encoding did not begin!\n");
+{
+	char* buf;
+	PRUint32 len;
+	const char* data;
+	
+	if (encoding != 1) {
+		fprintf(stderr, "JEP Audio:: Encoding did not begin, cannot append!\n");
 		return NS_ERROR_FAILURE;
 	}
 	
-	PromiseFlatCString buf(frames);
+	len = NS_CStringGetData(frames, &data);
+	buf = (char *)PR_Malloc(len);
+	memcpy(buf, data, len);
 	
-	if (buf.Length() % NUM_CHANNELS != 0) {
-		fprintf(stderr, "JEP Audio:: Frame count not multiple of channels! %d\n", buf.Length());
+	if (len % NUM_CHANNELS != 0) {
+		fprintf(stderr, "JEP Audio:: Frame count not multiple of channels! %d\n", len);
 		return NS_ERROR_FAILURE;
 	}
 	
-	if (sf_writef_short(outfile, (const short int *)buf.get(), buf.Length() / NUM_CHANNELS) != buf.Length() / NUM_CHANNELS) {
+	if (sf_writef_short(outfile, (const short int *)buf,
+		len / NUM_CHANNELS) != len / NUM_CHANNELS) {
 		fprintf(stderr, "JEP Audio:: Could not append frames!\n");
+		PR_Free(buf);
 		return NS_ERROR_FAILURE;
+	} else {
+		fprintf(stderr, "Wrote %d!\n", len);
 	}
-	
+
+	PR_Free(buf);
 	return NS_OK;
 }
 
@@ -152,8 +163,8 @@ AudioEncoder::AppendFrames(const nsACString& frames)
 NS_IMETHODIMP
 AudioEncoder::Finalize()
 {
-	if (!encoding) {
-		fprintf(stderr, "JEP Audio:: Encoding did not begin!\n");
+	if (encoding != 1) {
+		fprintf(stderr, "JEP Audio:: Encoding did not begin, cannot finalize! %d\n", encoding);
 		return NS_ERROR_FAILURE;
 	}
 	

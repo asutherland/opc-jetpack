@@ -84,6 +84,8 @@ AudioRecorder::~AudioRecorder()
     if ((err = Pa_Terminate()) != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not terminate PortAudio! %d\n", err);
     }
+    
+    fprintf(stderr, "DESTRUCTOR DONE!!\n");
 }
 
 int
@@ -107,7 +109,6 @@ AudioRecorder::RecordCallback(const void *input, void *output,
         }
     }
     
-    fprintf(stderr, "CB flushed %ld entries", framesPerBuffer);
     return paContinue;
 }
 
