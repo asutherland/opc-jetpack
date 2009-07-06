@@ -297,13 +297,12 @@ JetpackEnv.setFutures(
    "jetpack.selection": function(context) Selection.makeExported(context),
 
    "jetpack.storage.simple": function (context) {
-     Components.utils.import("resource://jetpack/modules/simple-storage.js");
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
      //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
      //  so it should be unique to this feature.
-     var ss = new SimpleStorage(context.srcUrl);
-     context.addUnloader({
-       unload: function () { ss.teardown(); }
-     });
+     var ss = new s.SimpleStorage(context.srcUrl);
+     context.addUnloader({ unload: function () ss.teardown() });
      return ss;
    },
 

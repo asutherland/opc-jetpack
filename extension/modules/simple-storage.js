@@ -19,7 +19,7 @@
  *
  * Contributor(s):
  *   Drew Willcoxon <adw@mozilla.com> (Original Author)
- *   David Dahl <ddahl@mozilla.com>   (Original Author)
+ *   David Dahl <ddahl@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,11 +43,11 @@
 //
 // Callbacks passed to the API's methods may be either functions or objects.
 // If a callback is a function, it is called when its associated asynchronous
-// operation successfully completes.  If a callback is an object, it should
-// define the method onResult and, optionally, the method onError.  onResult
-// is called on successful completion, and onError is called if an error
-// occurs.  In the method documentation that follows, "onResult" is used to
-// refer to either the function form or the object.onResult form.
+// operation successfully completes.  If a callback is an object, it may define
+// the methods onResult and onError.  onResult is called on successful
+// completion, and onError is called if an error occurs.  In the method
+// documentation that follows, "onResult" is used to refer to either the
+// function form or the object.onResult form.
 //
 // Each Jetpack feature that uses simple storage gets its own private backing
 // SQLite database.  This has the following benefits:
@@ -91,163 +91,733 @@ var json = Cc["@mozilla.org/dom/json;1"].createInstance(Ci.nsIJSON);
 // constructor, passing in the feature's URL.
 
 function SimpleStorage(aFeatureUrl) {
-  //XXXadw Now that simple storage is a real JS module, this doesn't work.
-//   Components.utils.import("resource://jetpack/modules/tracking.js");
-//   MemoryTracking.track(this);
+  Components.utils.import("resource://jetpack/modules/track.js");
+  MemoryTracking.track(this);
 
-  if (typeof(aFeatureUrl) !== "string"|| !aFeatureUrl) {
-    throw new Error("Feature URL must be a nonempty string");
-  }
+  ensureFx35();
+  if (typeof(aFeatureUrl) !== "string"|| !aFeatureUrl)
+    throw new Error("Feature URL must be a nonempty string.");
 
   this.featureUrl = aFeatureUrl;
   this.featureId = featureUrlToId(aFeatureUrl);
   var dbConn = getOrCreateDatabase(this.featureId);
   ensureDatabaseIsSetup(dbConn);
 
-  // === {{{SimpleStorage.get()}}} ===
+  // === {{{SimpleStorage.clear()}}} ===
   //
-  // Gets the value of the given key.  aCallback is either a callback function
-  // or a callback object.  (See this module's introductory documentation.)
-  // The onResult callback is called as
+  // Deletes all items from the store.
   //
-  //   onResult(aKey, value)
-  //
-  // where aKey is the given key and value is the associated value.  value
-  // will be undefined if aKey does not exist in the store.
-  //
-  // The onError callback is called as
-  //
-  //   onError(aKey, errorMessage)
+  // * onResult()
+  // * onError(errorMessage)
 
-  this.get = function SimpleStorage_get(aKey, aCallback) {
-    if (!isKeyLegal(aKey)) {
-      throw new Error("Key must be a string");
-    }
-
-    var sql = "SELECT value FROM " + TABLE_NAME + " WHERE key = :key";
-    var stmt = dbConn.createStatement(sql);
-    stmt.params.key = aKey;
-
-    var storageCallback = null;
-    if (aCallback) {
-      var gottenValue;
-      var callback = new CanonicalCallback(aCallback);
-      storageCallback = {
-        handleResult: function (aResultSet) {
-          var row = aResultSet.getNextRow();
-          // All values are wrapped in an array on set.  See the comment there.
-          gottenValue = json.decode(row.getResultByName("value"))[0];
-        },
-        handleCompletion: function () {
-          // gottenValue === undefined iff there were no results.
-          var value = (gottenValue === undefined ? undefined : gottenValue);
-          callback.onResult(aKey, value);
-        },
-        handleError: function (aError) {
-          var msg = makeErrorMsg(aError);
-          logError(msg);
-          callback.onError(aKey, msg);
-        }
-      };
-    }
-    stmt.executeAsync(storageCallback);
+  this.clear = function SimpleStorage_clear(aCallback) {
+    ensureTypeOfArg(aCallback, "callback", "First", "callback");
+    var stmt = dbConn.createStatement("DELETE FROM " + TABLE_NAME);
+    var ucb = new UserCallback(aCallback);
+    stmt.executeAsync({
+      handleCompletion: function () ucb.onResult(),
+      handleError: function (err) handleStorageError(err, ucb),
+      handleResult: function () {}
+    });
     stmt.finalize();
   };
+
+  // === {{{SimpleStorage.forEachItem()}}} ===
+  //
+  // Iterates over items in the store.
+  //
+  // ==== {{{forEachItem(keyArray, callback)}}} ====
+  //
+  // Iterates over items with the given keys.  onResult is called for each
+  // key-value pair in the order that keys are given in keyArray.  If a key
+  // does not exist in the store, undefined is passed as the value.  When all
+  // pairs are exhausted, onResult is passed null.
+  //
+  // * onResult(key, value) for each key in keyArray
+  // * onResult(null, null) when all items are exhausted
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{forEachItem(callback)}}} ====
+  //
+  // Iterates over all the items in the store.  onResult is called for each
+  // key-value pair, and when all pairs are exhausted, onResult is passed null.
+  // The order of iteration is arbitrary.
+  //
+  // * onResult(key, value) for each item in the store
+  // * onResult(null, null) when all items are exhausted
+  // * onError(errorMessage)
+
+  this.forEachItem = function SimpleStorage_forEachItem(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = array of of keys
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      forEachItemMultiple(aArg0.slice(0), new UserCallback(aArg1));
+      break;
+    case "callback":
+      // aArg0 = callback
+      forEachItemAll(new UserCallback(aArg0));
+      break;
+    default:
+      throw new ArgumentError("First", "key array or callback");
+    }
+  };
+
+  function forEachItemMultiple(aKeys, aUserCallback) {
+    var sql = "SELECT key, value FROM " + TABLE_NAME + " WHERE key = :key";
+    var value;
+    var errored = false;
+    var numCompleted = 0;
+
+    // We can't just batch statements with dbConn.executeAsync because we have
+    // to pass undefined to aCallback if a row doesn't exist.
+    for (let i = 0; i < aKeys.length && !errored; i++) {
+      let key = aKeys[i];
+      let stmt = dbConn.createStatement(sql);
+      stmt.params.key = key;
+      stmt.executeAsync({
+        handleResult: function (result) {
+          value = unwrapValue(result.getNextRow().getResultByName("value"));
+        },
+        handleCompletion: function () {
+          aUserCallback.onResult(key, value);
+          value = undefined;
+          numCompleted++;
+          if (numCompleted === aKeys.length)
+            aUserCallback.onResult(null, null);
+        },
+        handleError: function (err) {
+          errored = true;
+          handleStorageError(err, aUserCallback, [aKeys]);
+        }
+      });
+      stmt.finalize();
+    }
+  }
+
+  function forEachItemAll(aUserCallback) {
+    var stmt = dbConn.createStatement("SELECT key, value FROM " + TABLE_NAME);
+    stmt.executeAsync({
+      handleResult: function (result) {
+        var row;
+        while (row = result.getNextRow()) {
+          aUserCallback.onResult(row.getResultByName("key"),
+                                 unwrapValue(row.getResultByName("value")));
+        }
+      },
+      handleCompletion: function () aUserCallback.onResult(null, null),
+      handleError: function (err) handleStorageError(err, aUserCallback)
+    });
+    stmt.finalize();
+  }
+
+  // === {{{SimpleStorage.forEachKey()}}} ===
+  //
+  // Iterates over all the keys in the store.  onResult is called for each key,
+  // and when all keys are exhausted, onResult is passed null.  The order of
+  // iteration is arbitrary.
+  //
+  // * onResult(key) for each key in the store
+  // * onResult(null) when all keys are exhausted
+  // * onError(errorMessage)
+
+  this.forEachKey = function SimpleStorage_forEachKey(aCallback) {
+    ensureTypeOfArg(aCallback, "callback", "First", "callback");
+    var ucb = new UserCallback(aCallback);
+    forEachItemAll({
+      onResult: function (key, val) ucb.onResult(key),
+      onError: function (err) ucb.onError(err)
+    });
+  };
+
+  // === {{{SimpleStorage.forEachValue()}}} ===
+  //
+  // Iterates over values in the store.
+  //
+  // ==== {{{forEachValue(keyArray, callback)}}} ====
+  //
+  // Iterates over values with the given keys.  onResult is called for each
+  // value in the order that keys are given in keyArray.  If a key does not
+  // exist in the store, undefined is passed as the value.  When all values are
+  // exhausted, onResult is passed null.
+  //
+  // * onResult(value) for each key in keyArray
+  // * onResult(null) when all values are exhausted
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{forEachValue(callback)}}} ====
+  //
+  // Iterates over all the values in the store.  onResult is called for each
+  // value, and when all values are exhausted, onResult is passed null.  The
+  // order of iteration is arbitrary.
+  //
+  // * onResult(value) for each value in the store
+  // * onResult(null) when all values are exhausted
+  // * onError(errorMessage)
+
+  this.forEachValue = function SimpleStorage_forEachValue(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = key array
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      forEachValueMultiple(aArg0.slice(0), new UserCallback(aArg1));
+      break;
+    case "callback":
+      // aArg0 = callback
+      forEachValueAll(new UserCallback(aArg0));
+      break;
+    default:
+      throw new ArgumentError("First", "key array or callback");
+    }
+  };
+
+  function forEachValueMultiple(aKeys, aUserCallback) {
+    forEachItemMultiple(aKeys, makeForEachValueCallback(aUserCallback, aKeys));
+  }
+
+  function forEachValueAll(aUserCallback) {
+    forEachItemAll(makeForEachValueCallback(aUserCallback));
+  }
+
+  function makeForEachValueCallback(aUserCallback, aOnErrorArg) {
+    return {
+      onResult: function (key, val) aUserCallback.onResult(val),
+      onError: function (err) aUserCallback.onError(err, aOnErrorArg)
+    };
+  }
+
+  // === {{{SimpleStorage.get()}}} ===
+  //
+  // Gets items with given keys.
+  //
+  // ==== {{{get(key, callback)}}} ====
+  //
+  // Gets the item associated with the given key.  If the key does not exist
+  // in the store, undefined is passed as the value to onResult.
+  //
+  // * onResult(key, value)
+  // * onError(errorMessage, key)
+  //
+  // ==== {{{get(keyArray, callback)}}} ====
+  //
+  // Gets the items associated with the given keys and yields them as an
+  // object.  That is, if keyArray contains key_1, key_2, ..., key_m, this
+  // form yields { key_1: value_1, key_2: value_2, ..., key_m: value_m }.  If
+  // key_i does not exist in the store, value_i is undefined.
+  //
+  // * onResult(itemsObject)
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{get(callback)}}} ====
+  //
+  // Gets all the items in the store and yields them as an object.  That is,
+  // this form yields { key_1: value_1, key_2: value_2, ..., key_n: value_n }
+  // for all n key-value pairs in the store.
+  //
+  // * onResult(allItemsObject)
+  // * onError(errorMessage)
+
+  this.get = function SimpleStorage_get(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = key array
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      getMultiple(aArg0.slice(0), new UserCallback(aArg1));
+      break;
+    case "callback":
+      // aArg0 = callback
+      getAll(new UserCallback(aArg0));
+      break;
+    case "string":
+      // aArg0 = key
+      // aArg1 = callback
+      ensureKeyIsLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      getSingle(aArg0, new UserCallback(aArg1));
+      break;
+    default:
+      throw new ArgumentError("First", "key, key array, or callback");
+    }
+  };
+
+  function getSingle(aKey, aUserCallback) {
+    getMultiple([aKey], {
+      onResult: function (itemObj) aUserCallback.onResult(aKey, itemObj[aKey]),
+      onError: function (err) aUserCallback.onError(err, aKey)
+    });
+  }
+
+  function getMultiple(aKeys, aUserCallback) {
+    reduceItemsMultiple(aKeys, {}, getReduceFunc, aUserCallback);
+  }
+
+  function getAll(aUserCallback) {
+    reduceItemsAll({}, getReduceFunc, aUserCallback);
+  }
+
+  function getReduceFunc(itemsObj, key, val) {
+    itemsObj[key] = val;
+    return itemsObj;
+  }
+
+  // === {{{SimpleStorage.has()}}} ===
+  //
+  // Indicates whether a key or keys exist in the store.
+  //
+  // ==== {{{has(key, callback)}}} ====
+  //
+  // Yields true if the given key exists in the store and false otherwise.
+  //
+  // * onResult(key, exists)
+  // * onError(errorMessage, key)
+  //
+  // ==== {{{has(keyArray, callback)}}} ====
+  //
+  // Yields an object that indicates whether the given keys exist in the
+  // store.  If keyArray contains key_1, key_2, ..., key_m, this form yields
+  // { key_1: key_1_exists, key_2: key_2_exists, ..., key_m: key_m_exists },
+  // where key_i_exists is true if key_i exists in the store and false
+  // otherwise.
+  //
+  // * onResult(existsObject)
+  // * onError(errorMessage, keyArray)
+
+  this.has = function SimpleStorage_has(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = key array
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      hasMultiple(aArg0.slice(0), new UserCallback(aArg1));
+      break;
+    case "string":
+      // aArg0 = key
+      // aArg1 = callback
+      ensureKeyIsLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      hasSingle(aArg0, new UserCallback(aArg1));
+      break;
+    default:
+      throw new ArgumentError("First", "key or key array");
+    }
+  };
+
+  function hasSingle(aKey, aUserCallback) {
+    hasMultiple([aKey], {
+      onResult: function (hasObj) aUserCallback.onResult(aKey, hasObj[aKey]),
+      onError: function (err) ucb.onError(err, aKey)
+    });
+  }
+
+  function hasMultiple(aKeys, aUserCallback) {
+    reduceItemsMultiple(aKeys, {}, function (hasObj, key, val) {
+      hasObj[key] = val !== undefined;
+      return hasObj;
+    }, aUserCallback);
+  }
+
+  // === {{{SimpleStorage.keys()}}} ===
+  //
+  // Yields all the keys of the store in an unordered array.
+  //
+  // * onResult(keyArray)
+  // * onError(errorMessage)
+
+  this.keys = function SimpleStorage_keys(aCallback) {
+    ensureTypeOfArg(aCallback, "callback", "First", "callback");
+    mapItemsAll(function (key, val) key, new UserCallback(aCallback));
+  };
+
+  // === {{{SimpleStorage.mapItems()}}} ===
+  //
+  // Applies a function to items in the store and yields the results in an
+  // array.
+  //
+  // ==== {{{mapItems(keyArray, mapFunction, callback)}}} ====
+  //
+  // Applies mapFunction to the items in the store with the given keys and
+  // yields the results in an array.  mapFunction is called for each key-value
+  // pair in the order that keys are given, like so:
+  //
+  //   mapFunction(key, value)
+  //
+  // If a given key does not exist in the store, value will be undefined.
+  //
+  // * onResult(keyArray, mappedArray)
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{mapItems(mapFunction, callback)}}} ====
+  //
+  // Applies mapFunction to each item in the store and yields the results in an
+  // array.  mapFunction is called for each key-value pair in an arbitrary
+  // order, like so:
+  //
+  //   mapFunction(key, value)
+  //
+  // * onResult(mappedArray)
+  // * onError(errorMessage)
+
+  this.mapItems = function SimpleStorage_mapItems(aArg0, aArg1, aArg2) {
+    if (arguments.length === 3) {
+      // aArg0 = key array
+      // aArg1 = map function
+      // aArg2 = callback
+      ensureTypeOfArg(aArg0, "array", "First", "key array");
+      ensureKeysAreLegal(aArg0);
+      ensureJsTypeOfArg(aArg1, "function", "Second", "function");
+      ensureTypeOfArg(aArg2, "callback", "Third", "callback");
+      mapItemsMultiple(aArg0, aArg1, new UserCallback(aArg2));
+    }
+    else if (arguments.length === 2) {
+      // aArg0 = map function
+      // aArg1 = callback
+      ensureJsTypeOfArg(aArg0, "function", "First", "function");
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      mapItemsAll(aArg0, new UserCallback(aArg1));
+    }
+    else
+      throw new ArgumentError("First", "key array or map function");
+  };
+
+  function mapItemsMultiple(aKeys, aMapFunc, aUserCallback) {
+    reduceItemsMultiple(aKeys,
+                        [],
+                        makeMapItemsReduceFunction(aMapFunc),
+                        aUserCallback,
+                        true);
+  }
+
+  function mapItemsAll(aMapFunc, aUserCallback) {
+    reduceItemsAll([], makeMapItemsReduceFunction(aMapFunc), aUserCallback);
+  }
+
+  function makeMapItemsReduceFunction(aMapFunc) {
+    return function (map, key, val) {
+      map.push(aMapFunc(key, val));
+      return map;
+    };
+  }
+
+  // === {{{SimpleStorage.reduceItems()}}} ===
+  //
+  // Combines items in the store by applying a function to them and accumulating
+  // the result.  This method may be known as "inject" or "fold" in other
+  // languages.
+  //
+  // ==== {{{reduceItems(keyArray, initialValue, reduceFunction, callback)}}} ====
+  //
+  // For each item with a given key, applies reduceFunction to it and stores the
+  // return value in an accumulated result.  reduceFunction is then called with
+  // the accumulated result for the item with the next given key.
+  // reduceFunction is called like so:
+  //
+  //   reduceFunction(accumulatedValue, key, value)
+  //
+  // reduceFunction should return the new accumulated value.  If a given key
+  // does not exist in the store, value will be undefined.  reduceItems
+  // ultimately yields the accumulated value over all items with the given keys.
+  //
+  // * onResult(keyArray, accumulatedValue)
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{reduceItems(initialValue, reduceFunction, callback)}}} ====
+  //
+  // For each item in the store, applies reduceFunction to it and stores the
+  // return value in an accumulated result.  reduceFunction is then called with
+  // the accumulated result for the next item in the store.  reduceFunction is
+  // called like so:
+  //
+  //   reduceFunction(accumulatedValue, key, value)
+  //
+  // reduceFunction should return the new accumulated value.  reduceItems
+  // ultimately yields the accumulated value over all items.
+  //
+  // * onResult(accumulatedValue)
+  // * onError(errorMessage)
+
+  this.reduceItems = function SimpleStorage_reduceItems(aArg0,
+                                                        aArg1,
+                                                        aArg2,
+                                                        aArg3) {
+    if (arguments.length === 4) {
+      // aArg0 = key array
+      // aArg1 = initial value
+      // aArg2 = reduce function
+      // aArg3 = callback
+      ensureTypeOfArg(aArg0, "array", "First", "key array");
+      ensureKeysAreLegal(aArg0);
+      ensureJsTypeOfArg(aArg2, "function", "Third", "function");
+      ensureTypeOfArg(aArg3, "callback", "Fourth", "callback");
+      reduceItemsMultiple(aArg0, aArg1, aArg2, new UserCallback(aArg3), true);
+    }
+    else if (arguments.length === 3) {
+      // aArg0 = initial value
+      // aArg1 = reduce function
+      // aArg2 = callback
+      ensureJsTypeOfArg(aArg1, "function", "Second", "function");
+      ensureTypeOfArg(aArg2, "callback", "Third", "callback");
+      reduceItemsAll(aArg0, aArg1, new UserCallback(aArg2));
+    }
+    else
+      throw new ArgumentError("First", "key array or initial value");
+  };
+
+  function reduceItemsMultiple(aKeys,
+                               aMemo,
+                               aReduceFunc,
+                               aUserCallback,
+                               aPassKeysToUserCallback) {
+    var cb = makeReduceItemsCallback(aMemo,
+                                     aReduceFunc,
+                                     aUserCallback,
+                                     aPassKeysToUserCallback ? [aKeys] : []);
+    forEachItemMultiple(aKeys, cb);
+  }
+
+  function reduceItemsAll(aMemo, aReduceFunc, aUserCallback) {
+    var cb = makeReduceItemsCallback(aMemo, aReduceFunc, aUserCallback, []);
+    forEachItemAll(cb);
+  }
+
+  function makeReduceItemsCallback(aMemo,
+                                   aReduceFunc,
+                                   aUserCallback,
+                                   aUserCallbackArgs) {
+    return {
+      onResult: function (key, val) {
+        if (key === null) {
+          aUserCallbackArgs.push(aMemo);
+          aUserCallback.onResult.apply(aUserCallback, aUserCallbackArgs);
+        }
+        else
+          aMemo = aReduceFunc(aMemo, key, val);
+      },
+      onError: function (err) {
+        aUserCallbackArgs.unshift(err);
+        aUserCallback.onError.apply(aUserCallback, aUserCallbackArgs);
+      }
+    };
+  }
 
   // === {{{SimpleStorage.remove()}}} ===
   //
-  // Removes the value with the given key if the key exists.  Otherwise does
-  // nothing.  aCallback is either a callback function or a callback object.
-  // (See this module's introductory documentation.)  The onResult callback is
-  // called as
+  // Removes items with given keys.
   //
-  //   onResult(aKey)
+  // ==== {{{remove(key, callback)}}} ====
   //
-  // where aKey is the given key.
+  // Removes the item with the given key if it exists in the store.
   //
-  // The onError callback is called as
+  // * onResult(key)
+  // * onError(errorMessage, key)
   //
-  //   onError(aKey, errorMessage)
+  // ==== {{{remove(keyArray, callback)}}} ====
+  //
+  // Removes the items with the given keys if they exist in the store.
+  //
+  // * onResult(keyArray)
+  // * onError(errorMessage, keyArray)
 
-  this.remove = function SimpleStorage_remove(aKey, aCallback) {
-    if (!isKeyLegal(aKey)) {
-      throw new Error("Key must be a string");
+  this.remove = function SimpleStorage_remove(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = key array
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      removeMultiple(aArg0.slice(0), new UserCallback(aArg1));
+      break;
+    case "string":
+      // aArg0 = key
+      // aArg1 = callback
+      ensureKeyIsLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      removeSingle(aArg0, new UserCallback(aArg1));
+      break;
+    default:
+      throw new ArgumentError("First", "key or key array");
     }
-
-    var sql = "DELETE FROM " + TABLE_NAME + " WHERE key = :key";
-    var stmt = dbConn.createStatement(sql);
-    stmt.params.key = aKey;
-    var storageCallback = null;
-    if (aCallback) {
-      var callback = new CanonicalCallback(aCallback);
-      storageCallback = {
-        handleCompletion: function () {
-          callback.onResult(aKey);
-        },
-        handleError: function (aError) {
-          var msg = makeErrorMsg(aError);
-          logError(msg);
-          callback.onError(aKey, msg);
-        },
-        handleResult: function () {}
-      };
-    }
-    stmt.executeAsync(storageCallback);
-    stmt.finalize();
   };
+
+  function removeSingle(aKey, aUserCallback) {
+    setSingle(aKey, undefined, {
+      onResult: function () aUserCallback.onResult(aKey),
+      onError: function (err) aUserCallback.onError(err, aKey)
+    });
+  }
+
+  function removeMultiple(aKeys, aUserCallback) {
+    var items = {};
+    aKeys.forEach(function (key) items[key] = undefined);
+    setMultiple(items, {
+      onResult: function () aUserCallback.onResult(aKeys),
+      onError: function (err) aUserCallback.onError(err, aKeys)
+    });
+  }
 
   // === {{{SimpleStorage.set()}}} ===
   //
-  // Sets the value of the given key.  If aValue is undefined, this method is
-  // equivalent to calling {{{SimpleStorage.remove()}}}.  aCallback is either
-  // a callback function or a callback object.  (See this module's introductory
-  // documentation.)  The onResult callback is called as
+  // Sets the values of given keys.
   //
-  //   onResult(aKey, aValue)
+  // ==== {{{set(key, value, callback)}}} ====
   //
-  // where aKey and aValue are the given key and value.  
+  // Sets the value of the given key.  If the value is undefined, the key is
+  // removed from the store.
   //
-  // The onError callback is called as
+  // * onResult(key, value)
+  // * onError(errorMessage, key, value)
   //
-  //   onError(aKey, aValue, errorMessage)
+  // ==== {{{set(itemsObject, callback)}}} ====
+  //
+  // Sets the values of multiple keys.  itemsObject must be an object
+  // { key_1: value_1, key_2: value_2, ..., key_m: value_m }.  The value of
+  // each key_i is set to value_i.  If value_i is undefined, key_i is removed
+  // from the store.
+  //
+  // * onResult(itemsObject)
+  // * onError(errorMessage, itemsObject)
 
-  this.set = function SimpleStorage_set(aKey, aValue, aCallback) {
-    if (!isKeyLegal(aKey)) {
-      throw new Error("Key must be a string");
+  this.set = function SimpleStorage_set(aArg0, aArg1, aArg2) {
+    switch (typeOfArg(aArg0)) {
+    case "object":
+      // aArg0 = items dictionary
+      // aArg1 = callback
+      ensureKeysInItemsAreLegal(aArg0);
+      ensureValuesInItemsAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      setMultiple(aArg0, new UserCallback(aArg1));
+      break;
+    case "string":
+      // aArg0 = key
+      // aArg1 = value
+      // aArg2 = callback
+      ensureKeyIsLegal(aArg0);
+      ensureValueIsLegal(aArg1);
+      ensureTypeOfArg(aArg2, "callback", "Third", "callback");
+      setSingle(aArg0, aArg1, new UserCallback(aArg2));
+      break;
+    default:
+      throw new ArgumentError("First", "key or item object");
     }
+  };
 
-    if (aValue === undefined) {
-      this.remove(aKey, function () aCallback(aKey, aValue));
-    }
-    else {
-      var sql = "INSERT OR REPLACE INTO " + TABLE_NAME + " (key, value) " +
-                "VALUES (:key, :value)";
-      var stmt = dbConn.createStatement(sql);
-      stmt.params.key = aKey;
+  function setSingle(aKey, aValue, aUserCallback) {
+    var items = {};
+    items[aKey] = aValue;
+    setMultiple(items, {
+      onResult: function () aUserCallback.onResult(aKey, aValue),
+      onError: function (err) aUserCallback.onError(err, aKey, aValue)
+    });
+  }
 
-      // json.encode returns null if aValue is not an object or array.  A nice
-      // hacky way to store primitives is to wrap them in an array.  So, we
-      // wrap all values in an array on set and unwrap all values on get.
-      stmt.params.value = json.encode([aValue]);
+  function setMultiple(aItems, aUserCallback) {
+    var insertSql = "INSERT OR REPLACE INTO " + TABLE_NAME + " (key, value) " +
+                    "VALUES (:key, :value)";
+    var deleteSql = "DELETE FROM " + TABLE_NAME + " WHERE key = :key";
 
-      var storageCallback = null;
-      if (aCallback) {
-        var callback = new CanonicalCallback(aCallback);
-        storageCallback = {
-          handleCompletion: function () {
-            callback.onResult(aKey, aValue);
-          },
-          handleError: function (aError) {
-            var msg = makeErrorMsg(aError);
-            logError(msg);
-            callback.onError(aKey, aValue, msg);
-          },
-          handleResult: function () {}
-        };
+    var stmts = [];
+    for (let [key, val] in Iterator(aItems)) {
+      if (val === undefined) {
+        let stmt = dbConn.createStatement(deleteSql);
+        stmt.params.key = key;
+        stmts.push(stmt);
       }
-      stmt.executeAsync(storageCallback);
-      stmt.finalize();
+      else {
+        let stmt = dbConn.createStatement(insertSql);
+        stmt.params.key = key;
+        stmt.params.value = wrapValue(val);
+        stmts.push(stmt);
+      }
     }
+
+    dbConn.executeAsync(stmts, stmts.length, {
+      handleCompletion: function () aUserCallback.onResult(aItems),
+      handleError: function (err) handleStorageError(err,
+                                                     aUserCallback,
+                                                     [aItems]),
+      handleResult: function () {}
+    });
+    stmts.forEach(function (stmt) stmt.finalize());
+  }
+
+  // === {{{SimpleStorage.size()}}} ===
+  //
+  // Yields the number of items in the store.
+  //
+  // * onResult(numItems)
+  // * onError(errorMessage)
+
+  this.size = function SimpleStorage_size(aCallback) {
+    ensureTypeOfArg(aCallback, "callback", "First", "callback");
+    var stmt = dbConn.createStatement("SELECT count(*) FROM " + TABLE_NAME);
+    var ucb = new UserCallback(aCallback);
+    stmt.executeAsync({
+      handleResult: function (result) {
+        ucb.onResult(parseInt(result.getNextRow().getResultByIndex(0)));
+      },
+      handleError: function (err) handleStorageError(err, ucb),
+      handleCompletion: function () {}
+    });
+    stmt.finalize();
+  };
+
+  // === {{{SimpleStorage.values()}}} ===
+  //
+  // Yields an array of values in the store.
+  //
+  // ==== {{{values(keyArray, callback)}}} ====
+  //
+  // Yields an array of values corresponding to the given keys.  The values are
+  // ordered in the order that their keys are given.  If a given key does not
+  // exist in the store, its corresponding value in the array will be undefined.
+  //
+  // * onResult(keyArray, valueArray)
+  // * onError(errorMessage, keyArray)
+  //
+  // ==== {{{values(callback)}}} ====
+  //
+  // Yields all the values of the store in an unordered array.
+  //
+  // * onResult(valueArray)
+  // * onError(errorMessage)
+
+  this.values = function SimpleStorage_values(aArg0, aArg1) {
+    switch (typeOfArg(aArg0)) {
+    case "array":
+      // aArg0 = key array
+      // aArg1 = callback
+      ensureKeysAreLegal(aArg0);
+      ensureTypeOfArg(aArg1, "callback", "Second", "callback");
+      valuesMultiple(aArg0, new UserCallback(aArg1));
+      break;
+    case "callback":
+      // aArg0 = callback
+      valuesAll(new UserCallback(aArg0));
+      break;
+    default:
+      throw new ArgumentError("First", "key array or callback");
+    }
+  };
+
+  function valuesMultiple(aKeys, aUserCallback) {
+    mapItemsMultiple(aKeys, function (key, val) val, aUserCallback);
+  }
+
+  function valuesAll(aUserCallback) {
+    mapItemsAll(function (key, val) val, aUserCallback);
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  //XXXadw TODO Delete the DB file when the feature is purged.
+  this.deleteDatabaseFile = function SimpleStorage_deleteDatabaseFile() {
+    throw "NOT YET IMPLEMENTED";
   };
 
   // === {{{SimpleStorage.teardown()}}} ===
@@ -259,61 +829,173 @@ function SimpleStorage(aFeatureUrl) {
     dbConn.close();
     dbConn = null;
   };
-
-  //XXXadw TODO Delete the DB file when the feature is purged.
-  this.deleteDatabaseFile = function SimpleStorage_deleteDatabaseFile() {
-    throw "NOT YET IMPLEMENTED";
-  };
 }
 
-// This wraps a caller's callback to make calling it easier.
-function CanonicalCallback(aUserCallback) {
-  this.userCallback = aUserCallback;
+
+// Helper prototypes //////////////////////////////////////////////////////////
+
+// aPosition is the argument's position in the parameter list.  aExpectedTypes
+// is a string fragment indicating the argument's expected types.
+function ArgumentError(aPosition, aExpectedTypes) {
+  this.__proto__ = new TypeError(aPosition + " argument must be a " +
+                                 aExpectedTypes);
 }
 
-CanonicalCallback.prototype = {
-  onResult: function CanonicalCallback_prototype_onResult() {
-    if (typeof(this.userCallback) === "function") {
-      this.userCallback.apply(this.userCallback, arguments);
-    }
-    else if (typeof(this.userCallback.onResult) === "function") {
-      this.userCallback.onResult.apply(this.userCallback, arguments);
+// aBadKey is the illegal key.  aKeyIndex, optional, is the index of the key in
+// its key array.
+function IllegalKeyError(aBadKey, aKeyIndex) {
+  var msg = (aKeyIndex === undefined ? "Key" : "Key at index " + aKeyIndex) +
+            " must be a string.  Got instead: " +
+            aBadKey.toSource();
+  this.__proto__ = new TypeError(msg);
+}
+
+// aBadValue is the illegal value.  aKey, optional, is the value's associated
+// key.
+function IllegalValueError(aBadValue, aKey) {
+  var msg = (aKey === undefined ? "Value" : 'Value with key "' + aKey + '"') +
+            " must be non-null."
+  this.__proto__ = new TypeError(msg);
+}
+
+// This wraps a caller's callback to make it easy and safe to call.
+// aUserCallback may be undefined, a function, or an object, and if it's an
+// object, its methods onResult() and onError() are called if they exist.
+// Simply use this prototype's onResult() and onError() methods freely.  Your
+// UserCallback instance will do the right thing, including catching any errors
+// thrown by the wrapped callback.
+function UserCallback(aUserCallback) {
+  this.callback = aUserCallback;
+}
+
+UserCallback.prototype = {
+  onResult: function UserCallback_prototype_onResult( /* args */ ) {
+    var func;
+    if (typeof(this.callback) === "function")
+      func = this.callback;
+    else if (this.callback && typeof(this.callback.onResult) === "function")
+      func = this.callback.onResult;
+    if (func) {
+      try {
+        func.apply(this.callback, arguments);
+      }
+      catch (err) {
+        Components.utils.reportError(err);
+      }
     }
   },
-  onError: function CanonicalCallback_prototype_onError() {
-    if (typeof(this.userCallback.onError) === "function") {
-      this.userCallback.onError.apply(this.userCallback, arguments);
+  onError: function UserCallback_prototype_onError( /* args */ ) {
+    if (this.callback && typeof(this.callback.onError) === "function") {
+      try {
+        this.callback.onError.apply(this.callback, arguments);
+      }
+      catch (err) {
+        Components.utils.reportError(err);
+      }
     }
   }
 };
 
+
+// Helper functions ///////////////////////////////////////////////////////////
+
+// Maps the given string of bytes to its hexidecimal representation.  Returns a
+// string.
 function bytesToHexString(aByteStr) {
   return Array.map(
     aByteStr, function (c) ("0" + c.charCodeAt(0).toString(16)).slice(-2)
   ).join("");
 }
 
-function ensureDatabaseIsSetup(aDBConn) {
-  if (!aDBConn.tableExists(TABLE_NAME)) {
-    aDBConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
+// Creates our table if it doesn't already exist.
+function ensureDatabaseIsSetup(aDbConn) {
+  if (!aDbConn.tableExists(TABLE_NAME)) {
+    aDbConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
   }
 }
 
+// Creates a directory at the given file's path if it doesn't already exist.
 function ensureDirectoryExists(aFile) {
   if (aFile.exists()) {
-    if (!aFile.isDirectory()) {
-      throw new Error("File " + aFile.path + " exists but is not a directory");
-    }
+    if (!aFile.isDirectory())
+      throw new Error("File " + aFile.path + " exists but is not a directory.");
   }
-  else {
+  else
     aFile.create(aFile.DIRECTORY_TYPE, 0755);
+}
+
+// Simple storage is supported on Firefox 3.5+ only due to async mozStorage.
+function ensureFx35() {
+  var versionParts = Cc["@mozilla.org/xre/app-info;1"].
+                     getService(Ci.nsIXULAppInfo).
+                     version.split(".");
+  if (versionParts[0][0] == 3 && versionParts[1][0] < 5)
+    throw new Error("jetpack.storage.simple requires Firefox 3.5 or later.");
+}
+
+// Throws an IllegalKeyError if any of the keys in the given items object are
+// illegal.
+function ensureKeysInItemsAreLegal(aItems) {
+  for (let key in aItems) {
+    if (!isKeyLegal(key))
+      throw new IllegalKeyError(key);
   }
 }
 
+// Throws an IllegalKeyError if the given key is illegal.
+function ensureKeyIsLegal(aKey) {
+  if (!isKeyLegal(aKey))
+    throw new IllegalKeyError(aKey);
+}
+
+// Throws an IllegalKeyError if any of the given keys are illegal.
+function ensureKeysAreLegal(aKeys) {
+  for (let i = 0; i < aKeys.length; i++) {
+    if (!isKeyLegal(aKeys[i]))
+      throw new IllegalKeyError(aKeys[i], i);
+  }
+}
+
+// This is like ensureTypeOfArg(), except that the plain typeof() function is
+// used to get aArg's type.
+function ensureJsTypeOfArg(aArg, aExpectedType, aArgPosition, aExpectedMsg) {
+  if (typeof(aArg) !== aExpectedType)
+    throw new ArgumentError(aArgPosition, aExpectedMsg);
+}
+
+// Throws an ArgumentError if the type of the given argument, as returned by
+// typeOfArg(), is unexpected.  aArg is the argument, and aExpectedType is its
+// expected type, a string returned by typeOfArg().  aArgPosition and
+// aExpectedMsg are strings used only in the error's informational message.
+// aArgPosition indicates aArg's position in the parameter list, and
+// aExpectedMsg is a fragment indicating aArg's expected type.
+function ensureTypeOfArg(aArg, aExpectedType, aArgPosition, aExpectedMsg) {
+  if (typeOfArg(aArg) !== aExpectedType)
+    throw new ArgumentError(aArgPosition, aExpectedMsg);
+}
+
+// Throws an IllegalValueError if the given value is illegal.
+function ensureValueIsLegal(aValue) {
+  if (!isValueLegal(aValue))
+    throw new IllegalValueError(aValue);
+}
+
+// Throws an IllegalValueError if any of the values in the given items object
+// are illegal.
+function ensureValuesInItemsAreLegal(aItems) {
+  for (let [key, val] in Iterator(aItems)) {
+    if (!isValueLegal(val))
+      throw new IllegalValueError(val, key);
+  }
+}
+
+// Hashes the given feature URL.  Hey, an ID.
 function featureUrlToId(aFeatureUrl) {
   return hashString(aFeatureUrl);
 }
 
+// Creates the given feature's database file if it doesn't already exist and
+// returns a connection to it.
 function getOrCreateDatabase(aFeatureId) {
   var dir = Cc["@mozilla.org/file/directory_service;1"].
             getService(Ci.nsIProperties);
@@ -331,6 +1013,18 @@ function getOrCreateDatabase(aFeatureId) {
   return stor.openDatabase(file);
 }
 
+// Logs aError, a mozStorage asynchronous callback error, and calls the given
+// UserCallback's onError() with the given arguments.  aCallbackArgs should be
+// either undefined or an array.
+function handleStorageError(aError, aUserCallback, aCallbackArgs) {
+  var msg = makeErrorMsg(aError);
+  logError(msg);
+  aCallbackArgs = aCallbackArgs || [];
+  aCallbackArgs.unshift(msg);
+  aUserCallback.onError.apply(aUserCallback, aCallbackArgs);
+}
+
+// Returns a hex string hash of the given string.
 function hashString(aStr) {
   var stream = Cc["@mozilla.org/io/string-input-stream;1"].
                createInstance(Ci.nsIStringInputStream);
@@ -342,15 +1036,54 @@ function hashString(aStr) {
   return bytesToHexString(cryp.finish(false));
 }
 
+// Returns true if the given key is legal and false otherwise.
 function isKeyLegal(aKey) {
   return typeof(aKey) === "string";
 }
 
+// Returns true if the given value is legal and false otherwise.
+function isValueLegal(aValue) {
+  return aValue !== null;
+}
+
+// Logs the given error message.
 function logError(aMsg) {
   console.error(aMsg);
 }
 
+// Returns a message generated from the given mozStorage async callback error.
 function makeErrorMsg(aStorageError) {
   return "mozIStorageError: [" + aStorageError.result + "] " +
           aStorageError.message;
+}
+
+// Returns the "type" of the given Simple Storage API method argument.  This is
+// is not necessarily equivalent to typeof(aArg).  Returns "string", "callback",
+// or "array" if aArg quacks like one of those types and typeof(aArg) otherwise.
+// Note that if aArg is undefined, it's considered to be a callback, since
+// callbacks are optional.
+function typeOfArg(aArg) {
+  var type = typeof(aArg);
+  if (type === "string")
+    return "string";
+  if (type === "function" ||
+      type === "undefined" ||
+      (type === "object" && (typeof(aArg.onResult) === "function" ||
+                             typeof(aArg.onError) === "function")))
+    return "callback";
+  if (type === "object" && "length" in aArg)
+    return "array";
+  return type;
+}
+
+// All values are wrapped in an array on set.  See wrapValue().
+function unwrapValue(aRawValue) {
+  return json.decode(aRawValue)[0];
+}
+
+// json.encode() returns null if aValue is not an object or array.  A nice hacky
+// way to store primitives is to wrap them in an array.  So, we wrap all values
+// in an array on set and unwrap all values on get.
+function wrapValue(aJsValue) {
+  return json.encode([aJsValue]);
 }
