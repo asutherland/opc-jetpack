@@ -512,14 +512,19 @@ let SlideBar = let (T = {
     let makeEl = function(type) winBar.slideDoc.createElement(type);
 
     // Add the icon for the feature
-    F.icon = winBar.icons.appendChild(makeEl("div"));
-    let img = F.icon.appendChild(makeEl("img"));
+    let img = winBar.slideDoc.createElement("img");
     img.src = F.iconUrl;
+    F.icon = winBar.slideDoc.createElement("div");
+    F.icon.appendChild(img);
+    winBar.icons.appendChild(F.icon);
 
     // Add the iframe for the feature
-    F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
-    F.iframe.src = F.contentUrl;
-    F.iframe.style.width = F.iframeWidth;
+    F.iframe = winBar.slideDoc.createElementNS("http://www.mozilla.org/" +
+      "keymaster/gatekeeper/there.is.only.xul", "iframe");
+    F.iframe.setAttribute("type", "content");
+    F.iframe.setAttribute("src", F.contentUrl);
+    F.iframe.style.width = F.iframeWidth + "px";
+    winBar.iframes.appendChild(F.iframe);
 
     F.icon.addEventListener("click", function() {
       // Track when the icon is selected
