@@ -50,7 +50,6 @@
   visibility: hidden;
   background-color: rgba(255,255,255,.3);
   height: 100%;
-  padding: 5px;
 }
 
 #iframes iframe.selected {

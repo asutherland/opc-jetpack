@@ -486,6 +486,10 @@ let SlideBar = let (T = {
       // Iframe object for the expanded SlideBar view
       iframe: null,
 
+      // ==== {{{Feature.iframeWidth}}} ====
+      // Remember how big to make the iframe
+      iframeWidth: 200,
+
       // ==== {{{Feature.window}}} ====
       // Remember which window the feature belongs to
       window: window
@@ -498,6 +502,8 @@ let SlideBar = let (T = {
       F.contentUrl = "data:text/html," + encodeURI(args.html);
     else if (args.url)
       F.contentUrl = args.url;
+    if (args.width)
+      F.iframeWidth = args.width;
 
     let makeEl = function(type) winBar.slideDoc.createElement(type);
 
@@ -509,13 +515,7 @@ let SlideBar = let (T = {
     // Add the iframe for the feature
     F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
     F.iframe.src = F.contentUrl;
-    
-    // Set the width of the iframe, if one is passed in.
-    if( args.width ){
-      // The 5 is for automatic padding.
-      // TODO: Figure out a non-magic number way of doing this.
-      F.iframe.style.width = args.width-8;
-    }
+    F.iframe.style.width = F.iframeWidth;
 
     F.icon.addEventListener("click", function() {
       // Track when the icon is selected
