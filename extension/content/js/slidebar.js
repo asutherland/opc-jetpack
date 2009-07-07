@@ -434,27 +434,21 @@ let SlideBar = let (T = {
         // ==== {{{Feature.cbArgs.contentDocument}}} ====
         // Alias to the actual document of the iframe
         get contentDocument() {
-          delete this.contentDocument;
-
           let doc = F.iframe.contentDocument;
           // ==== {{{Feature.cbArgs.contentDocument.reload()}}} ====
           // Reset the content to the original html/url appended
           doc.reload = function() doc.location.replace(F.contentUrl);
-
-          return this.contentDocument = doc;
+          return doc;
         },
 
         // ==== {{{Feature.cbArgs.icon}}} ====
         // Alias to the actual img node of the icon
         get icon() {
-          delete this.icon;
-
           let icon = F.icon.firstChild;
           // ==== {{{Feature.cbArgs.icon.reload()}}} ====
           // Reset the icon to the original icon url appended
           icon.reload = function() icon.src = F.iconUrl;
-
-          return this.icon = icon;
+          return icon;
         },
 
         // ==== {{{Feature.cbArgs.slide()}}} ====
