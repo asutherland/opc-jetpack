@@ -295,6 +295,10 @@ let SlideBar = let (T = {
 
         // Show the feature and slide to the feature's width and persist
         if (W.shown) {
+          // Automatically reload the content on select if necessary
+          if (feature.args.autoReload)
+            feature.cbArgs.contentDocument.reload();
+
           W.shown.icon.className = "selected";
           W.shown.iframe.className = "selected";
           feature.cbArgs.slide(feature.iframeWidth, feature.args.persist);
