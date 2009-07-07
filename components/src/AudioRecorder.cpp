@@ -40,9 +40,7 @@
 NS_IMPL_ISUPPORTS1(AudioRecorder, IAudioRecorder)
 
 AudioRecorder::AudioRecorder()
-{
-    fprintf(stderr, "CONSTRUCTOR!!\n");
-    
+{   
     stream = NULL;
     recording = 0;
 
@@ -68,7 +66,7 @@ AudioRecorder::AudioRecorder()
             SAMPLE_RATE,
             FRAMES_PER_BUFFER,
             paClipOff,
-            this->RecordCallback,
+            this->RecordToFileCallback,
             this
     );
     if (err != paNoError) {
@@ -77,15 +75,41 @@ AudioRecorder::AudioRecorder()
 }
 
 AudioRecorder::~AudioRecorder()
-{
-    fprintf(stderr, "DESTRUCTOR!!\n");
-    
+{   
     PaError err;
     if ((err = Pa_Terminate()) != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not terminate PortAudio! %d\n", err);
     }
-    
-    fprintf(stderr, "DESTRUCTOR DONE!!\n");
+}
+
+#define TABLE_SIZE 36
+static const char table[] = {
+    'a','b','c','d','e','f','g','h','i','j',
+    'k','l','m','n','o','p','q','r','s','t',
+    'u','v','w','x','y','z','0','1','2','3',
+    '4','5','6','7','8','9' 
+};
+
+/*
+ * This code is ripped from profile/src/nsProfile.cpp and is further
+ * duplicated in uriloader/exthandler.  this should probably be moved
+ * into xpcom or some other shared library.
+ */ 
+static void
+MakeRandomString(char *buf, PRInt32 bufLen)
+{
+    // turn PR_Now() into milliseconds since epoch
+    // and salt rand with that.
+    double fpTime;
+    LL_L2D(fpTime, PR_Now());
+
+    // use 1e-6, granularity of PR_Now() on the mac is seconds
+    srand((uint)(fpTime * 1e-6 + 0.5));   
+    PRInt32 i;
+    for (i=0;i<bufLen;i++) {
+        *buf++ = table[rand()%TABLE_SIZE];
+    }
+    *buf = 0;
 }
 
 int
@@ -104,6 +128,29 @@ AudioRecorder::RecordCallback(const void *input, void *output,
         for (i = 0; i < framesPerBuffer; i++) {
             PRUint32 written;
             op->Write((const char *)rptr, (PRUint32)sizeof(short) * 2, &written);
+            rptr++;
+            rptr++;
+        }
+    }
+    
+    return paContinue;
+}
+
+int
+AudioRecorder::RecordToFileCallback(const void *input, void *output,
+        unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo* timeInfo,
+        PaStreamCallbackFlags statusFlags,
+        void *userData)
+{
+    unsigned long i;
+    const float *rptr = (const float *)input;
+
+    SNDFILE *out = static_cast<AudioRecorder*>(userData)->outfile;
+
+    if (input != NULL) {
+        for (i = 0; i < framesPerBuffer; i++) {
+			sf_writef_float(out, rptr, 1);
             rptr++;
             rptr++;
         }
@@ -147,6 +194,61 @@ AudioRecorder::Start(nsIAsyncInputStream** out)
 }
 
 /*
+ * Start recording to file
+ */
+NS_IMETHODIMP
+AudioRecorder::StartRecordToFile(nsACString& file)
+{
+    if (recording) {
+        fprintf(stderr, "JEP Audio:: Recording in progress!\n");
+        return NS_ERROR_FAILURE;
+    }
+
+    nsresult rv;
+	nsCOMPtr<nsIFile> o;
+
+    /* Allocate OGG file */
+    char buf[13];
+    nsCAutoString path;
+
+    rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(o));
+    if (NS_FAILED(rv)) return rv;
+
+    MakeRandomString(buf, 8);
+    memcpy(buf + 8, ".ogg", 5);
+    rv = o->AppendNative(nsDependentCString(buf, 12));
+    if (NS_FAILED(rv)) return rv;
+    rv = o->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+    if (NS_FAILED(rv)) return rv;
+    rv = o->GetNativePath(path);
+    if (NS_FAILED(rv)) return rv;
+    rv = o->Remove(PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
+    /* Open file in libsndfile */
+    SF_INFO info;
+    info.channels = NUM_CHANNELS;
+    info.samplerate = SAMPLE_RATE;
+    info.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
+
+    if (!(outfile = sf_open(path.get(), SFM_WRITE, &info))) {
+        sf_perror(NULL);
+        return NS_ERROR_FAILURE;
+    }
+
+	file.Assign(path.get(), strlen(path.get()));
+
+    /* Start recording */
+    PaError err = Pa_StartStream(stream);
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
+        return NS_ERROR_FAILURE;
+    }
+	recording = 2;
+    return NS_OK;
+}
+
+/*
  * Stop stream recording
  */
 NS_IMETHODIMP
@@ -163,9 +265,10 @@ AudioRecorder::Stop()
         return NS_ERROR_FAILURE;
     }
     
-    mPipeOut->Close();
-    mPipeOut->Release();
-    
+	if (recording == 1) {
+		mPipeOut->Close();
+		mPipeOut->Release();
+	}
     recording = 0;
     return NS_OK;
 }

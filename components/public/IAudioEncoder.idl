@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
+#include "nsIAsyncInputStream.idl"
 
 [scriptable, uuid(efaa62ff-c464-419e-b917-bb0798304890)]
 interface IAudioEncoder : nsISupports
