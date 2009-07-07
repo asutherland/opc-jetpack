@@ -293,11 +293,11 @@ let SlideBar = let (T = {
         // Remember which feature is being shown
         W.shown = feature;
 
-        // Show the feature and slide to the minimal view
+        // Show the feature and slide to the feature's width and persist
         if (W.shown) {
           W.shown.icon.className = "selected";
           W.shown.iframe.className = "selected";
-          W.slide(32);
+          feature.cbArgs.slide(feature.iframeWidth, feature.args.persist);
 
           // Let the feature know it's been selected
           T.catchCall(feature.args, "onSelect", feature.cbArgs);
