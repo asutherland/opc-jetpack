@@ -429,11 +429,29 @@ let SlideBar = let (T = {
 
         // ==== {{{Feature.cbArgs.contentDocument}}} ====
         // Alias to the actual document of the iframe
-        get contentDocument() F.iframe.contentDocument,
+        get contentDocument() {
+          delete this.contentDocument;
+
+          let doc = F.iframe.contentDocument;
+          // ==== {{{Feature.cbArgs.contentDocument.reload()}}} ====
+          // Reset the content to the original html/url appended
+          doc.reload = function() doc.location.replace(F.contentUrl);
+
+          return this.contentDocument = doc;
+        },
 
         // ==== {{{Feature.cbArgs.icon}}} ====
         // Alias to the actual img node of the icon
-        get icon() F.icon.firstChild,
+        get icon() {
+          delete this.icon;
+          
+          let icon = F.icon.firstChild;
+          // ==== {{{Feature.cbArgs.icon.reload()}}} ====
+          // Reset the icon to the original icon url appended
+          icon.reload = function() icon.src = F.iconUrl;
+
+          return this.icon = icon;
+        },
 
         // ==== {{{Feature.cbArgs.slide()}}} ====
         // Feature specific function to slide the SlideBar
@@ -448,6 +466,10 @@ let SlideBar = let (T = {
         },
       },
 
+      // ==== {{{Feature.contentUrl}}} ====
+      // Remember what url to load for the content frame
+      contentUrl: "about:blank",
+
       // ==== {{{Feature.context}}} ====
       // Remember which context the feature belongs to
       context: context,
@@ -455,6 +477,10 @@ let SlideBar = let (T = {
       // ==== {{{Feature.icon}}} ====
       // Icon object for the minimal SlideBar view
       icon: null,
+
+      // ==== {{{Feature.iconUrl}}} ====
+      // Remember what url to load for the icon
+      iconUrl: "chrome://jetpack/content/gfx/jetpack_32x32.png",
 
       // ==== {{{Feature.iframe}}} ====
       // Iframe object for the expanded SlideBar view
@@ -465,23 +491,24 @@ let SlideBar = let (T = {
       window: window
     };
 
+    // Figure out what icon and content to load then save them
+    if (args.icon)
+      F.iconUrl = args.icon;
+    if (args.html)
+      F.contentUrl = "data:text/html," + encodeURI(args.html);
+    else if (args.url)
+      F.contentUrl = args.url;
+
     let makeEl = function(type) winBar.slideDoc.createElement(type);
 
     // Add the icon for the feature
     F.icon = winBar.icons.appendChild(makeEl("div"));
     let img = F.icon.appendChild(makeEl("img"));
-    img.src = args.icon || "chrome://jetpack/content/gfx/jetpack_32x32.png";
-
-    // Figure out what to load for the iframe
-    let url = "about:blank";
-    if (args.html)
-      url = "data:text/html," + encodeURI(args.html);
-    else if (args.url)
-      url = args.url;
+    img.src = F.iconUrl;
 
     // Add the iframe for the feature
     F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
-    F.iframe.src = url;
+    F.iframe.src = F.contentUrl;
     
     // Set the width of the iframe, if one is passed in.
     if( args.width ){
