@@ -517,8 +517,13 @@ let SlideBar = let (T = {
       F.iframe.style.width = args.width-8;
     }
 
-    // Track when the icon is selected
-    F.icon.addEventListener("click", function() winBar.selectFeature(F), true);
+    F.icon.addEventListener("click", function() {
+      // Track when the icon is selected
+      winBar.selectFeature(F);
+
+      // Let the feature know it was clicked
+      T.catchCall(args, "onClick", F.cbArgs);
+    }, true);
 
     // Track when the iframe loads
     F.iframe.addEventListener("DOMContentLoaded", function iframeLoaded() {
