@@ -418,16 +418,28 @@ let SlideBar = let (T = {
       // Remember the original args used to append the feature
       args: args,
 
-      // ==== {{{Feature.cbArgs()}}} ====
-      // Provide a function object for all SlideBar callbacks
-      cbArgs: function Feature_cbArgs(options) {
-        options = options || {};
+      // ==== {{{Feature.cbArgs}}} ====
+      // Provide an object for all SlideBar callbacks
+      cbArgs: {
+        // ==== {{{Feature.cbArgs.contentDocument}}} ====
+        // Alias to the actual document of the iframe
+        get contentDocument() F.iframe.contentDocument,
 
-        let size = Number(options.size);
-        if (size > 0)
-          winBar.slide(options.size + 32, options.persist);
-        else
-          winBar.slide(0);
+        // ==== {{{Feature.cbArgs.icon}}} ====
+        // Alias to the actual img node of the icon
+        get icon() F.icon.firstChild,
+
+        // ==== {{{Feature.cbArgs.slide()}}} ====
+        // Feature specific function to slide the SlideBar
+        slide: function(size, options) {
+          options = options || {};
+          size = size || 0;
+          let persist = typeof options == "boolean" ? options : options.persist;
+
+          // Only do something if we have a valid size
+          if (size > 0)
+            winBar.slide(size + 32, persist);
+        },
       },
 
       // ==== {{{Feature.context}}} ====
@@ -446,14 +458,6 @@ let SlideBar = let (T = {
       // Remember which window the feature belongs to
       window: window
     };
-
-    // ==== {{{Feature.cbArgs.icon}}}
-    // Alias to the actual img node of the icon
-    F.cbArgs.__defineGetter__("icon", function() F.icon.firstChild);
-
-    // ==== {{{Feature.cbArgs.doc}}}
-    // Alias to the actual document of the iframe
-    F.cbArgs.__defineGetter__("doc", function() F.iframe.contentDocument);
 
     let makeEl = function(type) winBar.slideDoc.createElement(type);
 
