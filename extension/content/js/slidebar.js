@@ -421,6 +421,12 @@ let SlideBar = let (T = {
       // ==== {{{Feature.cbArgs}}} ====
       // Provide an object for all SlideBar callbacks
       cbArgs: {
+        // ==== {{{Feature.cbArgs.close()}}} ====
+        // Feature specific function to close the SlideBar
+        close: function() {
+          winBar.slide(0);
+        },
+
         // ==== {{{Feature.cbArgs.contentDocument}}} ====
         // Alias to the actual document of the iframe
         get contentDocument() F.iframe.contentDocument,
