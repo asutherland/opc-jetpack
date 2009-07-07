@@ -159,8 +159,8 @@ let SlideBar = let (T = {
     let slideButton = window.document.createElement("slideButton");
     slideButton.style.height = slideButton.style.width = "11px";
     slideButton.style.padding = "7px 2px";
-    slideButton.style.width = "20px"; 
-    
+    slideButton.style.width = "20px";
+
     slideButton.style.backgroundRepeat = "no-repeat";
     slideButton.style.backgroundPosition = "center";
 
@@ -341,7 +341,7 @@ let SlideBar = let (T = {
         // If we already have a timer running, it'll use the updated values
         if (W.ease.timer != null)
           return;
-    
+
         // Create a new timer to slide from "start" to "end"
         W.ease.timer = setInterval(function() {
           // Figure out how much we've progressed since starting
@@ -350,19 +350,19 @@ let SlideBar = let (T = {
             // We need to finish up, so no need for the timer anymore
             clearInterval(W.ease.timer);
             W.ease.timer = null;
-    
+
             // We might have exceeded our time, so pretend we're at the end
             prog = 1;
           }
-    
+
           // Overshoot some when sliding
           let scale = Math.PI / 1.8;
           prog = Math.sin(scale * prog) / Math.sin(scale);
-    
+
           // Calculate the new position to shift things
           W.ease.curr = W.ease.curr.map(function(curr, idx)
             prog * W.ease.end[idx] + (1 - prog) * W.ease.start[idx]);
-    
+
           W.content.style.marginLeft = W.ease.curr[0] + "px";
           W.content.style.marginRight = -W.ease.curr[1] + "px";
         }, 30);
@@ -444,7 +444,7 @@ let SlideBar = let (T = {
         // Alias to the actual img node of the icon
         get icon() {
           delete this.icon;
-          
+
           let icon = F.icon.firstChild;
           // ==== {{{Feature.cbArgs.icon.reload()}}} ====
           // Reset the icon to the original icon url appended
