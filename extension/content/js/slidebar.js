@@ -235,6 +235,31 @@ let SlideBar = let (T = {
         size: 0
       },
 
+      // ==== {{{Window.notifyFeature()}}} ====
+      // Indicate that the provided feature has something to notify
+      notifyFeature: function Window_notifyFeature(feature) {
+        // Don't bother notifying for something that is already shown
+        if (W.shown == feature)
+          return;
+
+        // Open if the icons aren't being shown
+        if (W.state.size < 32)
+          W.slide(32, true);
+
+        // Highlight the notified feature
+        feature.icon.className = "notified";
+
+        // Animate the icon for ~1 second
+        let icon = feature.cbArgs.icon;
+        let frame = 0;
+        (function updateIcon() {
+          let deg = Math.round(25 * Math.sin(frame / 15 * Math.PI));
+          icon.style.MozTransform = "rotate(" + deg + "deg)";
+          if (frame++ < 30)
+            setTimeout(updateIcon, 33);
+        })();
+      },
+
       // ==== {{{Window.onMouseMove()}}} ====
       // Handle the user moving the mouse over the browser content area
       onMouseMove: function Window_onMouseMove(event) {
@@ -449,6 +474,12 @@ let SlideBar = let (T = {
           // Reset the icon to the original icon url appended
           icon.reload = function() icon.src = F.iconUrl;
           return icon;
+        },
+
+        // ==== {{{Feature.cbArgs.notify()}}} ====
+        // Let the feature notify itself in the SlideBar
+        notify: function() {
+          winBar.notifyFeature(F);
         },
 
         // ==== {{{Feature.cbArgs.slide()}}} ====

@@ -27,6 +27,11 @@
   background-color: rgba(255,255,255,.3);
 }
 
+#icons div.notified {
+  opacity: 1;
+  background-color: rgba(200, 200, 255, .6);
+}
+
 #icons img {
   max-height: 32px;
   max-width: 32px;
