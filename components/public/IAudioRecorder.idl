@@ -42,5 +42,6 @@
 interface IAudioRecorder : nsISupports
 {
     nsIAsyncInputStream start();
+	ACString startRecordToFile();
     void stop();
 };

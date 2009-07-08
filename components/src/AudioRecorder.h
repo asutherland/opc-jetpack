@@ -40,12 +40,17 @@
 
 #include "IAudioRecorder.h"
 #include "portaudio.h"
+#include "sndfile.h"
 
+#include "prmem.h"
 #include "nsIPipe.h"
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
+#include "nsStringAPI.h"
 #include "nsIAsyncInputStream.h"
 #include "nsIAsyncOutputStream.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
 #include "nsComponentManagerUtils.h"
 
 #define AUDIO_RECORDER_CONTRACTID "@labs.mozilla.com/audio/recorder;1"
@@ -53,11 +58,11 @@
 #define AUDIO_RECORDER_CID { 0x1fdf790f, 0x0648, 0x4e53, \
                            { 0x92, 0x7d, 0xbe, 0x13, 0xa3, 0xc6, 0x92, 0x54 } }
 
-#define SAMPLE_RATE         (16000)
+#define SAMPLE_RATE         (44000)
 #define SAMPLE_SILENCE      (0)
 #define NUM_CHANNELS        (2)
 #define FRAMES_PER_BUFFER   (1024)
-#define PA_SAMPLE_TYPE      paInt16
+#define PA_SAMPLE_TYPE      paFloat32
 
 class AudioRecorder : public IAudioRecorder
 {
@@ -73,7 +78,8 @@ private:
     ~AudioRecorder();
     int recording;
     PaStream *stream;
-    
+	SNDFILE *outfile;
+
 protected:
     static int RecordCallback(const void *input, void *output,
         unsigned long framesPerBuffer,
@@ -81,6 +87,12 @@ protected:
         PaStreamCallbackFlags statusFlags,
         void *userData
     );
+	static int RecordToFileCallback(const void *input, void *output,
+    	unsigned long framesPerBuffer,
+    	const PaStreamCallbackTimeInfo* timeInfo,
+    	PaStreamCallbackFlags statusFlags,
+    	void *userData
+	);
 };
 
 #endif

@@ -41,87 +41,39 @@
 //
 
 var EXPORTED_SYMBOLS = ["Audio"];
-var FILENAME = null;
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-const Cr = Components.results;
 const CC = Components.Constructor;
-const En = Cc["@labs.mozilla.com/audio/encoder;1"].
-			getService(Ci.IAudioEncoder);
 const Re = Cc["@labs.mozilla.com/audio/recorder;1"].
             getService(Ci.IAudioRecorder);
-const Bi = CC("@mozilla.org/binaryinputstream;1",
-			"nsIBinaryInputStream",
-			"setInputStream");
 const Fi = CC("@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithPath");
 
-const CT = Cc["@mozilla.org/thread-manager;1"].
-            getService().
-            currentThread;
-
-function Audio() {}
+function Audio() {
+	this.recorder = {};
+	this.isRecording = false;
+}
 Audio.prototype = {
-    beginRecordToFile: function() {
-        this._input = Re.start();
-        this._input.asyncWait(new inputStreamListener(), 0, 0, CT);
+    recordToFile: function() {
+        this._path = Re.startRecordToFile();
+		this.isRecording = true;
     },
 
-    stopRecordToFile: function() {
+    stopRecording: function() {
         Re.stop();
-
-        let src = new Fi(FILENAME);
+		this.isRecording = false;
+		
+        let src = new Fi(this._path);
         let dst = getOrCreateDirectory();
 
         src.moveTo(dst, '');
         dst.append(src.leafName);
+
         return dst.path;
     }
 }
-
-function inputStreamListener() {
-    this._data = '';
-}
-inputStreamListener.prototype = {
-	_readBytes: function(inputStream, count) {
-		return new Bi(inputStream).readByteArray(count);
-	},
-	
-	onInputStreamReady: function(input) {
-		if (!FILENAME) {
-			FILENAME = En.createOgg();
-		}
-		
-	    try {
-            let bytes = this._readBytes(input, input.available());
-			this._data += bytes.join('');
-	    } catch (e) {
-	        dump("*** Exception " + e + " assuming stream was closed ***" + "\n");
-	        input.close();
-			En.finalize();
-	        return;
-	    }
-        
-        if (this._data.length % 2 == 0) {
-            /* Even bytes means we can write all channels now */
-            En.appendFrames(this._data);
-        } else {
-            /* Odd bytes, write as much as we can and do the rest later */
-            En.appendFrames(this._data.substr(0, this._data.length - 1));
-			this._data = this._data.substr(-1, 1);
-        }
-        input.asyncWait(this, 0, 0, CT);
-	},
-	
-	QueryInterface: function(aIID) {
-	    if (aIID.equals(Ci.nsIInputStreamCallback) ||
-	        aIID.equals(Ci.nsISupports))
-	        return this;
-	    throw Cr.NS_ERROR_NO_INTERFACE;
-	}
-};
 
 function ensureDirectoryExists(aFile) {
     if (aFile.exists()) {

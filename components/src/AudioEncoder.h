@@ -46,6 +46,7 @@
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "nsStringAPI.h"
+#include "nsThreadUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsComponentManagerUtils.h"
@@ -53,7 +54,7 @@
 #define AUDIO_ENCODER_CONTRACTID "@labs.mozilla.com/audio/encoder;1"
 #define AUDIO_ENCODER_CLASSNAME  "Audio Encoding Capability"
 #define AUDIO_ENCODER_CID { 0xb7182604, 0x7BE6, 0x4308, \
-                           { 0x81, 0x0C, 0x12, 0x8F, 0xD7, 0xD7, 0x76, 0xDE } }
+                          { 0x81, 0x0C, 0x12, 0x8F, 0xD7, 0xD7, 0x76, 0xDE } }
 
 #define SAMPLE_RATE         (16000)
 #define SAMPLE_SILENCE      (0)
