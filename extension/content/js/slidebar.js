@@ -80,6 +80,15 @@ let SlideBar = let (T = {
     // We should only run once, so set ourselves to do nothing
     T.init = function() {};
 
+    try {
+      // This should always throw because we either get not avail or no file
+      Components.utils.import("resource://personas");
+    }
+    catch(ex) {
+      // We'll get NS_ERROR_FILE_NOT_FOUND if Personas /is/ installed
+      T.hasPersonas = ex.name != "NS_ERROR_NOT_AVAILABLE";
+    }
+
     // Listen in on when the runtime and browsers unload
     JetpackRuntime.addUnloader(T.uninit);
     T.watcher = new BrowserWatcher(T);
@@ -152,7 +161,8 @@ let SlideBar = let (T = {
     // Keep track of all windows to add features to them later
     T.windows.push(window);
 
-    let doc = window.document.getElementById("slidebar").contentWindow.document;
+    let slideBar = window.document.getElementById("slidebar");
+    let doc = slideBar.contentWindow.document;
     let content = window.document.getElementById("_browser");
 
     // Add an image as a target area for the SlideBar
@@ -166,6 +176,12 @@ let SlideBar = let (T = {
 
     let tabStrip = window.document.getElementById("content").mStrip;
     tabStrip.insertBefore(slideButton, tabStrip.firstChild);
+
+    // Push down the top of the SlideBar browser element so that it's not
+    // visible, so Personas can shine through
+    if (T.hasPersonas)
+      slideBar.style.marginTop = tabStrip.clientHeight + "px";
+    slideBar.style.visibility = "visible";
 
     // == Window ==
     // Extend the browser window with custom SlideBar properties such as its
@@ -434,6 +450,10 @@ let SlideBar = let (T = {
 
   //////////////////////////////////////////////////////////////////////////////
   //// SlideBar
+
+  // ==== {{{SlideBar.hasPersonas}}} ====
+  // Flag to indicate if the user has Personas installed
+  hasPersonas: false,
 
   // ==== {{{SlideBar.addFeature()}}} ====
   // Add the appended options for the context to the window
