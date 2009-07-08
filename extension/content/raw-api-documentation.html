@@ -136,7 +136,21 @@ console.log( jetpack.storage.live.myData );
       </div>
       
     </div>  
-    
+
+    <div name="clipboard" class="property">
+      This object provides access to the system clipboard.
+      See the <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/10">Clipboard
+        JEP</a> for a complete API reference.
+      <p>
+      Here's a quick example demonstrating how to set and get text from the
+      clipboard.
+      <div class="example">
+jetpack.future.import("clipboard");
+jetpack.clipboard.set("So long and thanks for all the fish!");
+console.log(jetpack.clipboard.get());
+      </div>
+    </div>
+
     <div name="notifications" class="property">
       Eventually, this object will be the end-all be-all of easy
       communication with your users. Notification bars, transparent

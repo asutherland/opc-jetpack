@@ -285,7 +285,7 @@ JetpackEnv.setFutures(
      return function() { return "I'm from the future."; };
    },
 
-   "jetpack.os.clipboard": function(context) {
+   "jetpack.clipboard": function(context) {
      return new Clipboard();
    },
 
