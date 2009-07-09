@@ -40,18 +40,19 @@
 // A JEP for it has not been created yet.
 //
 
+var Re;
 var EXPORTED_SYMBOLS = ["Audio"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-const CC = Components.Constructor;
-const Re = Cc["@labs.mozilla.com/audio/recorder;1"].
-            getService(Ci.IAudioRecorder);
-const Fi = CC("@mozilla.org/file/local;1",
+const Fi = Components.Constructor(
+			"@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithPath");
 
 function Audio() {
+	Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+			getService(Ci.IAudioRecorder);
 	this.recorder = {};
 	this.isRecording = false;
 }
