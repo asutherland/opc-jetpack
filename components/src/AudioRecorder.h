@@ -39,13 +39,30 @@
 #define AudioRecorder_h_
 
 #include "IAudioRecorder.h"
+#include "portaudio.h"
+#include "sndfile.h"
+
+#include "prmem.h"
+#include "nsIPipe.h"
 #include "nsCOMPtr.h"
-#include "nsITimer.h"
+#include "nsAutoPtr.h"
+#include "nsStringAPI.h"
+#include "nsIAsyncInputStream.h"
+#include "nsIAsyncOutputStream.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
+#include "nsComponentManagerUtils.h"
 
 #define AUDIO_RECORDER_CONTRACTID "@labs.mozilla.com/audio/recorder;1"
 #define AUDIO_RECORDER_CLASSNAME  "Audio Recording Capability"
 #define AUDIO_RECORDER_CID { 0x1fdf790f, 0x0648, 0x4e53, \
                            { 0x92, 0x7d, 0xbe, 0x13, 0xa3, 0xc6, 0x92, 0x54 } }
+
+#define SAMPLE_RATE         (44000)
+#define SAMPLE_SILENCE      (0)
+#define NUM_CHANNELS        (2)
+#define FRAMES_PER_BUFFER   (1024)
+#define PA_SAMPLE_TYPE      paFloat32
 
 class AudioRecorder : public IAudioRecorder
 {
@@ -54,19 +71,28 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_IAUDIORECORDER
 
+    nsCOMPtr<nsIAsyncInputStream> mPipeIn;
+    nsCOMPtr<nsIAsyncOutputStream> mPipeOut;
+
 private:
     ~AudioRecorder();
+    int recording;
+    PaStream *stream;
+	SNDFILE *outfile;
 
 protected:
-    int recording;
-};
-
-#define TABLE_SIZE 36
-static const char table[] = {
-    'a','b','c','d','e','f','g','h','i','j',
-    'k','l','m','n','o','p','q','r','s','t',
-    'u','v','w','x','y','z','0','1','2','3',
-    '4','5','6','7','8','9' 
+    static int RecordCallback(const void *input, void *output,
+        unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo* timeInfo,
+        PaStreamCallbackFlags statusFlags,
+        void *userData
+    );
+	static int RecordToFileCallback(const void *input, void *output,
+    	unsigned long framesPerBuffer,
+    	const PaStreamCallbackTimeInfo* timeInfo,
+    	PaStreamCallbackFlags statusFlags,
+    	void *userData
+	);
 };
 
 #endif

@@ -37,48 +37,21 @@
 
 #include "AudioRecorder.h"
 
-#include "prmem.h"
-#include "nsIFile.h"
-#include "nsAutoPtr.h"
-#include "nsStringAPI.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsComponentManagerUtils.h"
+NS_IMPL_ISUPPORTS1(AudioRecorder, IAudioRecorder)
 
-extern "C" {
+AudioRecorder::AudioRecorder()
+{   
+    stream = NULL;
+    recording = 0;
 
-#include "CAudioRecorder.h"
-
-static int recordCallback(const void *input, void *output,
-        unsigned long framesPerBuffer,
-        const PaStreamCallbackTimeInfo* timeInfo,
-        PaStreamCallbackFlags statusFlags,
-        void *userData)
-{
-    unsigned long i;
-    const float *rptr = (const float *)input;
-
-    if (input != NULL) {
-        for (i = 0; i < framesPerBuffer; i++) {
-            sf_writef_float(outfile, rptr, 1);
-            rptr++; // left channel
-            rptr++; // right channel
-        }
-    }
-    return paContinue;
-}
-
-static int
-initialize_portaudio()
-{
-    PaError err = paNoError;
-    PaStreamParameters inputParameters;
-
+    PaError err;
     err = Pa_Initialize();
     if (err != paNoError) {
-        return err;
+        fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
     }
-
+    
+    /* Open stream */
+    PaStreamParameters inputParameters;    
     inputParameters.device = Pa_GetDefaultInputDevice();
     inputParameters.channelCount = 2;
     inputParameters.sampleFormat = PA_SAMPLE_TYPE;
@@ -93,37 +66,29 @@ initialize_portaudio()
             SAMPLE_RATE,
             FRAMES_PER_BUFFER,
             paClipOff,
-            recordCallback,
-            NULL
+            this->RecordToFileCallback,
+            this
     );
-    
-    return (int)err;
-}
-
-}
-
-NS_IMPL_ISUPPORTS1(AudioRecorder, IAudioRecorder)
-
-AudioRecorder::AudioRecorder()
-{
-    stream = NULL;
-    recording = 0;
-    outfile = NULL;
-    filename = NULL;
-
-    PaError err;
-    if ((err = initialize_portaudio()) != paNoError) {
-        fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not open stream! %d", err);
     }
 }
 
 AudioRecorder::~AudioRecorder()
-{
+{   
     PaError err;
     if ((err = Pa_Terminate()) != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not terminate PortAudio! %d\n", err);
     }
 }
+
+#define TABLE_SIZE 36
+static const char table[] = {
+    'a','b','c','d','e','f','g','h','i','j',
+    'k','l','m','n','o','p','q','r','s','t',
+    'u','v','w','x','y','z','0','1','2','3',
+    '4','5','6','7','8','9' 
+};
 
 /*
  * This code is ripped from profile/src/nsProfile.cpp and is further
@@ -147,20 +112,100 @@ MakeRandomString(char *buf, PRInt32 bufLen)
     *buf = 0;
 }
 
+int
+AudioRecorder::RecordCallback(const void *input, void *output,
+        unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo* timeInfo,
+        PaStreamCallbackFlags statusFlags,
+        void *userData)
+{
+    unsigned long i;
+    const short *rptr = (const short *)input;
+
+    nsIAsyncOutputStream *op = static_cast<AudioRecorder*>(userData)->mPipeOut;
+
+    if (input != NULL) {
+        for (i = 0; i < framesPerBuffer; i++) {
+            PRUint32 written;
+            op->Write((const char *)rptr, (PRUint32)sizeof(short) * 2, &written);
+            rptr++;
+            rptr++;
+        }
+    }
+    
+    return paContinue;
+}
+
+int
+AudioRecorder::RecordToFileCallback(const void *input, void *output,
+        unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo* timeInfo,
+        PaStreamCallbackFlags statusFlags,
+        void *userData)
+{
+    unsigned long i;
+    const float *rptr = (const float *)input;
+
+    SNDFILE *out = static_cast<AudioRecorder*>(userData)->outfile;
+
+    if (input != NULL) {
+        for (i = 0; i < framesPerBuffer; i++) {
+			sf_writef_float(out, rptr, 1);
+            rptr++;
+            rptr++;
+        }
+    }
+    
+    return paContinue;
+}
+
 /*
  * Start recording
  */
 NS_IMETHODIMP
-AudioRecorder::Start()
+AudioRecorder::Start(nsIAsyncInputStream** out)
 {
     if (recording) {
         fprintf(stderr, "JEP Audio:: Recording in progress!\n");
         return NS_ERROR_FAILURE;
     }
 
-    PaError err;
+    /* Create pipe: NS_NewPipe2 is not exported by XPCOM */
+    nsCOMPtr<nsIPipe> pipe = do_CreateInstance("@mozilla.org/pipe;1");
+    if (!pipe)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv = pipe->Init(PR_TRUE, PR_FALSE, 0, PR_UINT32_MAX, NULL);
+    if (NS_FAILED(rv)) return rv;
+
+    pipe->GetInputStream(getter_AddRefs(mPipeIn));
+    pipe->GetOutputStream(getter_AddRefs(mPipeOut));
+
+    recording = 1;
+    *out = mPipeIn;
+
+    /* Start recording */
+    PaError err = Pa_StartStream(stream);
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
+        return NS_ERROR_FAILURE;
+    }
+    return NS_OK;
+}
+
+/*
+ * Start recording to file
+ */
+NS_IMETHODIMP
+AudioRecorder::StartRecordToFile(nsACString& file)
+{
+    if (recording) {
+        fprintf(stderr, "JEP Audio:: Recording in progress!\n");
+        return NS_ERROR_FAILURE;
+    }
+
     nsresult rv;
-    nsCOMPtr<nsIFile> o;
+	nsCOMPtr<nsIFile> o;
 
     /* Allocate OGG file */
     char buf[13];
@@ -180,49 +225,50 @@ AudioRecorder::Start()
     rv = o->Remove(PR_FALSE);
     if (NS_FAILED(rv)) return rv;
 
-    /* Store tmpfile name */
-    filename = (char *)PR_Calloc(strlen(path.get()) + 1, sizeof(char));
-    memcpy(filename, path.get(), strlen(path.get()));
-
     /* Open file in libsndfile */
     SF_INFO info;
     info.channels = NUM_CHANNELS;
     info.samplerate = SAMPLE_RATE;
     info.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
 
-    if (!(outfile = sf_open(filename, SFM_WRITE, &info))) {
+    if (!(outfile = sf_open(path.get(), SFM_WRITE, &info))) {
         sf_perror(NULL);
         return NS_ERROR_FAILURE;
     }
 
+	file.Assign(path.get(), strlen(path.get()));
+
     /* Start recording */
-    recording = 1;
-    err = Pa_StartStream(stream);
+    PaError err = Pa_StartStream(stream);
     if (err != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
         return NS_ERROR_FAILURE;
     }
-
+	recording = 2;
     return NS_OK;
 }
 
 /*
- * Stop recording
+ * Stop stream recording
  */
 NS_IMETHODIMP
-AudioRecorder::Stop(nsACString& final)
+AudioRecorder::Stop()
 {
     if (!recording) {
         fprintf(stderr, "JEP Audio:: No recording in progress!\n");
         return NS_ERROR_FAILURE;    
     }
-
-    Pa_StopStream(stream);
-    sf_close(outfile);
-    final.Assign(filename, strlen(filename));
-    PR_Free(filename);
-
+    
+    PaError err = Pa_StopStream(stream);
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not close stream!\n");
+        return NS_ERROR_FAILURE;
+    }
+    
+	if (recording == 1) {
+		mPipeOut->Close();
+		mPipeOut->Release();
+	}
     recording = 0;
     return NS_OK;
 }
-

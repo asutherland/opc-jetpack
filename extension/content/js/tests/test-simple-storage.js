@@ -35,12 +35,50 @@
  * ***** END LICENSE BLOCK ***** */
 
 var SimpleStorageTests = {
+
+  // Helpers //////////////////////////////////////////////////////////////////
+
   _ss: (function () {
     Components.utils.import("resource://jetpack/modules/simple-storage.js");
     return new SimpleStorage("http://example.com/my_jetpack");
   })(),
 
   _key: "test key",
+
+  _areArraysEquivalent: function (aArr1, aArr2) {
+    // We can't use instanceof Array here for the same reason we make our
+    // own _assertRaises function.  See the comment there.
+    if (typeof(aArr1.length) === "undefined" ||
+        typeof(aArr2.length) === "undefined") {
+      return false;
+    }
+    if (aArr1.length !== aArr2.length)
+      return false;
+    try {
+      for (var i = 0; i < aArr1.length; i++) {
+        if (aArr1[i] !== aArr2[i])
+          return false;
+      }
+    }
+    catch (err) {
+      return false;
+    }
+    return true;
+  },
+
+  _areObjectsEquivalent: function (aObj1, aObj2) {
+    if (typeof(aObj1) !== "object" || typeof(aObj2) !== "object")
+      return false;
+    if (aObj1.__count__ !== aObj2.__count__)
+      return false;
+    for (var [key, val] in Iterator(aObj2)) {
+      if (!aObj1.hasOwnProperty(key))
+        return false;
+      if (aObj1[key] !== val)
+        return false;
+    }
+    return true;
+  },
 
   // We can't use the test runner's assertRaises, because it uses instanceof
   // to check that the exception is of the expected type.  Simple storage is
@@ -51,60 +89,69 @@ var SimpleStorageTests = {
   _assertRaises: function (aCallback) {
     try {
       aCallback();
-      throw "Test should have thrown exception but did not";
     }
-    catch (err) {}
+    catch (err) {
+      return;
+    }
+    throw new Error("Test should have thrown exception but did not");
+  },
+
+  _insertTestItems: function (aRunner, aCallback) {
+    var that = this;
+    var keys = [];
+    var vals = [];
+    var items = {};
+    // map "a" - "j" to 0 - 9
+    for (var i = 0; i < 10; i++) {
+      keys.push(String.fromCharCode(97 + i)); // "a" - "j"
+      vals.push(i);
+      items[keys[keys.length - 1]] = vals[vals.length - 1];
+    }
+    // Clear the store.
+    that._ss.clear(function () {
+      // Size should be 0.
+      that._ss.size(function (size) {
+        aRunner.assertEqual(size, 0);
+        // Set the items.
+        that._ss.set(items, function (setItems) {
+          aRunner.assert(that._areObjectsEquivalent(setItems, items));
+          // New size should be number of items.
+          that._ss.size(function (newSize) {
+            aRunner.assertEqual(newSize, items.__count__);
+            aCallback(keys, vals, items);
+          });
+        });
+      });
+    });
+  },
+
+  _testGetIllegalKeys: function (ssMethodName) {
+    var that = this;
+    that._assertRaises(function () that._ss[ssMethodName](null));
+    that._assertRaises(function () that._ss[ssMethodName](1337));
+    that._assertRaises(function () that._ss[ssMethodName](false));
+  },
+
+  _testGetIllegalKeyArrays: function (ssMethodName) {
+    var that = this;
+    that._assertRaises(function () that._ss[ssMethodName]({}));
+    that._assertRaises(function () that._ss[ssMethodName]([undefined]));
+    that._assertRaises(function () that._ss[ssMethodName]([null]));
+    that._assertRaises(function () that._ss[ssMethodName]([1337]));
+    that._assertRaises(function () that._ss[ssMethodName]([false]));
+    that._assertRaises(function () that._ss[ssMethodName]([{}]));
   },
 
   _testSetAndGetArray: function (key, val, runner) {
-    function equiv(val1, val2) {
-      // We can't use instanceof Array here for the same reason we make our
-      // own _assertRaises function.  See the comment there.
-      if (typeof(val1.length) === "undefined" ||
-          typeof(val2.length) === "undefined") {
-        return false;
-      }
-      if (val1.length !== val2.length) {
-        return false;
-      }
-      try {
-        for (var i = 0; i < val1.length; i++) {
-          if (val1[i] !== val2[i]) {
-            return false;
-          }
-        }
-      }
-      catch (err) {
-        return false;
-      }
-      return true;
-    }
-    this._testSetAndGet(key, val, equiv, runner);
+    this._testSetAndGet(key, val, this._areArraysEquivalent, runner);
   },
 
   _testSetAndGetObject: function (key, val, runner) {
-    function equiv(val1, val2) {
-      if (typeof(val1) !== "object" || typeof(val2) !== "object") {
-        return false;
-      }
-      if (val1.__count__ !== val2.__count__) {
-        return false;
-      }
-      for (var prop in val1) {
-        if (!val2.hasOwnProperty(prop) || val2[prop] !== val1[prop]) {
-          return false;
-        }
-      }
-      return true;
-    }
-    this._testSetAndGet(key, val, equiv, runner);
+    this._testSetAndGet(key, val, this._areObjectsEquivalent, runner);
   },
 
   _testSetAndGetPrimitive: function (key, val, runner) {
-    function equiv(val1, val2) {
-      return val1 === val2;
-    }
-    this._testSetAndGet(key, val, equiv, runner);
+    this._testSetAndGet(key, val, function (v1, v2) (v1 === v2), runner);
   },
 
   _testSetAndGet: function (key, val, equivFunc, runner) {
@@ -114,25 +161,19 @@ var SimpleStorageTests = {
       runner.assert(setVal === val);
       that._ss.get(key, function (getKey, gottenVal) {
         runner.assertEqual(getKey, key);
-        try{
         runner.assert(equivFunc(gottenVal, val));
-        }catch (e) { throw "" + (val instanceof Array); }
         runner.success();
       });
     });
     runner.setTimeout(5000);
   },
 
-  // Legal calls
+  // Expected usage tests /////////////////////////////////////////////////////
 
   testInitMultipleTimes: function (runner) {
     for (var i = 0; i < 10; i++) {
       this._ss = new this._ss.constructor("http://example.com/my_jetpack");
     }
-  },
-
-  testSetAndGetNull: function (runner) {
-    this._testSetAndGetPrimitive(this._key, null, runner);
   },
 
   testSetAndGetNumber: function (runner) {
@@ -165,7 +206,7 @@ var SimpleStorageTests = {
 
   testSetAndGetObject: function (runner) {
     this._testSetAndGetObject(this._key,
-                              { hey: "now", 1: 2, huh: null },
+                              { hey: "now", 1: 2, huh: false },
                               runner);
   },
 
@@ -288,30 +329,351 @@ var SimpleStorageTests = {
     runner.setTimeout(5000);
   },
 
-  // Illegal calls
-
-  testSetWithUndefinedKey: function (runner) {
+  testForEachItem: function (runner) {
     var that = this;
-    that._assertRaises(function () that._ss.set(undefined, "no!"));
+    var gottenItems = {};
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.forEachItem(function (key, val) {
+        if (!key) {
+          runner.assert(that._areObjectsEquivalent(gottenItems, items));
+          runner.success();
+        }
+        else
+          gottenItems[key] = val;
+      });
+    });
+    runner.setTimeout(5000);
   },
 
-  testSetWithNullKey: function (runner) {
+  testForEachItemWithKeys: function (runner) {
     var that = this;
-    that._assertRaises(function () that._ss.set(null, "no!"));
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.forEachItem(targetKeys, function (key, val) {
+        if (!key) {
+          runner.assertEqual(targetKeys.length, 0);
+          runner.success();
+        }
+        else {
+          runner.assert(targetKeys.length > 0);
+          var targetKey = targetKeys.shift();
+          runner.assertEqual(key, targetKey);
+          runner.assert(val === items[key]);
+        }
+      });
+    });
+    runner.setTimeout(5000);
   },
 
-  testSetWithNonstringKey: function (runner) {
+  testForEachKey: function (runner) {
     var that = this;
-    that._assertRaises(function () that._ss.set(1337, "no!"));
+    var gottenKeys = [];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.forEachKey(function (key) {
+        if (!key) {
+          runner.assert(that._areArraysEquivalent(gottenKeys.sort(),
+                                                  keys.sort()));
+          runner.success();
+        }
+        else
+          gottenKeys.push(key);
+      });
+    });
+    runner.setTimeout(5000);
   },
 
-  testGetUndefinedKey: function (runner) {
+  testForEachValue: function (runner) {
     var that = this;
-    that._assertRaises(function () that._ss.get(undefined));
+    var gottenValues = [];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.forEachValue(function (val) {
+        if (val === null) {
+          runner.assert(that._areArraysEquivalent(gottenValues.sort(),
+                                                  vals.sort()));
+          runner.success();
+        }
+        else
+          gottenValues.push(val);
+      });
+    });
+    runner.setTimeout(5000);
   },
 
-  testGetNonstringKey: function (runner) {
+  testForEachValueWithKeys: function (runner) {
     var that = this;
-    that._assertRaises(function () that._ss.get(1337));
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.forEachValue(targetKeys, function (val) {
+        if (val === null) {
+          runner.assertEqual(targetKeys.length, 0);
+          runner.success();
+        }
+        else {
+          runner.assert(targetKeys.length > 0);
+          var targetKey = targetKeys.shift();
+          runner.assert(val === items[targetKey]);
+        }
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testGetAll: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.get(function (gottenItems) {
+        runner.assert(that._areObjectsEquivalent(items, gottenItems));
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testGetWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.get(targetKeys, function (gottenItems) {
+        runner.assertEqual(gottenItems.__count__, targetKeys.length);
+        targetKeys.forEach(function (key) {
+          runner.assert(gottenItems.hasOwnProperty(key));
+          runner.assert(gottenItems[key] === items[key]);
+        });
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testHas: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      // Test existing key.
+      that._ss.has("c", function (key, has) {
+        runner.assertEqual(key, "c");
+        runner.assert(has);
+        // Test nonexisting key.
+        that._ss.has("frobble", function (key, has) {
+          runner.assertEqual(key, "frobble");
+          runner.assert(!has);
+          runner.success();
+        });
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testHasWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.has(targetKeys, function (hasDict) {
+        runner.assertEqual(hasDict.__count__, targetKeys.length);
+        targetKeys.forEach(function (key) {
+          runner.assert(hasDict.hasOwnProperty(key));
+          runner.assert((key in items && hasDict[key] === true) ||
+                        (!(key in items) && hasDict[key] === false));
+        });
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testRemoveWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    var remainingItems = {};
+    that._insertTestItems(runner, function (keys, vals, items) {
+      // Calculate the items that should remain after removal.
+      for (var [key, val] in Iterator(items)) {
+        if (targetKeys.indexOf(key) < 0)
+          remainingItems[key] = val;
+      }
+      // Remove items of targetKeys.
+      that._ss.remove(targetKeys, function (removeKeys) {
+        runner.assert(that._areArraysEquivalent(removeKeys, targetKeys));
+        // Size should be right.
+        that._ss.size(function (newSize) {
+          runner.assertEqual(newSize, remainingItems.__count__);
+          // targetKeys should no longer be in the store.
+          that._ss.forEachValue(targetKeys, function (val) {
+            if (val === null) {
+              // Existing items should be remainingItems.
+              that._ss.get(function (allItems) {
+                runner.assert(that._areObjectsEquivalent(allItems,
+                                                         remainingItems));
+                runner.success();
+              });
+            }
+            else
+              runner.assert(val === undefined);
+          });
+        });
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testKeys: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.keys(function (gottenKeys) {
+        runner.assert(that._areArraysEquivalent(gottenKeys.sort(),
+                                                keys.sort()));
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testValues: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.values(function (gottenVals) {
+        runner.assert(that._areArraysEquivalent(gottenVals.sort(),
+                                                vals.sort()));
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testValuesWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.values(targetKeys, function (vKeys, gottenVals) {
+        runner.assert(that._areArraysEquivalent(vKeys, targetKeys));
+        runner.assertEqual(gottenVals.length, targetKeys.length);
+        for (var i = 0; i < targetKeys.length; i++) {
+          runner.assertEqual(gottenVals[i], items[targetKeys[i]]);
+        }
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testReduceItems: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.reduceItems([], function (arr, key, val) {
+        arr.push(key);
+        return arr;
+      }, function (reduction) {
+        runner.assert(that._areArraysEquivalent(reduction.sort(), keys.sort()));
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testReduceItemsWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.reduceItems(targetKeys, [], function (arr, key, val) {
+        arr.push(key);
+        return arr;
+      }, function (reduceKeys, reduction) {
+        runner.assert(that._areArraysEquivalent(reduceKeys, targetKeys));
+        runner.assert(that._areArraysEquivalent(reduction.sort(),
+                                                targetKeys.sort()));
+        runner.success();
+      });
+    });
+    runner.setTimeout(5000);
+  },
+
+  testMapItems: function (runner) {
+    var that = this;
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.mapItems(function (key, val) key, function (map) {
+        runner.assert(that._areArraysEquivalent(map.sort(), keys.sort()));
+        runner.success();
+      });
+    });
+    runner.setTimeout(115000);
+  },
+
+  testMapItemsWithKeys: function (runner) {
+    var that = this;
+    var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
+    that._insertTestItems(runner, function (keys, vals, items) {
+      that._ss.mapItems(targetKeys, function (key, val) key,
+        function (mapKeys, map) {
+          runner.assert(that._areArraysEquivalent(mapKeys, targetKeys));
+          runner.assertEqual(map.length, targetKeys.length);
+          for (var i = 0; i < targetKeys.length; i++) {
+            runner.assertEqual(map[i], targetKeys[i]);
+          }
+          runner.success();
+        });
+    });
+    runner.setTimeout(5000);
+  },
+
+  // Stress tests /////////////////////////////////////////////////////////////
+
+  testSetIllegalKeys: function (runner) {
+    var ss = this._ss;
+    this._assertRaises(function () ss.set(undefined, "no!"));
+    this._assertRaises(function () ss.set(null, "no!"));
+    this._assertRaises(function () ss.set(1337, "no!"));
+    this._assertRaises(function () ss.set(false, "no!"));
+    this._assertRaises(function () ss.set({ foo: "bar" }, "no!"));
+  },
+
+  testSetIllegalValues: function (runner) {
+    var ss = this._ss;
+    this._assertRaises(function () ss.set("no", null));
+    this._assertRaises(function () ss.set({ no: null }));
+  },
+
+  testGetIllegalKeys: function (runner) {
+    this._testGetIllegalKeys("get");
+    this._testGetIllegalKeyArrays("get");
+  },
+
+  testForEachItemIllegalKeys: function (runner) {
+    this._testGetIllegalKeyArrays("forEachItem");
+  },
+
+  testForEachValueIllegalKey: function (runner) {
+    this._testGetIllegalKeyArrays("forEachValue");
+  },
+
+  testHasIllegalKeys: function (runner) {
+    this._testGetIllegalKeys("has");
+    this._testGetIllegalKeyArrays("has");
+  },
+
+  testRemoveIllegalKeys: function (runner) {
+    this._testGetIllegalKeys("remove");
+    this._testGetIllegalKeyArrays("remove");
+  },
+
+  testMapItemsIllegal: function (runner) {
+    var ss = this._ss;
+    this._assertRaises(function () ss.mapItems());
+    this._assertRaises(function () ss.mapItems("no"));
+    this._assertRaises(function () ss.mapItems([123],
+                                               function () {},
+                                               function() {}));
+  },
+
+  testReduceItemsIllegal: function (runner) {
+    var ss = this._ss;
+    this._assertRaises(function () ss.reduceItems());
+    this._assertRaises(function () ss.reduceItems("no"));
+    this._assertRaises(function () ss.reduceItems([123],
+                                                  [],
+                                                  function () {},
+                                                  function() {}));
+  },
+
+  testValuesIllegalKeys: function (runner) {
+    this._testGetIllegalKeyArrays("values");
   }
 };

@@ -11,7 +11,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Audio Recorder
+ * The Original Code is Audio Encoder
  *
  * The Initial Developer of the Original Code is
  * Mozilla Labs
@@ -38,10 +38,11 @@
 #include "nsISupports.idl"
 #include "nsIAsyncInputStream.idl"
 
-[scriptable, uuid(cb319cdf-badd-4549-b4d5-a10ff2498063)]
-interface IAudioRecorder : nsISupports
+[scriptable, uuid(efaa62ff-c464-419e-b917-bb0798304890)]
+interface IAudioEncoder : nsISupports
 {
-    nsIAsyncInputStream start();
-	ACString startRecordToFile();
-    void stop();
+    ACString createOgg();
+    void appendFrames(in ACString frames);
+    void finalize();
 };
+

@@ -109,11 +109,42 @@ StatusBar.prototype = {
           iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
           self._injectPanelWindowFunctions(iframe);
 
+          // Hack the appearance of the iframe to make it look more like
+          // a statusbarpanel.  Unfortunately, a limitation in Gecko causes
+          // all HTML documents to have a white background, even when their
+          // background is specified as transparent, so we have to jump
+          // through hoops to give them statusbarpanel-colored backgrounds.
           if (Extension.OS == "Darwin") {
             iframe.contentDocument.documentElement.style.MozAppearance =
               "statusbar";
             iframe.contentDocument.documentElement.style.marginTop = "-1px";
             iframe.contentDocument.documentElement.style.height = "100%";
+          }
+          else if (Extension.OS == "WINNT") {
+            // Setting the document element's -moz-appearance to statusbar
+            // adds 1px left- and right-hand borders, which we can accommodate
+            // with padding on the document element (or margin on the body),
+            // but that causes panels to have less space than the amount
+            // they specify via the initial width or by changing the width
+            // CSS property.
+
+            // We could add 2px to the initial width to accommodate the borders,
+            // but we can't easily add it to the value of the CSS property,
+            // which might not be in pixels, so instead we copy the background
+            // styles from the statusbar into the iframe body and then add a bit
+            // of top and bottom margin to the iframe so it doesn't overlap
+            // the top and bottom borders of the statusbar.
+
+            // That doesn't give it native style, but it's close.
+
+            //iframe.contentDocument.documentElement.style.MozAppearance =
+            //  "statusbar";
+            //iframe.contentDocument.documentElement.style.padding = "0 1px";
+            //iframe.contentDocument.documentElement.style.height = "100%";
+            self._copyBackground(iframe.parentNode,
+                                 iframe.contentDocument.body);
+            iframe.style.marginTop = "2px";
+            iframe.style.marginBottom = "2px";
           }
           else {
             self._copyBackground(iframe.parentNode,

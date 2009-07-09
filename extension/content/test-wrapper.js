@@ -402,6 +402,21 @@ function testReadOnlyDomWrapper() {
 if (this.window)
   testReadOnlyDomWrapper();
 
+// SEAL TESTS
+
+(function testSeal() {
+   var obj = {boop: 1};
+   seal(obj);
+   assertEqual(obj.boop, 1);
+   assertThrows(
+     function() {
+       obj.boop = 5;
+     },
+     "Error: obj.boop is read-only"
+     );
+   assertEqual(obj.boop, 1);
+ })();
+
 // MEMORY PROFILING TESTS
 
 function runMemoryProfilingTest(func, namedObjects) {
@@ -462,18 +477,24 @@ function memoryProfilingTests(global) {
   var leftToVisit = [namedObjects[name] for (name in namedObjects)];
   if (leftToVisit.length == 0)
     leftToVisit = getGCRoots();
+  var STANDARD_PROPERTY_INFO = false;
+  var ALTERNATE_PROPERTY_INFO = true;
+  var classProps = {Function: STANDARD_PROPERTY_INFO,
+                    Object: STANDARD_PROPERTY_INFO};
   while (leftToVisit.length > 0) {
     var id = leftToVisit.pop();
     if (!(id in visited)) {
       visited[id] = true;
       visitedCount++;
       var info = getObjectInfo(id);
-      //getObjectProperties(id);
       if (info) {
         leftToVisit = leftToVisit.concat(info.children);
-//        if (info.name && info.filename &&
-//            info.filename.indexOf("http") == "0")
-//          print(JSON.stringify(info));
+        if (info.nativeClass in classProps)
+          getObjectProperties(id, classProps[info.nativeClass]);
+
+        //        if (info.name && info.filename &&
+        //            info.filename.indexOf("http") == "0")
+        //          print(JSON.stringify(info));
       }
     }
   }

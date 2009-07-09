@@ -36,36 +36,63 @@
 
 // = Audio =
 //
-// This module implements a simple audio recording interface.
-// A JEP for it has not been created yet.
+// This module implements a simple audio recording interface as proposed in
+// [[https://wiki.mozilla.org/Labs/Jetpack/JEP/18|JEP 18]].  It depends
+// on a binary component that is included with Jetpack for the low-level
+// recording and encoding routines.
 //
 
+var Re;
 var EXPORTED_SYMBOLS = ["Audio"];
 
-var Cc = Components.classes;
-var Ci = Components.interfaces;
-var CC = Components.Constructor;
-var Re = Cc["@labs.mozilla.com/audio/recorder;1"].
-            getService(Ci.IAudioRecorder);
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Fi = Components.Constructor(
+            "@mozilla.org/file/local;1",
+            "nsILocalFile",
+            "initWithPath");
 
 function Audio() {
-    this.recorder = {
-        start: function() {
-            Re.start();
-        },
+    // Don't fail if the binary audio component is missing.
+    try {
+        Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+            getService(Ci.IAudioRecorder);
+        this.recorder = {};
+        this.isRecording = false;
+    } catch (e) {
+        return {};
+    }
+}
+Audio.prototype = {
+	// === {{{Audio.recordToFile()}}} ===
+    //
+    // Starts recording audio and encoding it into
+    // and Ogg/Vorbis file.
+    //
+    recordToFile: function() {
+        this._path = Re.startRecordToFile();
+		this.isRecording = true;
+    },
 
-        stop: function() {
-            let fPath = Re.stop();
-            let lFile = CC("@mozilla.org/file/local;1",
-                    "nsILocalFile", "initWithPath");
-            let src = new lFile(fPath);
-            let dst = getOrCreateDirectory();
+    // === {{{Audio.stopRecording()}}} ===
+    //
+    // Stops recording. If recording was started
+    // with {{{recordToFile}}} then this routine will
+    // return the full (local) path of the Ogg/Vorbis
+    // file that the audio was saved to.
+    //
+    stopRecording: function() {
+        Re.stop();
+		this.isRecording = false;
+		
+        let src = new Fi(this._path);
+        let dst = getOrCreateDirectory();
 
-            src.moveTo(dst, '');
-            dst.append(src.leafName);
-            return dst.path;
-        }
-    };
+        src.moveTo(dst, '');
+        dst.append(src.leafName);
+
+        return dst.path;
+    }
 }
 
 function ensureDirectoryExists(aFile) {
@@ -91,4 +118,3 @@ function getOrCreateDirectory() {
 
     return file;
 }
-

@@ -37,6 +37,7 @@
 #include "tcb.h"
 
 static JSFunctionSpec TCB_global_functions[] = {
+  JS_FS("seal",           TCB_seal,           1, 0, 0),
   JS_FS("print",          TCB_print,          1, 0, 0),
   JS_FS("stack",          TCB_stack,          0, 0, 0),
   JS_FS("lookupProperty", TCB_lookupProperty, 2, 0, 0),
@@ -53,6 +54,24 @@ JSClass TCB_global_class = {
   JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub,
   JSCLASS_NO_OPTIONAL_MEMBERS
 };
+
+// This native JS function "seals" the given object, preventing it
+// from being modified. This function may or may not be identical to
+// ES5's freeze().
+
+extern JSBool TCB_seal(JSContext *cx, JSObject *obj, uintN argc,
+                       jsval *argv, jsval *rval) 
+{
+  JSObject *target;
+  JSBool deep = JS_FALSE;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "o/b", &target, &deep))
+    return JS_FALSE;
+
+  *rval = JSVAL_VOID;
+
+  return JS_SealObject(cx, target, deep);
+}
 
 // This native JS function prints the given string to the console.
 

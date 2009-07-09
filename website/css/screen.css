@@ -133,11 +133,19 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 	color: #555;
 }
 
+.news {
+	font-family: 'DroidSans'; 
+	font-weight: normal; 
+	font-size: 14px; 
+	letter-spacing: -0.2px;
+	margin-right: 10px;
+	color: #454545;
+}
+
 .introBg {
 
 	font-family: 'DroidSans';
 	margin: 20px auto;
-	margin-top: -60px;
 	max-width: 800px;
 	text-align: left;
 	padding: 20px 40px;
@@ -170,6 +178,22 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 	border-bottom: 3px solid #adb6ba;
 	-moz-border-bottom-colors:#adb6ba #e7eaec #e7eaec;
 	background-color: #fff;
+
+}
+
+.newsBg {
+
+	font-family: 'DroidSans';
+	margin: 20px auto;
+	max-width: 800px;
+	text-align: left;
+	padding: 10px 40px;
+	width: 800px;
+	-moz-border-radius: 0.25em;
+	-webkit-border-radius: 0.25em;
+	border: 1px solid rgba(132, 52, 46, 0.6);
+	-moz-box-shadow: inset rgba(0, 0, 0, 0.2) 0 -2px 4px, inset rgba(0, 0, 0, 0.2) 0 1px 2px;
+	background-color: rgba(159, 66, 59, 0.1);
 
 }
 
@@ -317,6 +341,50 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 	margin-bottom: -5px;
 	margin-right: 10px;
 }
+
+
+
+/* ------- MENU ------- */
+
+#menu {
+	margin: 20px auto;
+	margin-top: -60px;
+	max-width: 800px;
+	padding: 4px 40px;
+	width: 800px;
+	text-align: left;
+	-moz-border-radius: 0.25em;
+	-webkit-border-radius: 0.25em;
+	border-top: 1px solid #adb6ba;
+	border-left: 1px solid #adb6ba;
+	border-right: 1px solid #adb6ba;
+	border-bottom: 3px solid #adb6ba;
+	-moz-border-bottom-colors:#adb6ba #e7eaec #e7eaec;
+	background-color: #fff;
+}
+
+.menuItem {
+	margin-right: 30px;
+	font-size: 14px;
+	text-shadow: 1px 1px 1px rgba(173, 182, 186, 0.6);
+	padding: 5px 8px 6px 8px;
+}
+
+.menuOn {
+	margin-right: 30px;
+	font-size: 14px;
+	text-shadow: 1px 1px 1px rgba(173, 182, 186, 1);
+	background-color: rgba(173, 182, 186, 0.3);
+	padding: 5px 8px 6px 8px;
+}
+
+.menuItem a {color: #9f423b; text-decoration: none;}
+.menuItem a:hover {color: #9f423b; text-decoration: none; border-bottom: 1px dotted #9f423b;}
+
+
+.menuOn a {color: #345b7d; text-decoration: none;}
+.menuOn a:hover {color: #345b7d; text-decoration: none; border-bottom: 1px dotted #345b7d;}
+
 
 /* ------- BUTTON ------- */
 

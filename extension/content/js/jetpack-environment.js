@@ -162,6 +162,9 @@ window.addLazyLoaders(
    "js/notifications.js": [
      "Notifications"
    ],
+   "js/selection.js": [
+     "Selection"
+   ],
    "js/slidebar.js": [
      "SlideBar"
    ],
@@ -291,33 +294,19 @@ JetpackEnv.setFutures(
      return {require: loader.require};
    },
 
+   "jetpack.selection": function(context) Selection.makeExported(context),
+
    "jetpack.storage.simple": function (context) {
-     Components.utils.import("resource://jetpack/modules/simple-storage.js");
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
      //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
      //  so it should be unique to this feature.
-     var ss = new SimpleStorage(context.srcUrl);
-     context.addUnloader({
-       unload: function () { ss.teardown(); }
-     });
+     var ss = new s.SimpleStorage(context.srcUrl);
+     context.addUnloader({ unload: function () ss.teardown() });
      return ss;
    },
 
-   "jetpack.slideBar": function(context) {
-     // Make sure the SlideBar is ready for this context
-     SlideBar.init();
-     SlideBar.load(context);
-
-     // When unloading the context, inform SlideBar which one it is
-     context.addUnloader(
-       {unload: function() {
-          SlideBar.unload(context);
-        }});
-
-     // Export functions while letting SlideBar know which context is used
-     return {
-       append: function(args) { SlideBar.append(context, args); }
-     };
-   },
+   "jetpack.slideBar": function(context) SlideBar.makeExported(context),
 
    "jetpack.audio": function(context) {
        Components.utils.import("resource://jetpack/modules/audio.js");

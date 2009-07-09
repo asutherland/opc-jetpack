@@ -46,14 +46,25 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackEnv
 
-  // ==== {{{SlideBar.append}}} ====
-  // Append a new feature to SlideBar for the context and feature args
-  append: function SlideBar_append(context, args) {
-    // Remember which features have been appended
-    context.slideBar.appends.push(args);
+  // ==== {{{SlideBar.makeExported}}} ====
+  // Create an object to export for this new JetpackContext
+  makeExported: function Selection_makeExported(context) {
+    // Prepare SlideBar for the context's listeners
+    T.load(context);
 
-    // Add this new feature to all open windows
-    T.windows.forEach(function(window) T.addFeature(context, args, window));
+    // Add items for Jetpack features to access
+    let exportObj = {};
+
+    // Append a new feature to SlideBar for the feature args
+    exportObj.append = function(args) {
+      // Remember which features have been appended
+      context.slideBar.appends.push(args);
+
+      // Add this new feature to all open windows
+      T.windows.forEach(function(window) T.addFeature(context, args, window));
+    };
+
+    return exportObj;
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -69,9 +80,20 @@ let SlideBar = let (T = {
     // We should only run once, so set ourselves to do nothing
     T.init = function() {};
 
+    try {
+      // This should always throw because we either get not avail or no file
+      Components.utils.import("resource://personas");
+    }
+    catch(ex) {
+      // We'll get NS_ERROR_FILE_NOT_FOUND if Personas /is/ installed
+      T.hasPersonas = ex.name != "NS_ERROR_NOT_AVAILABLE";
+    }
+
     // Listen in on when the runtime and browsers unload
     JetpackRuntime.addUnloader(T.uninit);
     T.watcher = new BrowserWatcher(T);
+
+    return T;
   },
 
   // ==== {{{SlideBar.uninit()}}} ====
@@ -92,6 +114,11 @@ let SlideBar = let (T = {
   // ==== {{{SlideBar.load()}}} ====
   // Prepare the JetpackContext for use with SlideBar
   load: function SlideBar_load(context) {
+    // Hook up the unloader to pass in the context
+    context.addUnloader({
+      unload: function() T.unload(context)
+    });
+
     // Keep track of all contexts to add their features to new windows
     T.contexts.push(context);
 
@@ -134,20 +161,27 @@ let SlideBar = let (T = {
     // Keep track of all windows to add features to them later
     T.windows.push(window);
 
-    let doc = window.document.getElementById("slidebar").contentWindow.document;
+    let slideBar = window.document.getElementById("slidebar");
+    let doc = slideBar.contentWindow.document;
     let content = window.document.getElementById("_browser");
 
     // Add an image as a target area for the SlideBar
     let slideButton = window.document.createElement("slideButton");
     slideButton.style.height = slideButton.style.width = "11px";
     slideButton.style.padding = "7px 2px";
-    slideButton.style.width = "20px"; 
-    
+    slideButton.style.width = "20px";
+
     slideButton.style.backgroundRepeat = "no-repeat";
     slideButton.style.backgroundPosition = "center";
 
     let tabStrip = window.document.getElementById("content").mStrip;
     tabStrip.insertBefore(slideButton, tabStrip.firstChild);
+
+    // Push down the top of the SlideBar browser element so that it's not
+    // visible, so Personas can shine through
+    if (T.hasPersonas)
+      slideBar.style.marginTop = tabStrip.clientHeight + "px";
+    slideBar.style.visibility = "visible";
 
     // == Window ==
     // Extend the browser window with custom SlideBar properties such as its
@@ -217,6 +251,31 @@ let SlideBar = let (T = {
         size: 0
       },
 
+      // ==== {{{Window.notifyFeature()}}} ====
+      // Indicate that the provided feature has something to notify
+      notifyFeature: function Window_notifyFeature(feature) {
+        // Don't bother notifying for something that is already shown
+        if (W.shown == feature)
+          return;
+
+        // Open if the icons aren't being shown
+        if (W.state.size < 32)
+          W.slide(32, true);
+
+        // Highlight the notified feature
+        feature.icon.className = "notified";
+
+        // Animate the icon for ~1 second
+        let icon = feature.cbArgs.icon;
+        let frame = 0;
+        (function updateIcon() {
+          let deg = Math.round(25 * Math.sin(frame / 15 * Math.PI));
+          icon.style.MozTransform = "rotate(" + deg + "deg)";
+          if (frame++ < 30)
+            setTimeout(updateIcon, 33);
+        })();
+      },
+
       // ==== {{{Window.onMouseMove()}}} ====
       // Handle the user moving the mouse over the browser content area
       onMouseMove: function Window_onMouseMove(event) {
@@ -275,11 +334,15 @@ let SlideBar = let (T = {
         // Remember which feature is being shown
         W.shown = feature;
 
-        // Show the feature and slide to the minimal view
+        // Show the feature and slide to the feature's width and persist
         if (W.shown) {
+          // Automatically reload the content on select if necessary
+          if (feature.args.autoReload)
+            feature.cbArgs.contentDocument.reload();
+
           W.shown.icon.className = "selected";
           W.shown.iframe.className = "selected";
-          W.slide(32);
+          feature.cbArgs.slide(feature.iframeWidth, feature.args.persist);
 
           // Let the feature know it's been selected
           T.catchCall(feature.args, "onSelect", feature.cbArgs);
@@ -323,7 +386,7 @@ let SlideBar = let (T = {
         // If we already have a timer running, it'll use the updated values
         if (W.ease.timer != null)
           return;
-    
+
         // Create a new timer to slide from "start" to "end"
         W.ease.timer = setInterval(function() {
           // Figure out how much we've progressed since starting
@@ -332,19 +395,19 @@ let SlideBar = let (T = {
             // We need to finish up, so no need for the timer anymore
             clearInterval(W.ease.timer);
             W.ease.timer = null;
-    
+
             // We might have exceeded our time, so pretend we're at the end
             prog = 1;
           }
-    
+
           // Overshoot some when sliding
           let scale = Math.PI / 1.8;
           prog = Math.sin(scale * prog) / Math.sin(scale);
-    
+
           // Calculate the new position to shift things
           W.ease.curr = W.ease.curr.map(function(curr, idx)
             prog * W.ease.end[idx] + (1 - prog) * W.ease.start[idx]);
-    
+
           W.content.style.marginLeft = W.ease.curr[0] + "px";
           W.content.style.marginRight = -W.ease.curr[1] + "px";
         }, 30);
@@ -388,6 +451,10 @@ let SlideBar = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// SlideBar
 
+  // ==== {{{SlideBar.hasPersonas}}} ====
+  // Flag to indicate if the user has Personas installed
+  hasPersonas: false,
+
   // ==== {{{SlideBar.addFeature()}}} ====
   // Add the appended options for the context to the window
   addFeature: function SlideBar_addFeature(context, args, window) {
@@ -400,17 +467,57 @@ let SlideBar = let (T = {
       // Remember the original args used to append the feature
       args: args,
 
-      // ==== {{{Feature.cbArgs()}}} ====
-      // Provide a function object for all SlideBar callbacks
-      cbArgs: function Feature_cbArgs(options) {
-        options = options || {};
-
-        let size = Number(options.size);
-        if (size > 0)
-          winBar.slide(options.size + 32, options.persist);
-        else
+      // ==== {{{Feature.cbArgs}}} ====
+      // Provide an object for all SlideBar callbacks
+      cbArgs: {
+        // ==== {{{Feature.cbArgs.close()}}} ====
+        // Feature specific function to close the SlideBar
+        close: function() {
           winBar.slide(0);
+        },
+
+        // ==== {{{Feature.cbArgs.contentDocument}}} ====
+        // Alias to the actual document of the iframe
+        get contentDocument() {
+          let doc = F.iframe.contentDocument;
+          // ==== {{{Feature.cbArgs.contentDocument.reload()}}} ====
+          // Reset the content to the original html/url appended
+          doc.reload = function() doc.location.replace(F.contentUrl);
+          return doc;
+        },
+
+        // ==== {{{Feature.cbArgs.icon}}} ====
+        // Alias to the actual img node of the icon
+        get icon() {
+          let icon = F.icon.firstChild;
+          // ==== {{{Feature.cbArgs.icon.reload()}}} ====
+          // Reset the icon to the original icon url appended
+          icon.reload = function() icon.src = F.iconUrl;
+          return icon;
+        },
+
+        // ==== {{{Feature.cbArgs.notify()}}} ====
+        // Let the feature notify itself in the SlideBar
+        notify: function() {
+          winBar.notifyFeature(F);
+        },
+
+        // ==== {{{Feature.cbArgs.slide()}}} ====
+        // Feature specific function to slide the SlideBar
+        slide: function(size, options) {
+          options = options || {};
+          size = size || 0;
+          let persist = typeof options == "boolean" ? options : options.persist;
+
+          // Only do something if we have a valid size
+          if (size > 0)
+            winBar.slide(size + 32, persist);
+        },
       },
+
+      // ==== {{{Feature.contentUrl}}} ====
+      // Remember what url to load for the content frame
+      contentUrl: "about:blank",
 
       // ==== {{{Feature.context}}} ====
       // Remember which context the feature belongs to
@@ -420,50 +527,57 @@ let SlideBar = let (T = {
       // Icon object for the minimal SlideBar view
       icon: null,
 
+      // ==== {{{Feature.iconUrl}}} ====
+      // Remember what url to load for the icon
+      iconUrl: "chrome://jetpack/content/gfx/jetpack_32x32.png",
+
       // ==== {{{Feature.iframe}}} ====
       // Iframe object for the expanded SlideBar view
       iframe: null,
+
+      // ==== {{{Feature.iframeWidth}}} ====
+      // Remember how big to make the iframe
+      iframeWidth: 200,
 
       // ==== {{{Feature.window}}} ====
       // Remember which window the feature belongs to
       window: window
     };
 
-    // ==== {{{Feature.cbArgs.icon}}}
-    // Alias to the actual img node of the icon
-    F.cbArgs.__defineGetter__("icon", function() F.icon.firstChild);
-
-    // ==== {{{Feature.cbArgs.doc}}}
-    // Alias to the actual document of the iframe
-    F.cbArgs.__defineGetter__("doc", function() F.iframe.contentDocument);
+    // Figure out what icon and content to load then save them
+    if (args.icon)
+      F.iconUrl = args.icon;
+    if (args.html)
+      F.contentUrl = "data:text/html," + encodeURI(args.html);
+    else if (args.url)
+      F.contentUrl = args.url;
+    if (args.width)
+      F.iframeWidth = args.width;
 
     let makeEl = function(type) winBar.slideDoc.createElement(type);
 
     // Add the icon for the feature
-    F.icon = winBar.icons.appendChild(makeEl("div"));
-    let img = F.icon.appendChild(makeEl("img"));
-    img.src = args.icon || "chrome://jetpack/content/gfx/jetpack_32x32.png";
-
-    // Figure out what to load for the iframe
-    let url = "about:blank";
-    if (args.html)
-      url = "data:text/html," + encodeURI(args.html);
-    else if (args.url)
-      url = args.url;
+    let img = winBar.slideDoc.createElement("img");
+    img.src = F.iconUrl;
+    F.icon = winBar.slideDoc.createElement("div");
+    F.icon.appendChild(img);
+    winBar.icons.appendChild(F.icon);
 
     // Add the iframe for the feature
-    F.iframe = winBar.iframes.appendChild(makeEl("iframe"));
-    F.iframe.src = url;
-    
-    // Set the width of the iframe, if one is passed in.
-    if( args.width ){
-      // The 5 is for automatic padding.
-      // TODO: Figure out a non-magic number way of doing this.
-      F.iframe.style.width = args.width-8;
-    }
+    F.iframe = winBar.slideDoc.createElementNS("http://www.mozilla.org/" +
+      "keymaster/gatekeeper/there.is.only.xul", "iframe");
+    F.iframe.setAttribute("type", "content");
+    F.iframe.setAttribute("src", F.contentUrl);
+    F.iframe.style.width = F.iframeWidth + "px";
+    winBar.iframes.appendChild(F.iframe);
 
-    // Track when the icon is selected
-    F.icon.addEventListener("click", function() winBar.selectFeature(F), true);
+    F.icon.addEventListener("click", function() {
+      // Track when the icon is selected
+      winBar.selectFeature(F);
+
+      // Let the feature know it was clicked
+      T.catchCall(args, "onClick", F.cbArgs);
+    }, true);
 
     // Track when the iframe loads
     F.iframe.addEventListener("DOMContentLoaded", function iframeLoaded() {
@@ -532,4 +646,4 @@ let SlideBar = let (T = {
     // Make a copy of the array as it might change as we remove features
     features.slice().forEach(function(feature) T.removeFeature(feature));
   }
-}) T;
+}) T.init();

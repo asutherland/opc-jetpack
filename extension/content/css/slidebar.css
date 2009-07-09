@@ -27,6 +27,11 @@
   background-color: rgba(255,255,255,.3);
 }
 
+#icons div.notified {
+  opacity: 1;
+  background-color: rgba(200, 200, 255, .6);
+}
+
 #icons img {
   max-height: 32px;
   max-width: 32px;
@@ -44,15 +49,14 @@
 }
 
 #iframes iframe {
+  background-color: rgba(255, 255, 255, .3);
   border: 0;
+  display: none;
+  height: 100%;
   position: absolute;
   top: 0;
-  visibility: hidden;
-  background-color: rgba(255,255,255,.3);
-  height: 100%;
-  padding: 5px;
 }
 
 #iframes iframe.selected {
-  visibility: visible;
+  display: block;
 }
