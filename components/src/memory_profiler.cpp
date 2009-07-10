@@ -209,26 +209,32 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
 }
 
 static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
-                               jsid targetPropId, JSObject *target,
-                               JSContext *targetCx)
+                               jsid targetPropId, const char *name,
+                               JSObject *target, JSContext *targetCx)
 {
-  jsval id;
-  if (!JS_IdToValue(targetCx, targetPropId, &id)) {
-    JS_ReportError(cx, "JS_IdToValue() failed.");
-    return JS_FALSE;
-  }
-
   jsval value;
-  JSObject *valueObj;
-  if (!JS_LookupPropertyWithFlagsById(
-        targetCx,
-        target,
-        targetPropId,
-        JSRESOLVE_DETECTING,
-        &valueObj,
-        &value)) {
-    JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
-    return JS_FALSE;
+  if (name == NULL) {
+    JSObject *valueObj;
+    if (!JS_LookupPropertyWithFlagsById(
+          targetCx,
+          target,
+          targetPropId,
+          JSRESOLVE_DETECTING,
+          &valueObj,
+          &value)) {
+      JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
+      return JS_FALSE;
+    }
+  } else {
+    if (!JS_LookupPropertyWithFlags(
+          targetCx,
+          target,
+          name,
+          JSRESOLVE_DETECTING,
+          &value)) {
+      JS_ReportError(cx, "JS_LookupPropertyWithFlags() failed.");
+      return JS_FALSE;
+    }
   }
 
   if (JSVAL_IS_OBJECT(value)) {
@@ -247,15 +253,26 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
   } else
     value = JSVAL_NULL;
 
-  if (!JS_DefinePropertyById(
-        cx, propInfo,
-        // TODO: Is it OK to use this ID from a different JSRuntime?
-        targetPropId,
-        value,
-        NULL,
-        NULL,
-        JSPROP_ENUMERATE))
-    return JS_FALSE;
+  if (name == NULL) {
+    if (!JS_DefinePropertyById(
+          cx, propInfo,
+          // TODO: Is it OK to use this ID from a different JSRuntime?
+          targetPropId,
+          value,
+          NULL,
+          NULL,
+          JSPROP_ENUMERATE))
+      return JS_FALSE;
+  } else {
+    if (!JS_DefineProperty(
+          cx, propInfo,
+          name,
+          value,
+          NULL,
+          NULL,
+          JSPROP_ENUMERATE))
+      return JS_FALSE;
+  }
 
   return JS_TRUE;
 }
@@ -277,7 +294,7 @@ static JSBool getPropertiesInfo2(JSContext *cx, JSObject *propInfo,
       break;
 
     if (!copyPropertyInfo(cx, propInfo,
-                          iterId, target,
+                          iterId, NULL, target,
                           targetCx))
       return JS_FALSE;
   }
@@ -305,7 +322,7 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
 
   for (int i = 0; i < ids->length; i++) {
     if (!copyPropertyInfo(cx, propInfo,
-                          ids->vector[i], target,
+                          ids->vector[i], NULL, target,
                           targetCx)) {
       success = JS_FALSE;
       break;
