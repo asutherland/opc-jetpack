@@ -294,21 +294,28 @@ JetpackEnv.setFutures(
      return {require: loader.require};
    },
 
-   "jetpack.selection": function(context) Selection.makeExported(context),
+   "jetpack.selection": function(context) {
+     Selection.makeExported(context);
+   },
 
    "jetpack.storage.simple": function (context) {
      var s = {};
-     Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
-     //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
-     //  so it should be unique to this feature.
+     Components.utils.import("resource://jetpack/modules/simple-storage.js",
+                             s);
+
+     // TODO: context.srcUrl or context.url?  We hash this as the
+     // feature's ID, so it should be unique to this feature. -adw
      return new s.SimpleStorage(context.srcUrl);
    },
 
-   "jetpack.slideBar": function(context) SlideBar.makeExported(context),
+   "jetpack.slideBar": function(context) {
+     SlideBar.makeExported(context);
+   },
 
    "jetpack.audio": function(context) {
-       Components.utils.import("resource://jetpack/modules/audio.js");
-       return new AudioModule();
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/audio.js", s);
+     return new s.AudioModule();
    }
   });
 
