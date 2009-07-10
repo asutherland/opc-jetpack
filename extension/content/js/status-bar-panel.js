@@ -35,7 +35,7 @@ StatusBar.prototype = {
   _injectPanelWindowFunctions: function _injectPanelWindowFunctions(iframe) {
     var functions = {
       close: function close() {
-        iframe.parentNode.removeChild(iframe);
+        iframe.parentNode.parentNode.removeChild(iframe.parentNode);
       }
     };
 
@@ -76,6 +76,7 @@ StatusBar.prototype = {
     var self = this;
     var document = window.document;
     var statusBar = document.getElementById("status-bar");
+    var statusBarPanel = document.createElement("statusbarpanel");
     var iframe = document.createElement("iframe");
     MemoryTracking.track(iframe, "StatusBarPanel");
     iframe.setAttribute("type", "content");
@@ -115,39 +116,46 @@ StatusBar.prototype = {
           // background is specified as transparent, so we have to jump
           // through hoops to give them statusbarpanel-colored backgrounds.
           if (Extension.OS == "Darwin") {
+            // For Mac, we accomplish the effect by making the iframe
+            // appear like a statusbar (plus a few margin/height tweaks).
             iframe.contentDocument.documentElement.style.MozAppearance =
               "statusbar";
             iframe.contentDocument.documentElement.style.marginTop = "-1px";
             iframe.contentDocument.documentElement.style.height = "100%";
           }
           else if (Extension.OS == "WINNT") {
-            // Setting the document element's -moz-appearance to statusbar
-            // adds 1px left- and right-hand borders, which we can accommodate
-            // with padding on the document element (or margin on the body),
-            // but that causes panels to have less space than the amount
-            // they specify via the initial width or by changing the width
-            // CSS property.
+            // For Windows, setting the document element's -moz-appearance
+            // to statusbar adds 1px left- and right-hand borders, which we
+            // can accommodate with padding on the document element (or margin
+            // on the body), but that causes panels to have less space than
+            // the amount they specify via the initial width or by changing
+            // the width CSS property.
 
             // We could add 2px to the initial width to accommodate the borders,
             // but we can't easily add it to the value of the CSS property,
             // which might not be in pixels, so instead we copy the background
-            // styles from the statusbar into the iframe body and then add a bit
-            // of top and bottom margin to the iframe so it doesn't overlap
-            // the top and bottom borders of the statusbar.
-
-            // That doesn't give it native style, but it's close.
+            // styles from the statusbar into the iframe body.  For Vista
+            // we also have to add a margin to the top of the iframe so it
+            // doesn't overlap the border of the outer statusbar.
 
             //iframe.contentDocument.documentElement.style.MozAppearance =
             //  "statusbar";
             //iframe.contentDocument.documentElement.style.padding = "0 1px";
             //iframe.contentDocument.documentElement.style.height = "100%";
-            self._copyBackground(iframe.parentNode,
+            self._copyBackground(iframe.parentNode.parentNode,
                                  iframe.contentDocument.body);
             iframe.style.marginTop = "2px";
-            iframe.style.marginBottom = "2px";
+          }
+          else if (Extension.OS == "Linux") {
+            // For Linux, all we have to do is copy the background styles
+            // from the statusbar into the iframe body.
+            self._copyBackground(iframe.parentNode.parentNode,
+                                 iframe.contentDocument.body);
           }
           else {
-            self._copyBackground(iframe.parentNode,
+            // If this is some other operating system, then copy the background
+            // styles and hope for the best.
+            self._copyBackground(iframe.parentNode.parentNode,
                                  iframe.contentDocument.body);
           }
 
@@ -177,7 +185,8 @@ StatusBar.prototype = {
         },
         true
       );
-      statusBar.appendChild(iframe);
+      statusBarPanel.appendChild(iframe);
+      statusBar.appendChild(statusBarPanel);
     }
 
     return iframe;
@@ -251,8 +260,11 @@ StatusBar.prototype = {
                    jQuery.event.remove(elem);
                }
 
-             if (panel.iframe.parentNode)
-               panel.iframe.parentNode.removeChild(panel.iframe);
+             // Remove the statusbarpanel containing the iframe from the doc,
+             // which has the effect of removing the iframe as well.
+             if (panel.iframe.parentNode && panel.iframe.parentNode.parentNode)
+               panel.iframe.parentNode.parentNode.
+                     removeChild(panel.iframe.parentNode);
            }
          }
         }));
