@@ -425,6 +425,39 @@ static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
   return JS_TRUE;
 }
 
+static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
+                             jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+  bool useGetPropertiesInfo2 = false;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (!JSVAL_IS_STRING(argv[1])) {
+    JS_ReportError(cx, "Must supply a string as second parameter.");
+    return JS_FALSE;
+  }
+
+  char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+    JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+    *rval = OBJECT_TO_JSVAL(info);
+
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
+    JSContext *targetCx = tracingState.tracer.context;
+
+    if (!copyPropertyInfo(cx, info,
+                          NULL, name, target,
+                          targetCx))
+      return JS_FALSE;
+  } else
+    *rval = JSVAL_NULL;
+
+  return JS_TRUE;
+}
+
 static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
                                jsval *argv, jsval *rval)
 {
@@ -625,6 +658,7 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
+  JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),
   JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
   JS_FS_END
 };
