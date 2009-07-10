@@ -308,7 +308,7 @@ JetpackEnv.setFutures(
 
    "jetpack.audio": function(context) {
        Components.utils.import("resource://jetpack/modules/audio.js");
-       return new Audio();
+       return new AudioModule();
    }
   });
 
