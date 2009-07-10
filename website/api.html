@@ -237,63 +237,7 @@ jetpack.notifications.show({title: 'hai2u',
 jetpack.future.import("slideBar");
       </div>
       
-    </div></div><div class="properties"><div name="jetpack.slideBar.append" class="documentation"><div class="heading">jetpack.slideBar.append(options)</div><div class="content"><h2>Arguments</h2><div class="arguments"><div class="argument"><span class="name">options</span><span class="types"><span class="type">Options Object</span></span><span class="description"><div class="option"><span class="name">icon</span><span class="types"><span class="type">String</span></span><span class="description">URI of the initial icon to show when
-          the SlideBar is open.</span></div><div class="option"><span class="name">html</span><span class="types"><span class="type">String</span></span><span class="description">The initial HTML contents of the new
-          SlideBar Feature. This can be a plain string or an E4X xml
-          node.</span></div><div class="option"><span class="name">url</span><span class="types"><span class="type">URL</span></span><span class="description">The URL to load HTML contents for the
-          SlideBar Feature. If the html property is set, it will be used instead
-          of this.</span></div><div class="option"><span class="name">width</span><span class="types"><span class="type">Number</span></span><span class="description">Size of the content area to render
-          <tt>html</tt> or <tt>url</tt>, in pixels.</span></div><div class="option"><span class="name">onSelect</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function invoked
-          when the icon is clicked and selected. If the Feature is already
-          "selected", it won't get another onSelect call. See below for the
-          callback's arguments.</span></div><div class="option"><span class="name">onReady</span><span class="types"><span class="type">Function</span></span><span class="description">The callback function invoked
-          when the SlideBar Feature has its contents loaded. See below for the
-          callback's arguments.</span></div></span></div></div><h2>Description</h2><div name="append" class="property description">
-        
-        This function adds an icon to the SlideBar, and it will be shown when
-        the user moves towards the SlideBar icon. When the user selects a
-        Feature's icon, it will be "selected," and the Feature can do additional
-        actions such as sliding open a larger area to reveal the Feature's
-        contents.
-        <p>
-        All callback functions passed in as options will be called with a single
-        function argument, referred to here as <tt>slide()</tt>, that is used to
-        slide open the SlideBar. <tt>slide()</tt> takes a single "options"
-        object like the <tt>slideBar.append</tt> method; the two
-        properties are <tt>size</tt> and <tt>persist</tt>. <tt>size</tt> is the
-        number of pixels to slide out, and if <tt>persist</tt> is true, the
-        SlideBar will stay open even if the user moves the cursor away.
-        </p><p>
-        <tt>slide()</tt> is a named-property object and has two additional
-        properties: <tt>icon</tt> refers to the icon in the SlideBar and
-        <tt>doc</tt> refers to the content document for the Feature. These are
-        useful for adding listeners or dynamically changing the icon or
-        document.
-        </p><p>
-        To close the SlideBar, just call <tt>slide()</tt> without any arguments.
-        </p><p>
-        The following example adds a SlideBar Feature that temporarily slides
-        itself open when selected and makes itself stay open after clicking the
-        content area. (To close, click the SlideBar icon.) Additionally, the
-        Feature will change its icon when the page is clicked.
-        </p><div class="example">
-jetpack.future.import("slideBar");
-jetpack.slideBar.append({
-  onSelect: function(slide) slide({ size: 100 }),
-  onReady: function(slide) $(slide.doc).click(function() {
-    slide({ size: 200, persist: true });
-    slide.icon.src = "chrome://branding/content/icon48.png";
-  })
-});
-        </div>
-        <p>
-        Notice when <tt>persist</tt> is not provided to the callback function's
-        argument, <tt>slide</tt>, the SlideBar actually shifts the contents of
-        the browser off the right edge of the window. This is because the
-        default view of the SlideBar and its Features are temporary. When
-        <tt>persist</tt> is true, the right edge will stay on the right side of
-        the window, so if it was "off" the window before, it will slide back in.
-      </p></div></div><div class="properties"></div></div></div></div><div name="jetpack.statusBar" class="documentation"><div class="heading">jetpack.statusBar</div><div class="content"><div name="statusBar" class="property description">
+    </div></div><div class="properties"></div></div><div name="jetpack.statusBar" class="documentation"><div class="heading">jetpack.statusBar</div><div class="content"><div name="statusBar" class="property description">
       This object contains methods relevant to the status bar that
       appears at the bottom of the browser window. Note that the user
       has the option to disable the display of the status bar in
@@ -348,7 +292,7 @@ console.log( jetpack.storage.live.myData );
         <p>
         The simple storage is sandboxed to each Jetpack, so that you never
         have to worry about collisions with
-        somebody elses code.
+        somebody else's code.
         </p><p>
         Here's a quick example of how to use the simple storage API:
         </p><p>
