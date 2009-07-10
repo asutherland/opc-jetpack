@@ -301,9 +301,7 @@ JetpackEnv.setFutures(
      Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
      //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
      //  so it should be unique to this feature.
-     var ss = new s.SimpleStorage(context.srcUrl);
-     context.addUnloader({ unload: function () ss.teardown() });
-     return ss;
+     return new s.SimpleStorage(context.srcUrl);
    },
 
    "jetpack.slideBar": function(context) SlideBar.makeExported(context),
