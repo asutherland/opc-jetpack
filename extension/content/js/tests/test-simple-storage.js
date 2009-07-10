@@ -40,7 +40,7 @@ var SimpleStorageTests = {
 
   _ss: (function () {
     Components.utils.import("resource://jetpack/modules/simple-storage.js");
-    var ss = new SimpleStorage("http://example.com/my_jetpack");
+    var ss = new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
     ss._suppressDeprecationWarnings(true);
     return ss;
   })(),
@@ -537,7 +537,8 @@ var SimpleStorageTests = {
 
   testInitMultipleTimes: function (runner) {
     for (var i = 0; i < 10; i++) {
-      this._ss = new SimpleStorage("http://example.com/my_jetpack");
+      this._ss =
+        new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
       this._ss._suppressDeprecationWarnings(true);
     }
   },

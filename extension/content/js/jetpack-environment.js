@@ -305,7 +305,10 @@ JetpackEnv.setFutures(
 
      // TODO: context.srcUrl or context.url?  We hash this as the
      // feature's ID, so it should be unique to this feature. -adw
-     return new s.SimpleStorage(context.srcUrl);
+     var ss = new s.simpleStorage.SimpleStorage(context.srcUrl);
+     s.simpleStorage.register(ss);
+     context.addUnloader({ unload: function () s.simpleStorage.unregister(ss)});
+     return ss;
    },
 
    "jetpack.slideBar": function(context) {

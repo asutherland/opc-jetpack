@@ -48,10 +48,10 @@
 // feature therefore need only use the various [[https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference|standard JavaScript functions and operators]].
 // Each feature gets its own private storage.
 //
-// To write the object to disk, you must call
-// {{{jetpack.storage.simple.sync()}}}.  To force the object to reload its data
-// from disk, call {{{jetpack.storage.simple.open()}}}, although the data comes
-// loaded automatically so you shouldn't have to worry about it.
+// Storage is automatically flushed to disk periodically.  To flush it manually,
+// you can call {{{jetpack.storage.simple.sync()}}}.  To force the object to
+// reload its data from disk, call {{{jetpack.storage.simple.open()}}}, although
+// the data comes loaded automatically so you shouldn't have to worry about it.
 //
 // Here's an example:
 //
@@ -59,7 +59,6 @@
 // var myStorage = jetpack.storage.simple;
 // myStorage.fribblefrops = [1, 3, 3, 7];
 // myStorage.heimelfarbs = { bar: "baz" };
-// myStorage.sync();
 // }}}
 //
 // And then later:
@@ -78,7 +77,7 @@
 // where {{{ProfD}}} is the user's Firefox profile directory and {{{featureId}}}
 // is the "ID" of the feature.  To generate a feature's ID, we hash its URL.
 
-var EXPORTED_SYMBOLS = ["SimpleStorage"];
+var EXPORTED_SYMBOLS = ["simpleStorage"];
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
@@ -86,6 +85,39 @@ var Ci = Components.interfaces;
 const STREAM_BUFFER_SIZE = 8192;
 
 Components.utils.import("resource://jetpack/modules/track.js");
+
+var gSyncTimer;
+var gSimpleStorageInstances = [];
+
+// This object is exposed by the module.
+var simpleStorage = {
+
+  // The SimpleStorage constructor.
+  SimpleStorage: SimpleStorage,
+
+  // Registers a SimpleStorage instance with the sync timer.
+  register: function simpleStorage_register(aSimpleStorage) {
+    if (gSimpleStorageInstances.indexOf(aSimpleStorage) >= 0)
+      throw new Error("Tried to register a registered SimpleStorage");
+    if (gSimpleStorageInstances.length === 0)
+      gSyncTimer = createSyncTimer();
+    gSimpleStorageInstances.push(aSimpleStorage);
+  },
+
+  // Flushes the given SimpleStorage instance to disk and unregisters it with
+  // the sync timer.
+  unregister: function simpleStorage_unregister(aSimpleStorage) {
+    var idx = gSimpleStorageInstances.indexOf(aSimpleStorage);
+    if (idx < 0)
+      throw new Error("Tried to unregister an unregistered SimpleStorage");
+    aSimpleStorage.sync();
+    gSimpleStorageInstances.splice(idx, 1);
+    if (gSimpleStorageInstances.length === 0) {
+      gSyncTimer.cancel();
+      gSyncTimer = null;
+    }
+  }
+};
 
 // == The SimpleStorage Prototype ==
 //
@@ -111,8 +143,16 @@ function SimpleStorage(aFeatureUrl) {
   this.__noSuchMethod__ = function SimpleStorage___noSuchMethod__(name, args) {
     if (name in impl)
       impl[name].apply(that, args);
-    else if (name in deprecatedImpl)
+    else if (name in deprecatedImpl) {
+      if (name !== "_suppressDeprecationWarnings" &&
+          !deprecatedImpl._suppressDeprecationWarnings()) {
+        logMsg("Warning: jetpack.storage.simple." + name + " and the rest of " +
+               "the simple storage async API is deprecated and will be " +
+               "removed in a future version of Jetpack.");
+      }
+      deprecatedImpl._ensureDatabaseIsSetup();
       deprecatedImpl[name].apply(that, args);
+    }
     else {
       let fullName = "jetpack.storage.simple." + name;
       throw new TypeError(fullName + " is not a function");
@@ -199,8 +239,8 @@ function SimpleStorageImpl(aFeatureId) {
 
   // === {{{SimpleStorage.sync()}}} ===
   //
-  // Writes the object to disk.  This is currently the only mechanism by which
-  // the object is flushed.
+  // Writes the object to disk.  The object is automatically and periodically
+  // written, but you can use this method to manually flush it.
 
   this.sync = function SimpleStorage_sync() {
     try {
@@ -244,6 +284,27 @@ function cloneObject(aSourceObj, aDestObj) {
     aDestObj[prop] = val;
 }
 
+// Creates a repeating timer, whose period is getSyncTimerPeriod() and which
+// flushes all simple storage instances to disk.
+function createSyncTimer() {
+  var syncTimer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+  syncTimer.initWithCallback({
+    notify: function SimpleStorage_syncTimer_notify() {
+      gSimpleStorageInstances.forEach(function (ss) {
+        try {
+          ss.sync();
+        }
+        catch (err) {
+          let e = new SimpleStorageError("Error syncing on timer: " + err);
+          Components.utils.reportError(e);
+        }
+      });
+    }
+  }, getSyncTimerPeriod(), syncTimer.TYPE_REPEATING_SLACK);
+
+  return syncTimer;
+}
+
 // Simple storage is supported on Firefox 3.5+ only.
 function ensureFx35() {
   var versionParts = Cc["@mozilla.org/xre/app-info;1"].
@@ -269,6 +330,23 @@ function getJsonFile(aFeatureId) {
   file.append("storage");
   file.append("simple.json");
   return file;
+}
+
+// Gets the default period for the sync timer or if the user has set a pref
+// for it, gets that instead.
+function getSyncTimerPeriod() {
+  var period;
+  try {
+    period = Cc["@mozilla.org/preferences-service;1"].
+             getService(Ci.nsIPrefService).
+             getBranch("extensions.jetpack.").
+             getIntPref("storage.simple.syncTimerPeriod");
+  }
+  catch (err) {
+    // Default to 5 minutes.
+    period = 300000;
+  }
+  return period;
 }
 
 // Returns a hex string hash of the given string.
@@ -332,21 +410,24 @@ var CREATE_COLUMN_SQL = [
 function SimpleStorageDeprecatedImpl(aFeatureId) {
   MemoryTracking.track(this);
 
+  var dbConn;
   var suppressDeprecationWarnings = false;
-  var dbConn = getOrCreateDatabase(aFeatureId);
-  ensureDatabaseIsSetup(dbConn);
+
+  // Creates our database if it doesn't already exist.
+  this._ensureDatabaseIsSetup =
+  function SimpleStorageDeprecatedImpl__ensureDatabaseIsSetup() {
+    if (dbConn)
+      return;
+    dbConn = getOrCreateDatabase(aFeatureId);
+    if (!dbConn.tableExists(TABLE_NAME))
+      dbConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
+  }
 
   this._suppressDeprecationWarnings =
   function SimpleStorage_suppressDeprecationWarnings(aSuppress) {
-    suppressDeprecationWarnings = aSuppress;
-  };
-
-  this._warnDeprecation = function SimpleStorage_warnDeprecation(aMethodName) {
-    if (!suppressDeprecationWarnings) {
-      logMsg("Warning: jetpack.storage.simple." + aMethodName + "() and the " +
-             "rest of the async API is deprecated and will be removed in a " +
-             "future version of Jetpack.");
-    }
+    if (aSuppress !== undefined)
+      suppressDeprecationWarnings = aSuppress;
+    return suppressDeprecationWarnings;
   };
 
   // === {{{SimpleStorage.clear()}}} ===
@@ -360,7 +441,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.clear = function SimpleStorage_clear(aCallback) {
-    this._warnDeprecation("clear");
     ensureTypeOfArg(aCallback, "callback", "First", "callback");
     var stmt = dbConn.createStatement("DELETE FROM " + TABLE_NAME);
     var ucb = new UserCallback(aCallback);
@@ -401,7 +481,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.forEachItem = function SimpleStorage_forEachItem(aArg0, aArg1) {
-    this._warnDeprecation("forEachItem");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = array of of keys
@@ -481,7 +560,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.forEachKey = function SimpleStorage_forEachKey(aCallback) {
-    this._warnDeprecation("forEachKey");
     ensureTypeOfArg(aCallback, "callback", "First", "callback");
     var ucb = new UserCallback(aCallback);
     forEachItemAll({
@@ -519,7 +597,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.forEachValue = function SimpleStorage_forEachValue(aArg0, aArg1) {
-    this._warnDeprecation("forEachValue");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = key array
@@ -587,7 +664,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.get = function SimpleStorage_get(aArg0, aArg1) {
-    this._warnDeprecation("get");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = key array
@@ -658,7 +734,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage, keyArray)
 
   this.has = function SimpleStorage_has(aArg0, aArg1) {
-    this._warnDeprecation("has");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = key array
@@ -704,7 +779,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.keys = function SimpleStorage_keys(aCallback) {
-    this._warnDeprecation("keys");
     ensureTypeOfArg(aCallback, "callback", "First", "callback");
     mapItemsAll(function (key, val) key, new UserCallback(aCallback));
   };
@@ -742,7 +816,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.mapItems = function SimpleStorage_mapItems(aArg0, aArg1, aArg2) {
-    this._warnDeprecation("mapItems");
     if (arguments.length === 3) {
       // aArg0 = key array
       // aArg1 = map function
@@ -827,7 +900,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
                                                         aArg1,
                                                         aArg2,
                                                         aArg3) {
-    this._warnDeprecation("reduceItems");
     if (arguments.length === 4) {
       // aArg0 = key array
       // aArg1 = initial value
@@ -910,7 +982,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage, keyArray)
 
   this.remove = function SimpleStorage_remove(aArg0, aArg1) {
-    this._warnDeprecation("remove");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = key array
@@ -973,7 +1044,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage, itemsObject)
 
   this.set = function SimpleStorage_set(aArg0, aArg1, aArg2) {
-    this._warnDeprecation("set");
     switch (typeOfArg(aArg0)) {
     case "object":
       // aArg0 = items dictionary
@@ -1047,7 +1117,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.size = function SimpleStorage_size(aCallback) {
-    this._warnDeprecation("size");
     ensureTypeOfArg(aCallback, "callback", "First", "callback");
     var stmt = dbConn.createStatement("SELECT count(*) FROM " + TABLE_NAME);
     var ucb = new UserCallback(aCallback);
@@ -1085,7 +1154,6 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
   // * onError(errorMessage)
 
   this.values = function SimpleStorage_values(aArg0, aArg1) {
-    this._warnDeprecation("values");
     switch (typeOfArg(aArg0)) {
     case "array":
       // aArg0 = key array
@@ -1193,13 +1261,6 @@ UserCallback.prototype = {
     }
   }
 };
-
-// Creates our table if it doesn't already exist.
-function ensureDatabaseIsSetup(aDbConn) {
-  if (!aDbConn.tableExists(TABLE_NAME)) {
-    aDbConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
-  }
-}
 
 // Creates a directory at the given file's path if it doesn't already exist.
 function ensureDirectoryExists(aFile) {
