@@ -10,7 +10,9 @@ XPIDL_MODULE  = jetpack
 
 XPI_NAME = jetpack
 
-XPIDLSRCS = nsIJSWeakRef.idl \
+XPIDLSRCS = IAudioRecorder.idl \
+            IAudioEncoder.idl \
+            nsIJSWeakRef.idl \
             $(NULL)
 
 include $(topsrcdir)/config/rules.mk

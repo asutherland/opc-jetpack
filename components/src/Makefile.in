@@ -14,30 +14,63 @@ USE_STATIC_LIBS = 1
 
 XPI_NAME = jetpack
 
-REQUIRES	= \
-		  xpcom \
-		  string \
-		  js \
-		  xpconnect \
-		  caps \
-		  dom \
-		  $(NULL)
+REQUIRES = \
+	xpcom \
+	string \
+	js \
+	xpconnect \
+	caps \
+	dom \
+	$(NULL)
 
+ifeq ($(BUILD_AUDIO),1)
+CPPSRCS = AudioRecorder.cpp \
+	AudioEncoder.cpp \
+	nsJSWeakRef.cpp \
+        wrapper.cpp \
+        tcb.cpp \
+        memory_profiler.cpp \
+        server_socket.cpp \
+        jetpackmodule.cpp \
+        $(NULL)
+else
 CPPSRCS = nsJSWeakRef.cpp \
-          jetpackmodule.cpp \
-          wrapper.cpp \
-          tcb.cpp \
-          memory_profiler.cpp \
-          server_socket.cpp \
-          $(NULL)
+	wrapper.cpp \
+	tcb.cpp \
+	memory_profiler.cpp \
+	server_socket.cpp \
+	jetpackmodule.cpp \
+	$(NULL)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
 EXTRA_DSO_LDOPTS += \
-    $(MOZ_JS_LIBS) \
-    $(XPCOM_GLUE_LDOPTS) \
-    $(NSPR_LIBS) \
-    $(NULL)
+	$(MOZ_JS_LIBS) \
+	$(XPCOM_GLUE_LDOPTS) \
+	$(NSPR_LIBS) \
+	$(NULL)
+
+ifeq ($(BUILD_AUDIO),1)
+DEFINES += -DBUILD_AUDIO=1
+
+ifeq ($(OS_ARCH),Darwin)
+LOCAL_INCLUDES += -I/opt/local/include
+EXTRA_DSO_LDOPTS += \
+	/opt/local/lib/libportaudio.a \
+	/opt/local/lib/libsndfile.a \
+	/opt/local/lib/libvorbis.a \
+	/opt/local/lib/libvorbisenc.a \
+	/opt/local/lib/libogg.a \
+	/opt/local/lib/libFLAC.a \
+	-framework CoreAudio \
+	-framework AudioUnit \
+	-framework AudioToolbox \
+	-framework CoreServices \
+	$(NULL)
+endif
+endif
+
 
 clobber::
 	rm -f $(DIST)/lib/$(LIBRARY_NAME).lib
