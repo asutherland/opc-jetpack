@@ -706,7 +706,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     JS_ReportError(cx, "Couldn't create server JS context.");
     return JS_FALSE;
   }
-  JS_SetOptions(serverCx, JSOPTION_VAROBJFIX);
+  JS_SetOptions(serverCx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
   JS_SetVersion(serverCx, JSVERSION_LATEST);
 
   JS_BeginRequest(serverCx);
