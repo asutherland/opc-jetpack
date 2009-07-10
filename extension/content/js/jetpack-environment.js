@@ -295,7 +295,7 @@ JetpackEnv.setFutures(
    },
 
    "jetpack.selection": function(context) {
-     Selection.makeExported(context);
+     return Selection.makeExported(context);
    },
 
    "jetpack.storage.simple": function (context) {
@@ -309,7 +309,7 @@ JetpackEnv.setFutures(
    },
 
    "jetpack.slideBar": function(context) {
-     SlideBar.makeExported(context);
+     return SlideBar.makeExported(context);
    },
 
    "jetpack.audio": function(context) {
