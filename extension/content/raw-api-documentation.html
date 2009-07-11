@@ -120,11 +120,21 @@ jetpack.statusBar.append({
         <p>
         <div class="example">
 jetpack.future.import("storage.simple");
-jetpack.storage.simple.set( "4ever", {hello:"world"} );
-jetpack.storage.simple.get( "4ever", function(data, value){
-  console.log( data, value );
-});          
+var myStorage = jetpack.storage.simple;
+myStorage.forever = { hello: "world" };
         </div>
+        <p>
+        And then later:
+        <div class="example">
+jetpack.future.import("storage.simple");
+console.log(jetpack.storage.simple.forever.hello);
+        </div>
+        <p>
+        That's all there is to it!  Simply treat the
+        <tt>jetpack.storage.simple</tt> object the same way you would any
+        regular JavaScript object.  The properties attached to it will
+        automatically be saved.
+        </p>
       </div>
       <div name="live" class="property">
         You can attach any object to <tt>jetpack.storage.live</tt> and it will
