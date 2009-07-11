@@ -35,6 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "jsapi.h"
+#include "prmem.h"
 
 extern JSExtendedClass sFlexibleWrapper_JSClass;
 extern JSBool getWrapper(JSContext *cx, JSObject *obj, uintN argc,

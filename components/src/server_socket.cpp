@@ -122,28 +122,32 @@ static JSBool recv(JSContext *cx, JSObject *obj, uintN argc,
   if (!getSocket(cx, obj, &fd))
     return JS_FALSE;
 
-  char buffer[length];
+  char *buffer = (char *)PR_Malloc(length * sizeof(char));
   jsrefcount rc = JS_SuspendRequest(cx);
   PRInt32 recvd = PR_Recv(fd, buffer, length, 0, PR_INTERVAL_NO_TIMEOUT);
   JS_ResumeRequest(cx, rc);
 
   if (recvd == -1) {
     JS_ReportError(cx, "Receive failed.");
+    PR_Free(buffer);
     return JS_FALSE;
   }
 
   if (recvd == 0) {
     *rval = JSVAL_NULL;
+    PR_Free(buffer);
     return JS_TRUE;
   }
 
   JSString *string = JS_NewStringCopyN(cx, buffer, length);
   if (string == NULL) {
     JS_ReportOutOfMemory(cx);
+    PR_Free(buffer);
     return JS_FALSE;
   }
 
   *rval = STRING_TO_JSVAL(string);
+  PR_Free(buffer);
   return JS_TRUE;
 }
 

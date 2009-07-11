@@ -13,7 +13,7 @@
 
 // Private structure to track the state of tracing the JS heap.
 
-typedef struct TracingState {
+typedef struct _TracingState {
   // Keeps track of what objects we've visited so far.
   JSDHashTable visited;
 
@@ -28,17 +28,17 @@ typedef struct TracingState {
 
   // Structure required to use JS tracing functions.
   JSTracer tracer;
-};
+} TracingState;
 
 // Static singleton for tracking the state of tracing the JS heap.
 static TracingState tracingState;
 
-typedef struct ChildTracingState {
+typedef struct _ChildTracingState {
   int num;
   void **things;
   uint32 *kinds;
   JSTracer tracer;
-};
+} ChildTracingState;
 
 static ChildTracingState childTracingState;
 
@@ -65,9 +65,11 @@ static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
 // JSTraceCallback to build a hashtable of existing object references.
 static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
 {
+  JSDHashEntryStub *entry;
+
   switch (kind) {
   case JSTRACE_OBJECT:
-    JSDHashEntryStub *entry = (JSDHashEntryStub *)
+    entry = (JSDHashEntryStub *)
       JS_DHashTableOperate(&tracingState.visited,
                            thing,
                            JS_DHASH_LOOKUP);
@@ -99,8 +101,9 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
   childTracingState.num = 0;
   JS_TraceChildren(&childTracingState.tracer, target, JSTRACE_OBJECT);
 
-  void *things[childTracingState.num];
-  uint32 kinds[childTracingState.num];
+  jsval *childrenVals;
+  void **things = (void **)PR_Malloc(childTracingState.num * sizeof(void *));
+  uint32 *kinds = (uint32 *)PR_Malloc(childTracingState.num * sizeof(uint32));
 
   childTracingState.things = things;
   childTracingState.kinds = kinds;
@@ -114,7 +117,7 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
       numObjectChildren++;
   }
 
-  jsval childrenVals[numObjectChildren];
+  childrenVals = (jsval *)PR_Malloc(numObjectChildren * sizeof(jsval));
 
   int currChild = 0;
   for (int i = 0; i < childTracingState.num; i++) {
@@ -126,15 +129,25 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
 
   if (numObjectChildren != currChild) {
     JS_ReportError(cx, "Assertion failure, numObjectChildren != currChild");
+    PR_Free(things);
+    PR_Free(kinds);
+    PR_Free(childrenVals);
     return JS_FALSE;
   }
 
   JSObject *children = JS_NewArrayObject(cx, numObjectChildren, childrenVals);
   if (children == NULL) {
     JS_ReportOutOfMemory(cx);
+    PR_Free(things);
+    PR_Free(kinds);
+    PR_Free(childrenVals);
     return JS_FALSE;
   }
 
+  PR_Free(things);
+  PR_Free(kinds);
+  PR_Free(childrenVals);
+ 
   return JS_DefineProperty(cx, info, "children", OBJECT_TO_JSVAL(children),
                            NULL, NULL, JSPROP_ENUMERATE);
 }
@@ -429,7 +442,6 @@ static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
                              jsval *argv, jsval *rval)
 {
   jsval targetVal;
-  bool useGetPropertiesInfo2 = false;
 
   if (!getJSObject(cx, argc, argv, &targetVal))
     return JS_FALSE;
@@ -599,12 +611,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
-typedef struct RootMapStruct {
+typedef struct _RootMapStruct {
   JSBool rval;
   int length;
   JSContext *cx;
   JSObject *array;
-};
+} RootMapStruct;
 
 static intN rootMapFun(void *rp, const char *name, void *data)
 {
