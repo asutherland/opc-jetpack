@@ -60,11 +60,24 @@ function getObjectInfoAndProperties(objNum) {
     }
 }
 
+function getObjectInfoAndPrototype(objNum) {
+    var o = getObjectInfo(objNum);
+    if (!o) return;
+
+    if (o.wrappedObject) {
+        return getObjectInfoAndPrototype(o.wrappedObject);
+    } else {
+        var prototype = getObjectProperty(objNum, 'prototype');
+        if (prototype) o.properties = {prototype: prototype};
+        return o;
+    }
+}
+
 /*
  * From the object, get back to the "Window" object and then come down the path
  */
 function roundupWindowObjects(objNum) {
-    var objInfo = getObjectInfoAndProperties(objNum);
+    var objInfo = getObjectInfoAndPrototype(objNum);
     //debug("ROUNDUP: " + JSON.stringify(objInfo));
     if (!objInfo) return;
 
@@ -73,7 +86,7 @@ function roundupWindowObjects(objNum) {
     if (objInfo.nativeClass == "Window") {
         windowObject = objInfo;
     } else {
-        var again = getObjectInfoAndProperties(objInfo.wrappedObject || objInfo.parent);
+        var again = getObjectInfoAndPrototype(objInfo.wrappedObject || objInfo.parent);
         if (again && again.nativeClass == "Window") {
             windowObject = again;
             //debug(JSON.stringify(again));
@@ -101,7 +114,7 @@ function traverseRoundup(objNum) {
     if (roundup[objNum]) return; // been here
     roundup[objNum] = true;
 
-    var objInfo = getObjectInfoAndProperties(objNum);
+    var objInfo = getObjectInfoAndPrototype(objNum);
     if (!objInfo) return;
     //debug("traverseRoundup: " + JSON.stringify(objInfo));
     
@@ -124,11 +137,11 @@ function traverseRoundup(objNum) {
         //debug("Array: " + JSON.stringify(objInfo));
         if (objInfo.children) for (var x = 0; x < objInfo.children.length; x++) {
             //var kid = objInfo.children[x];
-            var kid = getObjectInfoAndProperties(objInfo.children[x]);
+            var kid = getObjectInfoAndPrototype(objInfo.children[x]);
 
             if (kid != objInfo.prototype && kid != objInfo.parent) { // not the parent scope or prototype chain
                 //debug("Kid got through 2: " + JSON.stringify(kid));
-                var arrayItem = getObjectInfoAndProperties(kid);
+                var arrayItem = getObjectInfoAndPrototype(kid);
                 if (arrayItem && arrayItem.prototype) {
                     if (typeSize[arrayItem.prototype]) {
                         typeSize[arrayItem.prototype] += arrayItem.size;
@@ -149,6 +162,18 @@ function traverseRoundup(objNum) {
             } else {
                 typeSize[objInfo.prototype] = objInfo.size;
                 typeCount[objInfo.prototype] = 1;
+            }
+        }
+    }
+}
+
+function getFirstTab() {
+    var windows = getNamedObjects();
+    for (var k in windows) {
+        if (k.indexOf('chrome:') < 0) {
+            return {
+                url: k,
+                root: windows[k]
             }
         }
     }
@@ -297,34 +322,25 @@ function processRequest(socket) {
     } else if (path.indexOf("/stop") == 0) {
         toSend = "'Stopping server now!'";
     } else if (path.indexOf("/ping") == 0) {
-        toSend = "'pong'";
+        toSend = JSON.stringify(getFirstTab());
+//        toSend = "'pong'";
     } else {
         if (path.indexOf("/gc-roots") == 0) {
             toSend = JSON.stringify(getGCRoots());
         } else if (path.indexOf("/dump-win") == 0) {
-            var windows = getNamedObjects();
-            var root;
-            var tabUrl;
-            debug(JSON.stringify(windows));
-            for (var k in windows) {
-                if (k.indexOf('chrome:') < 0) {
-                    tabUrl = k;
-                    root = windows[k];
-                    break;
-                }
-            }
+            var tab = getFirstTab();
             // debug(windows['file:///SourceControl/memory/sample.html']);
             // var root = windows['file:///SourceControl/memory/sample.html'];
 
-            debug("Dumping objects for sample...: " + root);
+            debug("Dumping objects for sample...: " + tab.root);
             dump = {};
             meta = {};
 
-            roundupWindowObjects(root);
-            dumpObject(root);
+            roundupWindowObjects(tab.root);
+            dumpObject(tab.root);
 
             debug("TOTAL BYTES: " + totalBytes);
-            toSend = JSON.stringify({ meta:meta, totalBytes:totalBytes, typeSize:typeSize, typeCount:typeCount, typeMap:typeMap, tabUrl:tabUrl });
+            toSend = JSON.stringify({ meta:meta, totalBytes:totalBytes, typeSize:typeSize, typeCount:typeCount, typeMap:typeMap, tabUrl:tab.url });
             
             //toSend = JSON.stringify(getNamedObjects());
         } else if (path.indexOf("/dump-roots") == 0) {
