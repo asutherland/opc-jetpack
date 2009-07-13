@@ -28,8 +28,12 @@ function printTraceback(frame) {
   print(lines.join('\n'));
 }
 
-function debug(out) {
-    print("DEBUG: " + out);
+function debug(out, object) {
+    out = "DEBUG: " + out;
+    if (object) {
+        out += JSON.stringify(object);
+    }
+    print(out);
 }
 
 // Work out if the caller wants the output to be wrapped in a JSONP function wrapper
@@ -55,9 +59,16 @@ function getObjectInfoAndProperties(objNum) {
         return getObjectInfoAndProperties(o.wrappedObject);
     } else {
         var properties = getObjectProperties(objNum);
-        if (properties) o.properties = properties;
+        if (!emptyObject(properties)) o.properties = properties;
         return o;
     }
+}
+
+function emptyObject(object) {
+    for (var key in object) {
+        return false;
+    }
+    return true;
 }
 
 function getObjectInfoAndPrototype(objNum) {
@@ -68,7 +79,7 @@ function getObjectInfoAndPrototype(objNum) {
         return getObjectInfoAndPrototype(o.wrappedObject);
     } else {
         var prototype = getObjectProperty(objNum, 'prototype');
-        if (prototype) o.properties = {prototype: prototype};
+        if (prototype.prototype) o.properties = prototype;
         return o;
     }
 }
@@ -77,8 +88,8 @@ function getObjectInfoAndPrototype(objNum) {
  * From the object, get back to the "Window" object and then come down the path
  */
 function roundupWindowObjects(objNum) {
-    var objInfo = getObjectInfoAndPrototype(objNum);
-    //debug("ROUNDUP: " + JSON.stringify(objInfo));
+    var objInfo = getObjectInfoAndProperties(objNum);
+    //debug("ROUNDUP: ", objInfo);
     if (!objInfo) return;
 
     var windowObject;
@@ -86,10 +97,10 @@ function roundupWindowObjects(objNum) {
     if (objInfo.nativeClass == "Window") {
         windowObject = objInfo;
     } else {
-        var again = getObjectInfoAndPrototype(objInfo.wrappedObject || objInfo.parent);
+        var again = getObjectInfoAndProperties(objInfo.wrappedObject || objInfo.parent);
         if (again && again.nativeClass == "Window") {
             windowObject = again;
-            //debug(JSON.stringify(again));
+            //debug("", again);
         }
     }
     
@@ -98,11 +109,14 @@ function roundupWindowObjects(objNum) {
     // now we have the window object we can go down down down
     // window.foo ->     
     for (var key in windowObject.properties) {
-        traverseRoundup(windowObject.properties[key]);
+        if (typeof windowObject.properties[key] == "number") {
+            //debug("windowObject.properties: ", windowObject.properties[key]);
+            traverseRoundup(windowObject.properties[key]);
+        }
     }
     
-    // debug("typeMap: " + JSON.stringify(typeMap));
-    // debug("typeSize: " + JSON.stringify(typeSize));
+    debug("typeMap: ", typeMap);
+    // debug("typeSize: ", typeSize);
 }
 
 var typeMap = {};
@@ -110,19 +124,31 @@ var typeSize = {};
 var typeCount = {};
 var roundup = {};
 
+function getType(object) {
+    if (object.name) return object.name;
+    if (object.filename) return object.filename;
+    return "anonymous";
+}
+
 function traverseRoundup(objNum) {
+    debug("traverseRoundup: " + objNum);
     if (roundup[objNum]) return; // been here
     roundup[objNum] = true;
 
     var objInfo = getObjectInfoAndPrototype(objNum);
     if (!objInfo) return;
-    //debug("traverseRoundup: " + JSON.stringify(objInfo));
+    //debug("traverseRoundup: ", objInfo);
     
     if (objInfo.nativeClass == "Function" && objInfo.properties) { //} && objInfo.properties.prototype) {
-        //debug("Function: " + JSON.stringify(objInfo));
+        debug("Function: ", objInfo);
         for (var key in objInfo.properties) {
             if (key == "prototype") {
-                typeMap[objInfo.properties[key]] = objInfo;
+                debug("prototype found for ", objInfo);
+                // var type = getType(objInfo);
+                // debug("Type: ", type);
+                typeMap[objInfo.properties["prototype"]] = objInfo;
+                addTypeSizeAndCount(objInfo.prototype, objInfo.size);
+                break;
             }
         }
 
@@ -134,13 +160,13 @@ function traverseRoundup(objNum) {
             }
         }
     } else if (objInfo.nativeClass == "Array") {
-        //debug("Array: " + JSON.stringify(objInfo));
+        //debug("Array: ", objInfo);
         if (objInfo.children) for (var x = 0; x < objInfo.children.length; x++) {
             //var kid = objInfo.children[x];
             var kid = getObjectInfoAndPrototype(objInfo.children[x]);
 
             if (kid != objInfo.prototype && kid != objInfo.parent) { // not the parent scope or prototype chain
-                //debug("Kid got through 2: " + JSON.stringify(kid));
+                //debug("Kid got through 2: ", kid);
                 var arrayItem = getObjectInfoAndPrototype(kid);
                 if (arrayItem && arrayItem.prototype) {
                     if (typeSize[arrayItem.prototype]) {
@@ -154,16 +180,22 @@ function traverseRoundup(objNum) {
             }
         }
     } else if (objInfo.nativeClass == "Object") {
-        //debug("Object: " + JSON.stringify(objInfo));
+        //debug("Object: ", objInfo);
         if (objInfo.prototype) {
-            if (typeSize[objInfo.prototype]) {
-                typeSize[objInfo.prototype] += objInfo.size;
-                typeCount[objInfo.prototype]++;
-            } else {
-                typeSize[objInfo.prototype] = objInfo.size;
-                typeCount[objInfo.prototype] = 1;
-            }
+            addTypeSizeAndCount(objInfo.prototype, objInfo.size);
         }
+    } else {
+        debug("What type is this pup? " + objInfo.nativeClass);
+    }
+}
+
+function addTypeSizeAndCount(id, size) {
+    if (typeSize[id]) {
+        typeSize[id] += size;
+        typeCount[id]++;
+    } else {
+        typeSize[id] = size;
+        typeCount[id] = 1;
     }
 }
 
