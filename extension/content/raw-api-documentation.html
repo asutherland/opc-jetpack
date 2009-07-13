@@ -27,6 +27,23 @@
     backwards-compatible facade to the underlying Mozilla platform,
     which means that if you write a Feature using the Jetpack library,
     you won't have to change your code as Firefox continues to evolve.
+    <div name="selection" class="property">
+      This object grants access to the user's current selection. It allows
+      reading out of the selection as text or html. Additionally it allows
+      Jetpack Features to listen for when the user changes selections.
+      <p>
+      This selection object is currently experimental, so load it with:
+      <div class="example">
+jetpack.future.import("selection");
+      </div>
+      <p>See <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/12">JEP 12:
+      Selection</a> for documentation on how to use jetpack.selection. Or
+      install a demo feature, <a
+      href="https://jetpack.mozillalabs.com/demos/selection-install.html">Selection
+      Demo</a> and check <a
+      href="https://jetpack.mozillalabs.com/demos/selection.js">its source</a>
+      for a more hands-on approach.</p>
+    </div>
     <div name="slideBar" class="property">
       This object contains methods relevant to the Jetpack-added SlideBar that
       appears at the left side of the browser window when the user's pointer
@@ -38,70 +55,13 @@
       <div class="example">
 jetpack.future.import("slideBar");
       </div>
-      <div name="append" class="property">
-        <div class="argument options" name="options">
-          <span class="string" name="icon">URI of the initial icon to show when
-          the SlideBar is open.</span>
-          <span class="string" name="html">The initial HTML contents of the new
-          SlideBar Feature. This can be a plain string or an E4X xml
-          node.</span>
-          <span class="url" name="url">The URL to load HTML contents for the
-          SlideBar Feature. If the html property is set, it will be used instead
-          of this.</span>
-          <span class="number" name="width">Size of the content area to render
-          <tt>html</tt> or <tt>url</tt>, in pixels.</span>
-          <span class="function" name="onSelect">The callback function invoked
-          when the icon is clicked and selected. If the Feature is already
-          "selected", it won't get another onSelect call. See below for the
-          callback's arguments.</span>
-          <span class="function" name="onReady">The callback function invoked
-          when the SlideBar Feature has its contents loaded. See below for the
-          callback's arguments.</span>
-        </div>
-        This function adds an icon to the SlideBar, and it will be shown when
-        the user moves towards the SlideBar icon. When the user selects a
-        Feature's icon, it will be "selected," and the Feature can do additional
-        actions such as sliding open a larger area to reveal the Feature's
-        contents.
-        <p>
-        All callback functions passed in as options will be called with a single
-        function argument, referred to here as <tt>slide()</tt>, that is used to
-        slide open the SlideBar. <tt>slide()</tt> takes a single "options"
-        object like the <tt>slideBar.append</tt> method; the two
-        properties are <tt>size</tt> and <tt>persist</tt>. <tt>size</tt> is the
-        number of pixels to slide out, and if <tt>persist</tt> is true, the
-        SlideBar will stay open even if the user moves the cursor away.
-        <p>
-        <tt>slide()</tt> is a named-property object and has two additional
-        properties: <tt>icon</tt> refers to the icon in the SlideBar and
-        <tt>doc</tt> refers to the content document for the Feature. These are
-        useful for adding listeners or dynamically changing the icon or
-        document.
-        <p>
-        To close the SlideBar, just call <tt>slide()</tt> without any arguments.
-        <p>
-        The following example adds a SlideBar Feature that temporarily slides
-        itself open when selected and makes itself stay open after clicking the
-        content area. (To close, click the SlideBar icon.) Additionally, the
-        Feature will change its icon when the page is clicked.
-        <div class="example">
-jetpack.future.import("slideBar");
-jetpack.slideBar.append({
-  onSelect: function(slide) slide({ size: 100 }),
-  onReady: function(slide) $(slide.doc).click(function() {
-    slide({ size: 200, persist: true });
-    slide.icon.src = "chrome://branding/content/icon48.png";
-  })
-});
-        </div>
-        <p>
-        Notice when <tt>persist</tt> is not provided to the callback function's
-        argument, <tt>slide</tt>, the SlideBar actually shifts the contents of
-        the browser off the right edge of the window. This is because the
-        default view of the SlideBar and its Features are temporary. When
-        <tt>persist</tt> is true, the right edge will stay on the right side of
-        the window, so if it was "off" the window before, it will slide back in.
-      </div>
+      <p>See <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/16">JEP 16:
+      SlideBar</a> for documentation on how to use jetpack.slideBar. Or install
+      a demo feature, <a
+      href="https://jetpack.mozillalabs.com/demos/videoSlide-install.html">Video
+      Slide - SlideBar Demo</a> and check <a
+      href="https://jetpack.mozillalabs.com/demos/videoSlide.js">its source</a>
+      for a more hands-on approach.</p>
     </div>
     <div name="statusBar" class="property">
       This object contains methods relevant to the status bar that
@@ -154,17 +114,27 @@ jetpack.statusBar.append({
         <p>
         The simple storage is sandboxed to each Jetpack, so that you never
         have to worry about collisions with
-        somebody elses code.
+        somebody else's code.
         <p>
         Here's a quick example of how to use the simple storage API:
         <p>
         <div class="example">
 jetpack.future.import("storage.simple");
-jetpack.storage.simple.set( "4ever", {hello:"world"} );
-jetpack.storage.simple.get( "4ever", function(data, value){
-  console.log( data, value );
-});          
+var myStorage = jetpack.storage.simple;
+myStorage.forever = { hello: "world" };
         </div>
+        <p>
+        And then later:
+        <div class="example">
+jetpack.future.import("storage.simple");
+console.log(jetpack.storage.simple.forever.hello);
+        </div>
+        <p>
+        That's all there is to it!  Simply treat the
+        <tt>jetpack.storage.simple</tt> object the same way you would any
+        regular JavaScript object.  The properties attached to it will
+        automatically be saved.
+        </p>
       </div>
       <div name="live" class="property">
         You can attach any object to <tt>jetpack.storage.live</tt> and it will
@@ -176,7 +146,21 @@ console.log( jetpack.storage.live.myData );
       </div>
       
     </div>  
-    
+
+    <div name="clipboard" class="property">
+      This object provides access to the system clipboard.
+      See the <a href="https://wiki.mozilla.org/Labs/Jetpack/JEP/10">Clipboard
+        JEP</a> for a complete API reference.
+      <p>
+      Here's a quick example demonstrating how to set and get text from the
+      clipboard.
+      <div class="example">
+jetpack.future.import("clipboard");
+jetpack.clipboard.set("So long and thanks for all the fish!");
+console.log(jetpack.clipboard.get());
+      </div>
+    </div>
+
     <div name="notifications" class="property">
       Eventually, this object will be the end-all be-all of easy
       communication with your users. Notification bars, transparent

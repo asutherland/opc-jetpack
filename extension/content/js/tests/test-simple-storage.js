@@ -40,7 +40,9 @@ var SimpleStorageTests = {
 
   _ss: (function () {
     Components.utils.import("resource://jetpack/modules/simple-storage.js");
-    return new SimpleStorage("http://example.com/my_jetpack");
+    var ss = new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
+    ss._suppressDeprecationWarnings(true);
+    return ss;
   })(),
 
   _key: "test key",
@@ -169,12 +171,6 @@ var SimpleStorageTests = {
   },
 
   // Expected usage tests /////////////////////////////////////////////////////
-
-  testInitMultipleTimes: function (runner) {
-    for (var i = 0; i < 10; i++) {
-      this._ss = new this._ss.constructor("http://example.com/my_jetpack");
-    }
-  },
 
   testSetAndGetNumber: function (runner) {
     this._testSetAndGetPrimitive(this._key, 1337, runner);
@@ -539,6 +535,14 @@ var SimpleStorageTests = {
     runner.setTimeout(5000);
   },
 
+  testInitMultipleTimes: function (runner) {
+    for (var i = 0; i < 10; i++) {
+      this._ss =
+        new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
+      this._ss._suppressDeprecationWarnings(true);
+    }
+  },
+
   testValuesWithKeys: function (runner) {
     var that = this;
     var targetKeys = ["b", "c", "frobble", "f", "j", "munnle", "dipple", "d"];
@@ -675,5 +679,77 @@ var SimpleStorageTests = {
 
   testValuesIllegalKeys: function (runner) {
     this._testGetIllegalKeyArrays("values");
+  },
+
+  // New sync API
+
+  _areObjectsEquivalentRecursive: function (aObj1, aObj2) {
+    if (typeof(aObj1) !== typeof(aObj2))
+      return false;
+    if (typeof(aObj1) !== "object")
+      return aObj1 === aObj2;
+    if (aObj1 === null)
+      return aObj2 === null;
+    if (aObj2 === null)
+      return false;
+    // __noSuchMethod__ and __iterator__ contribute to __count__...
+//     if (aObj1.__count__ !== aObj2.__count__)
+//       return false;
+    // aObj1 and aObj2 are equivalent iff all items in aObj1 are in aObj2...
+    for (var key in aObj1) {
+      if (!(key in aObj2))
+        return false;
+      if (!this._areObjectsEquivalentRecursive(aObj1[key], aObj2[key]))
+        return false;
+    }
+    // ... and all items in aObj2 are in aObj1.
+    for (var key in aObj2) {
+      if (!(key in aObj1))
+        return false;
+      if (!this._areObjectsEquivalentRecursive(aObj2[key], aObj1[key]))
+        return false;
+    }
+    return true;
+  },
+
+  _testSyncStoreAndLoad: function (aRunner, aObj) {
+    var key, val;
+    // First empty the store.
+    for (key in this._ss)
+      delete this._ss[key];
+    // Add all of aObj's key-value pairs to the store.
+    for ([key, val] in Iterator(aObj))
+      this._ss[key] = val;
+    // Write out the store and then empty it again.
+    this._ss.sync();
+    for (key in this._ss)
+      delete this._ss[key];
+    // Read in the store, which should then be equivalent to aObj.
+    this._ss.open();
+    aRunner.assert(this._areObjectsEquivalentRecursive(this._ss, aObj));
+  },
+
+  testSyncObject: function (runner) {
+    this._testSyncStoreAndLoad(runner, {
+      string: "bar",
+      number: 1337,
+      boolTrue: true,
+      boolFalse: false,
+      nil: null,
+      simpleArray: [1, 2, 3],
+      complexArray: [1, { foo: { bar: 2 } }, ["baz", "qux"], null],
+      simpleObject: { foo: "bar", 1: 2, qux: null },
+      complexObject: { foo: { bar: { baz: "qux" } }, qix: [1, 2, 3] }
+    });
+  },
+
+  testSyncHiddenProperty: function (runner) {
+    var forEachItem = this._ss.forEachItem;
+    this._testSyncStoreAndLoad(runner, { forEachItem: "foo" });
+    this._ss.forEachItem = forEachItem;
+  },
+
+  testSyncEmptyObject: function (runner) {
+    this._testSyncStoreAndLoad(runner, {});
   }
 };

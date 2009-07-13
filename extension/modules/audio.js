@@ -41,9 +41,10 @@
 // on a binary component that is included with Jetpack for the low-level
 // recording and encoding routines.
 //
+Components.utils.import("resource://jetpack/modules/init.js");
 
 var Re;
-var EXPORTED_SYMBOLS = ["Audio"];
+var EXPORTED_SYMBOLS = ["AudioModule"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -52,7 +53,7 @@ const Fi = Components.Constructor(
             "nsILocalFile",
             "initWithPath");
 
-function Audio() {
+function AudioModule() {
     // Don't fail if the binary audio component is missing.
     try {
         Re = Cc["@labs.mozilla.com/audio/recorder;1"].
@@ -63,8 +64,8 @@ function Audio() {
         return {};
     }
 }
-Audio.prototype = {
-	// === {{{Audio.recordToFile()}}} ===
+AudioModule.prototype = {
+	// === {{{AudioModule.recordToFile()}}} ===
     //
     // Starts recording audio and encoding it into
     // and Ogg/Vorbis file.
@@ -74,7 +75,7 @@ Audio.prototype = {
 		this.isRecording = true;
     },
 
-    // === {{{Audio.stopRecording()}}} ===
+    // === {{{AudioModule.stopRecording()}}} ===
     //
     // Stops recording. If recording was started
     // with {{{recordToFile}}} then this routine will
@@ -92,6 +93,21 @@ Audio.prototype = {
         dst.append(src.leafName);
 
         return dst.path;
+    },
+    
+    // === {{{AudioModule.playFile(path)}}} ===
+    //
+    // Plays an audio file located at {{{path}}}.
+    //
+    playFile: function(path) {
+        let win = null;
+        while (!win) {
+            win = get("chrome://jetpack/content/index.html");
+        }
+        let tag = win.document.createElement("audio");
+        tag.setAttribute("src", path);
+        tag.setAttribute("autoplay", "true");
+        win.document.body.appendChild(tag);
     }
 }
 

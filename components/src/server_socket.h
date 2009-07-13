@@ -35,6 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "jsapi.h"
+#include "prmem.h"
 
 extern JSClass sServerSocket_JSClass;
 extern JSBool createServerSocket(JSContext *cx, JSObject *obj, uintN argc,

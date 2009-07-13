@@ -512,6 +512,26 @@ assert(
   "functionInfo() must contain accurate line number component."
   );
 
+profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
+              "if (inf.hi != 'sup') throw new Error()",
+              "<string>", 1,
+              {blarg: {hi: 'sup'}});
+
+profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
+              "if (typeof(inf.hi) != 'number') throw new Error()",
+              "<string>", 1,
+              {blarg: {hi: {foo: 1}}});
+
+profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
+              "if (inf.hi) throw new Error()",
+              "<string>", 1,
+              {blarg: {}});
+
+profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
+              "if (inf !== null) throw new Error()",
+              "<string>", 1,
+              {blarg: undefined});
+
 profileMemory("if (!getObjectInfo('blarg')) throw new Error()",
               "<string>", 1,
               {blarg: {}});

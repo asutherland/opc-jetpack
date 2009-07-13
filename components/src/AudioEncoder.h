@@ -56,11 +56,21 @@
 #define AUDIO_ENCODER_CID { 0xb7182604, 0x7BE6, 0x4308, \
                           { 0x81, 0x0C, 0x12, 0x8F, 0xD7, 0xD7, 0x76, 0xDE } }
 
-#define SAMPLE_RATE         (16000)
-#define SAMPLE_SILENCE      (0)
+#ifndef SAMPLE_RATE
+#define SAMPLE_RATE         (44000)
+#endif
+#ifndef SAMPLE_SILENCE
+#define SAMPLE_SILENCE      (0.0f)
+#endif
+#ifndef NUM_CHANNELS
 #define NUM_CHANNELS        (2)
+#endif
+#ifndef FRAMES_PER_BUFFER
 #define FRAMES_PER_BUFFER   (1024)
-#define PA_SAMPLE_TYPE      paInt16
+#endif
+#ifndef PA_SAMPLE_TYPE
+#define PA_SAMPLE_TYPE      paFloat32
+#endif
 
 class AudioEncoder : public IAudioEncoder
 {

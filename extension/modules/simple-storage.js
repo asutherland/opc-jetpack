@@ -37,43 +37,368 @@
 
 // = Simple Storage =
 //
-// This module implements asynchronous simple storage as proposed in
+// This module implements simple, persistent storage as proposed in
 // [[https://wiki.mozilla.org/Labs/Jetpack/JEP/11|JEP 11]].  It is implemented
-// using asynchronous mozStorage.
+// via serialized JSON on disk.
 //
-// Callbacks passed to the API's methods may be either functions or objects.
-// If a callback is a function, it is called when its associated asynchronous
-// operation successfully completes.  If a callback is an object, it may define
-// the methods onResult and onError.  onResult is called on successful
-// completion, and onError is called if an error occurs.  In the method
-// documentation that follows, "onResult" is used to refer to either the
-// function form or the object.onResult form.
+// Simple storage is really simple.  {{{jetpack.storage.simple}}} is a single,
+// persistent JavaScript object available to each Jetpack feature.  For the most
+// part this object is like any other JavaScript object, and a feature can set
+// whatever properties it wants on it.  To manipulate its persistent data, a
+// feature therefore need only use the various [[https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference|standard JavaScript functions and operators]].
+// Each feature gets its own private storage.
+//
+// Storage is automatically flushed to disk periodically.  To flush it manually,
+// you can call {{{jetpack.storage.simple.sync()}}}.  To force the object to
+// reload its data from disk, call {{{jetpack.storage.simple.open()}}}, although
+// the data comes loaded automatically so you shouldn't have to worry about it.
+//
+// Here's an example:
+//
+// {{{
+// var myStorage = jetpack.storage.simple;
+// myStorage.fribblefrops = [1, 3, 3, 7];
+// myStorage.heimelfarbs = { bar: "baz" };
+// }}}
+//
+// And then later:
+//
+// {{{
+// var myStorage = jetpack.storage.simple;
+// myStorage.fribblefrops.forEach(function (elt) console.log(elt));
+// var bar = myStorage.heimelfarbs.bar;
+// }}}
 //
 // Each Jetpack feature that uses simple storage gets its own private backing
-// SQLite database.  This has the following benefits:
+// JSON store located at the following path:
 //
-// * Sandboxing.  One feature cannot touch another's database using only this
-//   API.  Even if a feature manages to mangle its database, the databases of
-//   others are unaffected.
+// {{{ProfD/jetpack/featureId/storage/simple.json}}}
 //
-// * Performance.  Separate databases implies smaller databases.
-//
-// * At the implementation level there is no need to worry about whether to use
-//   shared or unshared database connections or SQLite locking in the context
-//   of asynchronous access across multiple Jetpack features.
-//
-// Each feature's database is stored in the file system at the following path:
-//
-// * ProfD/jetpack/featureId/storage/simple.sqlite
-//
-// where ProfD is the user's Firefox profile directory and featureId is the
-// "ID" of the feature.  To generate a feature's ID, we hash its URL.  See
-// featureUrlToId() below.
+// where {{{ProfD}}} is the user's Firefox profile directory and {{{featureId}}}
+// is the "ID" of the feature.  To generate a feature's ID, we hash its URL.
 
-var EXPORTED_SYMBOLS = ["SimpleStorage"];
+var EXPORTED_SYMBOLS = ["simpleStorage"];
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
+
+const STREAM_BUFFER_SIZE = 8192;
+
+Components.utils.import("resource://jetpack/modules/track.js");
+
+var gSyncTimer;
+var gSimpleStorageInstances = [];
+
+// This object is exposed by the module.
+var simpleStorage = {
+
+  // The SimpleStorage constructor.
+  SimpleStorage: SimpleStorage,
+
+  // Registers a SimpleStorage instance with the sync timer.
+  register: function simpleStorage_register(aSimpleStorage) {
+    if (gSimpleStorageInstances.indexOf(aSimpleStorage) >= 0)
+      throw new Error("Tried to register a registered SimpleStorage");
+    if (gSimpleStorageInstances.length === 0)
+      gSyncTimer = createSyncTimer();
+    gSimpleStorageInstances.push(aSimpleStorage);
+  },
+
+  // Flushes the given SimpleStorage instance to disk and unregisters it with
+  // the sync timer.
+  unregister: function simpleStorage_unregister(aSimpleStorage) {
+    var idx = gSimpleStorageInstances.indexOf(aSimpleStorage);
+    if (idx < 0)
+      throw new Error("Tried to unregister an unregistered SimpleStorage");
+    aSimpleStorage.sync();
+    gSimpleStorageInstances.splice(idx, 1);
+    if (gSimpleStorageInstances.length === 0) {
+      gSyncTimer.cancel();
+      gSyncTimer = null;
+    }
+  }
+};
+
+// == The SimpleStorage Prototype ==
+//
+// Each Jetpack feature is tied to an instance of simple storage, and that's
+// reflected in the code.  Create a new {{{SimpleStorage}}} object with this
+// constructor, passing in the feature's URL.
+
+function SimpleStorage(aFeatureUrl) {
+  MemoryTracking.track(this);
+
+  ensureFx35();
+  if (typeof(aFeatureUrl) !== "string" || !aFeatureUrl)
+    throw new Error("Feature URL must be a nonempty string.");
+
+  var featureId = featureUrlToId(aFeatureUrl);
+  var impl = new SimpleStorageImpl(featureId);
+  var deprecatedImpl = new SimpleStorageDeprecatedImpl(featureId);
+
+  // This object delegates to the API implementations by forwarding method calls
+  // to them.  That allows us to not have to worry (too much, see below) about
+  // callers clobbering properties defined on this object.
+  var that = this;
+  this.__noSuchMethod__ = function SimpleStorage___noSuchMethod__(name, args) {
+    if (name in impl)
+      impl[name].apply(that, args);
+    else if (name in deprecatedImpl) {
+      if (name !== "_suppressDeprecationWarnings" &&
+          !deprecatedImpl._suppressDeprecationWarnings()) {
+        logMsg("Warning: jetpack.storage.simple." + name + " and the rest of " +
+               "the simple storage async API is deprecated and will be " +
+               "removed in a future version of Jetpack.");
+      }
+      deprecatedImpl._ensureDatabaseIsSetup();
+      deprecatedImpl[name].apply(that, args);
+    }
+    else {
+      let fullName = "jetpack.storage.simple." + name;
+      throw new TypeError(fullName + " is not a function");
+    }
+  };
+
+  // It's important to call open() with this |this| pointer so that the
+  // properties are added to this object -- not the impl object.
+  try {
+    impl.open.call(this);
+  }
+  catch (err) {
+    // This constructor is called only by the environment to hook up a feature
+    // to its storage.  There's nothing the environment can really do if this
+    // fails, so just report the error instead of throwing it.  The feature will
+    // still be able to attach properties to this object and hopefully sync it.
+    Components.utils.reportError(err);
+  }
+}
+
+SimpleStorage.prototype = {
+  // Unfortunately, since we add __noSuchMethod__ directly on this object, it's
+  // yielded during iteration.  Define a custom iterator to hide it.  It's
+  // hidden only during iteration, though.
+  __iterator__: function SimpleStorage_prototype___iterator__(aKeysOnly) {
+    var iter = new Iterator(this, false);
+    return {
+      next: function () {
+        var pair = iter.next();
+        if (pair[0] === "__noSuchMethod__")
+          return this.next();
+        return aKeysOnly ? pair[0] : pair;
+      }
+    };
+  }
+};
+
+
+// API implementation /////////////////////////////////////////////////////////
+
+function SimpleStorageImpl(aFeatureId) {
+  MemoryTracking.track(this);
+  var jsonFile = getJsonFile(aFeatureId);
+
+  // === {{{SimpleStorage.deleteBackingFile()}}} ===
+  //
+  // Deletes the backing JSON file if it exists.  The {{{jetpack}}} directory
+  // structure as described above is also deleted if the directories are empty.
+
+  this.deleteBackingFile = function SimpleStorage_deleteBackingFile() {
+    try {
+      if (!jsonFile.exists())
+        return;
+      jsonFile.remove(false);
+
+      // Remove the storage, feature, and jetpack directories (in that order)
+      // if they are now empty.
+      let dir = jsonFile.parent;
+      for (let i = 0; i < 3; i++) {
+        if (dir.directoryEntries.hasMoreElements())
+          return;
+        dir.remove(false);
+        dir = dir.parent;
+      }
+    }
+    catch (err) {
+      // This method should only be called when the feature is purged, and
+      // there's nothing the caller can really do if this fails.  So, just
+      // report the error instead of throwing it.
+      let e = new SimpleStorageError("Error deleting JSON file: " + err);
+      Components.utils.reportError(e);
+    }
+  };
+
+  // === {{{SimpleStorage.open()}}} ===
+  //
+  // Loads the store from disk and reads it into the object.  Note that any
+  // properties already on the object will be overwritten, but no properties
+  // are deleted before loading.
+
+  this.open = function SimpleStorage_open() {
+    loadJsonIntoObject(jsonFile, this);
+  };
+
+  // === {{{SimpleStorage.sync()}}} ===
+  //
+  // Writes the object to disk.  The object is automatically and periodically
+  // written, but you can use this method to manually flush it.
+
+  this.sync = function SimpleStorage_sync() {
+    try {
+      if (!jsonFile.exists())
+        jsonFile.create(jsonFile.NORMAL_FILE_TYPE, 0600);
+
+      var stream = Cc["@mozilla.org/network/file-output-stream;1"].
+                   createInstance(Ci.nsIFileOutputStream);
+      stream.init(jsonFile, 0x02 | 0x08 | 0x20, 0600, 0);
+      var converter = Cc["@mozilla.org/intl/converter-output-stream;1"].
+                      createInstance(Ci.nsIConverterOutputStream);
+      converter.init(stream, "UTF-8", 0, 0);
+      converter.writeString(JSON.stringify(this));
+      converter.close();
+    }
+    catch (err) {
+      throw new SimpleStorageError("Error writing JSON: " + err);
+    }
+  };
+}
+
+
+// Helper functions ///////////////////////////////////////////////////////////
+
+// Prepends "jetpack.storage.simple:" to aMsg.
+function SimpleStorageError(aMsg) {
+  this.__proto__ = new Error("jetpack.storage.simple: " + aMsg);
+}
+
+// Maps the given string of bytes to its hexidecimal representation.  Returns a
+// string.
+function bytesToHexString(aByteStr) {
+  return Array.map(
+    aByteStr, function (c) ("0" + c.charCodeAt(0).toString(16)).slice(-2)
+  ).join("");
+}
+
+// Adds all the key-value pairs of aSourceObj to aDestObj.
+function cloneObject(aSourceObj, aDestObj) {
+  for (let [prop, val] in Iterator(aSourceObj))
+    aDestObj[prop] = val;
+}
+
+// Creates a repeating timer, whose period is getSyncTimerPeriod() and which
+// flushes all simple storage instances to disk.
+function createSyncTimer() {
+  var syncTimer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+  syncTimer.initWithCallback({
+    notify: function SimpleStorage_syncTimer_notify() {
+      gSimpleStorageInstances.forEach(function (ss) {
+        try {
+          ss.sync();
+        }
+        catch (err) {
+          let e = new SimpleStorageError("Error syncing on timer: " + err);
+          Components.utils.reportError(e);
+        }
+      });
+    }
+  }, getSyncTimerPeriod(), syncTimer.TYPE_REPEATING_SLACK);
+
+  return syncTimer;
+}
+
+// Simple storage is supported on Firefox 3.5+ only.
+function ensureFx35() {
+  var versionParts = Cc["@mozilla.org/xre/app-info;1"].
+                     getService(Ci.nsIXULAppInfo).
+                     version.split(".");
+  if (versionParts[0][0] == 3 && versionParts[1][0] < 5)
+    throw new Error("jetpack.storage.simple requires Firefox 3.5 or later.");
+}
+
+// Hashes the given feature URL.  Hey, an ID.
+function featureUrlToId(aFeatureUrl) {
+  return hashString(aFeatureUrl);
+}
+
+// Returns an nsIFile suitable for the feature with the given ID.  This function
+// does *not* create the file.
+function getJsonFile(aFeatureId) {
+  var dir = Cc["@mozilla.org/file/directory_service;1"].
+            getService(Ci.nsIProperties);
+  var file = dir.get("ProfD", Ci.nsIFile);
+  file.append("jetpack");
+  file.append(aFeatureId);
+  file.append("storage");
+  file.append("simple.json");
+  return file;
+}
+
+// Gets the default period for the sync timer or if the user has set a pref
+// for it, gets that instead.
+function getSyncTimerPeriod() {
+  var period;
+  try {
+    period = Cc["@mozilla.org/preferences-service;1"].
+             getService(Ci.nsIPrefService).
+             getBranch("extensions.jetpack.").
+             getIntPref("storage.simple.syncTimerPeriod");
+  }
+  catch (err) {
+    // Default to 5 minutes.
+    period = 300000;
+  }
+  return period;
+}
+
+// Returns a hex string hash of the given string.
+function hashString(aStr) {
+  var stream = Cc["@mozilla.org/io/string-input-stream;1"].
+               createInstance(Ci.nsIStringInputStream);
+  stream.setData(aStr, aStr.length);
+  var cryp = Cc["@mozilla.org/security/hash;1"].
+             createInstance(Ci.nsICryptoHash);
+  cryp.init(cryp.SHA1);
+  cryp.updateFromStream(stream, aStr.length);
+  return bytesToHexString(cryp.finish(false));
+}
+
+// Decodes the JSON stored in aJsonFile and adds the key-value pairs to
+// aDestObj.
+function loadJsonIntoObject(aJsonFile, aDestObj) {
+  var jsonObj = parseJsonFile(aJsonFile);
+  if (typeof(jsonObj) === "object")
+    cloneObject(jsonObj, aDestObj);
+}
+
+// Decodes the JSON in aJsonFile and returns the resulting object.  If the file
+// does not exist or is not JSON, returns undefined.
+function parseJsonFile(aJsonFile) {
+  try {
+    if (!aJsonFile.exists())
+      return undefined;
+
+    var stream = Cc["@mozilla.org/network/file-input-stream;1"].
+                 createInstance(Ci.nsIFileInputStream);
+    stream.init(aJsonFile, 0x01, 0, 0);
+    var converter = Cc["@mozilla.org/intl/converter-input-stream;1"].
+                    createInstance(Ci.nsIConverterInputStream);
+    converter.init(stream, "UTF-8", STREAM_BUFFER_SIZE,
+                   converter.DEFAULT_REPLACEMENT_CHARACTER);
+
+    var buffer = {};
+    var json = "";
+    while (converter.readString(STREAM_BUFFER_SIZE, buffer))
+      json += buffer.value;
+    converter.close();
+
+    return json.length ? JSON.parse(json) : undefined;
+  }
+  catch (err) {
+    throw new SimpleStorageError("Error reading JSON: " + err);
+  }
+}
+
+
+// DEPRECATED API implementation //////////////////////////////////////////////
 
 var TABLE_NAME = "simple_storage";
 
@@ -82,28 +407,33 @@ var CREATE_COLUMN_SQL = [
   "value TEXT"
 ];
 
-var json = Cc["@mozilla.org/dom/json;1"].createInstance(Ci.nsIJSON);
-
-// == The SimpleStorage Class ==
-//
-// Each Jetpack feature is tied to an instance of simple storage, and that's
-// reflected in the code.  Create a new {{{SimpleStorage}}} object with this
-// constructor, passing in the feature's URL.
-
-function SimpleStorage(aFeatureUrl) {
-  Components.utils.import("resource://jetpack/modules/track.js");
+function SimpleStorageDeprecatedImpl(aFeatureId) {
   MemoryTracking.track(this);
 
-  ensureFx35();
-  if (typeof(aFeatureUrl) !== "string"|| !aFeatureUrl)
-    throw new Error("Feature URL must be a nonempty string.");
+  var dbConn;
+  var suppressDeprecationWarnings = false;
 
-  this.featureUrl = aFeatureUrl;
-  this.featureId = featureUrlToId(aFeatureUrl);
-  var dbConn = getOrCreateDatabase(this.featureId);
-  ensureDatabaseIsSetup(dbConn);
+  // Creates our database if it doesn't already exist.
+  this._ensureDatabaseIsSetup =
+  function SimpleStorageDeprecatedImpl__ensureDatabaseIsSetup() {
+    if (dbConn)
+      return;
+    dbConn = getOrCreateDatabase(aFeatureId);
+    if (!dbConn.tableExists(TABLE_NAME))
+      dbConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
+  }
+
+  this._suppressDeprecationWarnings =
+  function SimpleStorage_suppressDeprecationWarnings(aSuppress) {
+    if (aSuppress !== undefined)
+      suppressDeprecationWarnings = aSuppress;
+    return suppressDeprecationWarnings;
+  };
 
   // === {{{SimpleStorage.clear()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Deletes all items from the store.
   //
@@ -123,6 +453,9 @@ function SimpleStorage(aFeatureUrl) {
   };
 
   // === {{{SimpleStorage.forEachItem()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Iterates over items in the store.
   //
@@ -215,6 +548,9 @@ function SimpleStorage(aFeatureUrl) {
 
   // === {{{SimpleStorage.forEachKey()}}} ===
   //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
+  //
   // Iterates over all the keys in the store.  onResult is called for each key,
   // and when all keys are exhausted, onResult is passed null.  The order of
   // iteration is arbitrary.
@@ -233,6 +569,9 @@ function SimpleStorage(aFeatureUrl) {
   };
 
   // === {{{SimpleStorage.forEachValue()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Iterates over values in the store.
   //
@@ -291,6 +630,9 @@ function SimpleStorage(aFeatureUrl) {
   }
 
   // === {{{SimpleStorage.get()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Gets items with given keys.
   //
@@ -368,6 +710,9 @@ function SimpleStorage(aFeatureUrl) {
 
   // === {{{SimpleStorage.has()}}} ===
   //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
+  //
   // Indicates whether a key or keys exist in the store.
   //
   // ==== {{{has(key, callback)}}} ====
@@ -425,6 +770,9 @@ function SimpleStorage(aFeatureUrl) {
 
   // === {{{SimpleStorage.keys()}}} ===
   //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
+  //
   // Yields all the keys of the store in an unordered array.
   //
   // * onResult(keyArray)
@@ -436,6 +784,9 @@ function SimpleStorage(aFeatureUrl) {
   };
 
   // === {{{SimpleStorage.mapItems()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Applies a function to items in the store and yields the results in an
   // array.
@@ -506,6 +857,9 @@ function SimpleStorage(aFeatureUrl) {
   }
 
   // === {{{SimpleStorage.reduceItems()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Combines items in the store by applying a function to them and accumulating
   // the result.  This method may be known as "inject" or "fold" in other
@@ -608,6 +962,9 @@ function SimpleStorage(aFeatureUrl) {
 
   // === {{{SimpleStorage.remove()}}} ===
   //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
+  //
   // Removes items with given keys.
   //
   // ==== {{{remove(key, callback)}}} ====
@@ -662,6 +1019,9 @@ function SimpleStorage(aFeatureUrl) {
   }
 
   // === {{{SimpleStorage.set()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Sets the values of given keys.
   //
@@ -748,6 +1108,9 @@ function SimpleStorage(aFeatureUrl) {
 
   // === {{{SimpleStorage.size()}}} ===
   //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
+  //
   // Yields the number of items in the store.
   //
   // * onResult(numItems)
@@ -768,6 +1131,9 @@ function SimpleStorage(aFeatureUrl) {
   };
 
   // === {{{SimpleStorage.values()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Yields an array of values in the store.
   //
@@ -813,14 +1179,14 @@ function SimpleStorage(aFeatureUrl) {
     mapItemsAll(function (key, val) val, aUserCallback);
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-
-  //XXXadw TODO Delete the DB file when the feature is purged.
   this.deleteDatabaseFile = function SimpleStorage_deleteDatabaseFile() {
-    throw "NOT YET IMPLEMENTED";
+    throw new Error("NOT YET IMPLEMENTED");
   };
 
   // === {{{SimpleStorage.teardown()}}} ===
+  //
+  // **This method and the rest of the async API is deprecated and will be
+  // removed in a future version of Jetpack.**
   //
   // Closes the store's backing database connection.  The store must not be
   // used after calling this method.
@@ -832,7 +1198,7 @@ function SimpleStorage(aFeatureUrl) {
 }
 
 
-// Helper prototypes //////////////////////////////////////////////////////////
+// DEPRECATED Helper functions ////////////////////////////////////////////////
 
 // aPosition is the argument's position in the parameter list.  aExpectedTypes
 // is a string fragment indicating the argument's expected types.
@@ -896,41 +1262,15 @@ UserCallback.prototype = {
   }
 };
 
-
-// Helper functions ///////////////////////////////////////////////////////////
-
-// Maps the given string of bytes to its hexidecimal representation.  Returns a
-// string.
-function bytesToHexString(aByteStr) {
-  return Array.map(
-    aByteStr, function (c) ("0" + c.charCodeAt(0).toString(16)).slice(-2)
-  ).join("");
-}
-
-// Creates our table if it doesn't already exist.
-function ensureDatabaseIsSetup(aDbConn) {
-  if (!aDbConn.tableExists(TABLE_NAME)) {
-    aDbConn.createTable(TABLE_NAME, CREATE_COLUMN_SQL.join(", "));
-  }
-}
-
 // Creates a directory at the given file's path if it doesn't already exist.
 function ensureDirectoryExists(aFile) {
   if (aFile.exists()) {
     if (!aFile.isDirectory())
-      throw new Error("File " + aFile.path + " exists but is not a directory.");
+      throw new SimpleStorageError("File " + aFile.path +
+                                   " exists but is not a directory.");
   }
   else
     aFile.create(aFile.DIRECTORY_TYPE, 0755);
-}
-
-// Simple storage is supported on Firefox 3.5+ only due to async mozStorage.
-function ensureFx35() {
-  var versionParts = Cc["@mozilla.org/xre/app-info;1"].
-                     getService(Ci.nsIXULAppInfo).
-                     version.split(".");
-  if (versionParts[0][0] == 3 && versionParts[1][0] < 5)
-    throw new Error("jetpack.storage.simple requires Firefox 3.5 or later.");
 }
 
 // Throws an IllegalKeyError if any of the keys in the given items object are
@@ -989,11 +1329,6 @@ function ensureValuesInItemsAreLegal(aItems) {
   }
 }
 
-// Hashes the given feature URL.  Hey, an ID.
-function featureUrlToId(aFeatureUrl) {
-  return hashString(aFeatureUrl);
-}
-
 // Creates the given feature's database file if it doesn't already exist and
 // returns a connection to it.
 function getOrCreateDatabase(aFeatureId) {
@@ -1024,18 +1359,6 @@ function handleStorageError(aError, aUserCallback, aCallbackArgs) {
   aUserCallback.onError.apply(aUserCallback, aCallbackArgs);
 }
 
-// Returns a hex string hash of the given string.
-function hashString(aStr) {
-  var stream = Cc["@mozilla.org/io/string-input-stream;1"].
-               createInstance(Ci.nsIStringInputStream);
-  stream.setData(aStr, aStr.length);
-  var cryp = Cc["@mozilla.org/security/hash;1"].
-             createInstance(Ci.nsICryptoHash);
-  cryp.init(cryp.SHA1);
-  cryp.updateFromStream(stream, aStr.length);
-  return bytesToHexString(cryp.finish(false));
-}
-
 // Returns true if the given key is legal and false otherwise.
 function isKeyLegal(aKey) {
   return typeof(aKey) === "string";
@@ -1049,6 +1372,13 @@ function isValueLegal(aValue) {
 // Logs the given error message.
 function logError(aMsg) {
   console.error(aMsg);
+}
+
+// Logs an information message to the console.
+function logMsg(aMsg) {
+  var console = Cc["@mozilla.org/consoleservice;1"].
+                getService(Ci.nsIConsoleService);
+  console.logStringMessage(aMsg);
 }
 
 // Returns a message generated from the given mozStorage async callback error.
@@ -1078,12 +1408,12 @@ function typeOfArg(aArg) {
 
 // All values are wrapped in an array on set.  See wrapValue().
 function unwrapValue(aRawValue) {
-  return json.decode(aRawValue)[0];
+  return JSON.parse(aRawValue)[0];
 }
 
-// json.encode() returns null if aValue is not an object or array.  A nice hacky
+// json.decode() returns null if aValue is not an object or array.  A nice hacky
 // way to store primitives is to wrap them in an array.  So, we wrap all values
 // in an array on set and unwrap all values on get.
 function wrapValue(aJsValue) {
-  return json.encode([aJsValue]);
+  return JSON.stringify([aJsValue]);
 }

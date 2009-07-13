@@ -1,13 +1,13 @@
 const kAllowableFlavors = [
   "text/unicode",
-  "text/plain",
   "text/html"
 /* CURRENTLY UNSUPPORTED FLAVORS
-  "text/x-moz-text-internal",
-  "AOLMAIL",
+  "text/plain",
   "image/png",
   "image/jpg",
-  "image/gif",
+  "image/gif"
+  "text/x-moz-text-internal",
+  "AOLMAIL",
   "application/x-moz-file",
   "text/x-moz-url",
   "text/x-moz-url-data",
@@ -21,9 +21,13 @@ const kAllowableFlavors = [
   "application/x-moz-file-promise-dir"
 */
 ];
-const kGenericFlavors = {
-  "text": ["text/unicode", "text/plain", "text/html"]
-}
+
+const kFlavorMap = [
+  { short: "plain", long: "text/unicode" },
+  { short: "text", long: "text/unicode" },
+  { short: "html", long: "text/html" }
+//  { short: "image", long: "image/png" },
+];
 
 function Clipboard() {
   MemoryTracking.track(this);
@@ -33,6 +37,7 @@ Clipboard.prototype = {
   // So that memory tracking shows this object properly.
   constructor: Clipboard,
 
+  // Full clipboard service
   __clipboardService: null,
   get _clipboardService() {
     if (!this.__clipboardService)
@@ -41,62 +46,59 @@ Clipboard.prototype = {
     return this.__clipboardService;
   },
 
+  // Clipboard helper (for strings only)
+  __clipboardHelper: null,
+  get _clipboardHelper() {
+    if (!this.__clipboardHelper)
+      this.__clipboardHelper = Cc["@mozilla.org/widget/clipboardhelper;1"].
+                               getService(Ci.nsIClipboardHelper);
+    return this.__clipboardHelper;
+  },
+
 
   set: function(aData, aDataType) {
+    // Handle the single argument case
+    if (!aDataType) {
+      if (typeof aData === "string") {
+        this._clipboardHelper.copyString(aData);
+        return true;
+      } else {
+        throw new Error("The flavor must be specified if content is not a string");
+      }
+    }
+
+    var flavor = this._fromJetpackFlavor(aDataType);
+
+    if (!flavor)
+      throw new Error("Invalid flavor");
+
+    // Additional checks for using the simple case
+    if (flavor == "text/unicode") {
+      // TODO: Should probably check if aData is a string first
+      this._clipboardHelper.copyString(aData);
+      return true;
+    }
+
+    // Below are the more complex cases where we actually have to work with a
+    // nsITransferable object
     var xferable = Cc["@mozilla.org/widget/transferable;1"].
                    createInstance(Ci.nsITransferable);
     if (!xferable)
-      return false;
+      throw new Error("Internal Error: Couldn't create Transferable");
 
-    var dataToSet = [];
-
-    // If we don't have a data type, determine if we have key/pair or
-    // just a single type.
-    if (!aDataType) {
-      if (typeof aData === "string") {
-        /// TODO: should we take the shortcut here and use
-        /// nsIClipboardHelper.copyString? -zpao
-        dataToSet.push(["text/unicode", aData]);
-      }
-      // TODO: Add other cases here (e.g., image) if we can figure them
-      // out.
-      else if (typeof aData === "object") {
-        for (var flavor in aData) {
-          // Ensure we allow this flavor
-          var data = aData[flavor];
-          if (kAllowableFlavors.indexOf(flavor) !== -1)
-            dataToSet.push([flavor, data]);
-        }
-      }
-    } else if (kAllowableFlavors.indexOf(aDataType) !== -1) {
-      // TODO: We should probably sanity check that the type they
-      // specify is what they passed in.
-      dataToSet.push([aDataType, aData]);
+    switch (flavor) {
+      case "text/html":
+        var str = Cc["@mozilla.org/supports-string;1"].
+        createInstance(Ci.nsISupportsString);
+        str.data = aData;
+        xferable.addDataFlavor(flavor);
+        xferable.setTransferData(flavor, str, aData.length * 2);
+        break;
+      // TODO: images!
+      default:
+        return false;
     }
 
-    // TODO: return false or throw? -zpao
-    if (!dataToSet.length)
-      throw new Error("Data to set must be non-empty.");
-
-    for (var i in dataToSet) {
-      // Internal representation is a little weird, but it works
-      // (makes it easy to check for .length).
-      var [flavor, data] = dataToSet[i];
-      switch (flavor) {
-        case "text/plain":
-        case "text/html":
-        case "text/unicode":
-          var str = Cc["@mozilla.org/supports-string;1"].
-                    createInstance(Ci.nsISupportsString);
-          str.data = data;
-          xferable.addDataFlavor(flavor);
-          // Unicode (and html because we store that in unicode) take up
-          // 2 bytes/char.
-          var dataLen = (flavor == "text/plain") ? data.length
-                                                 : data.length * 2;
-          xferable.setTransferData(flavor, str, dataLen);
-      }
-    }
     // TODO: Not sure if this will ever actually throw. -zpao
     try {
       this._clipboardService.setData(
@@ -105,59 +107,27 @@ Clipboard.prototype = {
         this._clipboardService.kGlobalClipboard
       );
     } catch (e) {
-      return false;
+      throw new Error("Internal Error: Could set clipboard data");
     }
     return true;
   },
 
 
-  get: function(aDataType, aCallback) {
+  get: function(aDataType) {
     var xferable = Cc["@mozilla.org/widget/transferable;1"].
                    createInstance(Ci.nsITransferable);
     if (!xferable)
-      return false;
+      throw new Error("Internal Error: Couldn't create Transferable");
 
-    var requestedFlavors = [];
+    var flavor = aDataType ? this._fromJetpackFlavor(aDataType) : "text/unicode";
 
-    // Determine how get() is being used.
-    if (!aDataType) {
-      // No arguments, so we try to grab the most best flavor.
-      requestedFlavors = kAllowableFlavors;
-    } else if (aDataType instanceof Array) {
-      // The user has requested multiple types, so use them.
-      requestedFlavors = aDataType;
-    } else if (typeof aDataType === "string") {
-      // The user has either requested a single type or a generic type
-      // like "text".
-      if (kGenericFlavors[aDataType]){
-        // It was generic.
-        requestedFlavors = kGenericFlavors[aDataType];
-      } else {
-        requestedFlavors.push(aDataType);
-      }
-    }
+    // Ensure that the user hasn't requested a flavor that we don't support.
+    if (!flavor)
+      throw new Error("Invalid flavor");
 
-    // Ensure that the user hasn't requested a flavor that we don't
-    // support.
+    // TODO: Check for matching flavor first? Probably not worth it.
 
-    // TODO: Should we just get rid of the unsupported type or should
-    // we throw an ArgumentError?
-    for (var i = requestedFlavors - 1; i >= 0; i--)
-      if (kAllowableFlavors.indexOf(requestedFlavors[i]) == -1)
-        requestedFlavors.splice(i, 1);
-
-    // We should definitely have SOME flavor to try to get, but if
-    // not, throw an exception.
-    if (!requestedFlavors.length)
-      throw new Error("Requested flavors must be specified.");
-
-    for (i in requestedFlavors)
-      xferable.addDataFlavor(requestedFlavors[i]);
-
-    // TODO: We should probably check for matching flavors before
-    // getting the clipboard data. see:
-    //
-    // http://mxr.mozilla.org/mozilla-central/source/browser/components/places/content/controller.js#386
+    xferable.addDataFlavor(flavor);
 
     // Get the data into our transferable.
     this._clipboardService.getData(
@@ -165,38 +135,71 @@ Clipboard.prototype = {
       this._clipboardService.kGlobalClipboard
     );
 
-    var returnData = {};
-
-    for (i in requestedFlavors) {
-      var flavor = requestedFlavors[i];
-
-      var data = {};
-      var dataLen = {};
-      try {
-        xferable.getTransferData(flavor, data, dataLen);
-      } catch (e) {
-        continue;
-      }
-
-      // TODO: Not sure data will ever be null at this point, but
-      // doesn't hurt to check.
-      if (!data)
-        continue;
-
-      // TODO: Add flavors here as we support more in kAllowableFlavors.
-      switch (flavor) {
-        case "text/plain":
-          data = data.value.data;
-          break;
-        case "text/unicode":
-        case "text/html":
-          data = data.value.QueryInterface(Ci.nsISupportsString).data;
-          break;
-        default:
-      }
-      returnData[flavor] = data;
+    var data = {};
+    var dataLen = {};
+    try {
+      xferable.getTransferData(flavor, data, dataLen);
+    } catch (e) {
+      // Clipboard doesn't contain data in flavor, return false
+      return null;
     }
 
-    return returnData;
+    // TODO: Not sure data will ever be null at this point, but
+    // doesn't hurt to check.
+    if (!data)
+      return null;
+
+    // TODO: Add flavors here as we support more in kAllowableFlavors.
+    switch (flavor) {
+      case "text/plain":
+        data = data.value.data;
+        break;
+      case "text/unicode":
+      case "text/html":
+        data = data.value.QueryInterface(Ci.nsISupportsString).data;
+        break;
+      default:
+        return null;
+    }
+
+    return data;
+  },
+
+  getCurrentFlavors: function() {
+    // Loop over kAllowableFlavors, calling hasDataMatchingFlavors for each.
+    // This doesn't seem like the most efficient way, but we can't get
+    // confirmation for specific flavors any other way. This is supposed to be
+    // an inexpensive call, so performance shouldn't be impacted (much).
+    var currentFlavors = [];
+    for each (var flavor in kAllowableFlavors) {
+      var matches = this._clipboardService.hasDataMatchingFlavors(
+        [flavor],
+        1,
+        this._clipboardService.kGlobalClipboard
+      );
+      if (matches)
+        currentFlavors.push(this._toJetpackFlavor(flavor));
+    }
+    return currentFlavors;
+  },
+
+
+  // SUPPORT FUNCTIONS ////////////////////////////////////////////////////////
+
+  _toJetpackFlavor: function(aFlavor) {
+    for each (flavorMap in kFlavorMap)
+      if (flavorMap.long == aFlavor || flavorMap.short == aFlavor)
+        return flavorMap.short;
+    // Return null in the case where we don't match
+    return null;
+  },
+
+  _fromJetpackFlavor: function(aJetpackFlavor) {
+    // TODO: Handle proper flavors better
+    for each (flavorMap in kFlavorMap)
+      if (flavorMap.short == aJetpackFlavor || flavorMap.long == aJetpackFlavor)
+        return flavorMap.long;
+    // Return null in the case where we don't match.
+    return null;
   }
 };

@@ -58,11 +58,21 @@
 #define AUDIO_RECORDER_CID { 0x1fdf790f, 0x0648, 0x4e53, \
                            { 0x92, 0x7d, 0xbe, 0x13, 0xa3, 0xc6, 0x92, 0x54 } }
 
+#ifndef SAMPLE_RATE
 #define SAMPLE_RATE         (44000)
-#define SAMPLE_SILENCE      (0)
+#endif
+#ifndef SAMPLE_SILENCE
+#define SAMPLE_SILENCE      (0.0f)
+#endif
+#ifndef NUM_CHANNELS
 #define NUM_CHANNELS        (2)
+#endif
+#ifndef FRAMES_PER_BUFFER
 #define FRAMES_PER_BUFFER   (1024)
+#endif
+#ifndef PA_SAMPLE_TYPE
 #define PA_SAMPLE_TYPE      paFloat32
+#endif
 
 class AudioRecorder : public IAudioRecorder
 {

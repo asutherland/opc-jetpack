@@ -67,25 +67,34 @@ delegateToResolver(JSContext *cx, JSObject *obj, const char *name,
     return JS_FALSE;
   JSObject *resolverObj = JSVAL_TO_OBJECT(resolver);
 
+  jsval *allArgv;
   uintN allArgc = argc + 2;
-  jsval allArgv[allArgc];
+  allArgv = (jsval *)PR_Malloc(allArgc * sizeof(jsval));
 
-  if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, allArgv))
+  if (!JS_GetReservedSlot(cx, obj, SLOT_WRAPPEE, allArgv)) {
+    PR_Free(allArgv);
     return JS_FALSE;
+  }
   allArgv[1] = OBJECT_TO_JSVAL(obj);
 
   for (unsigned int i = 0; i < argc; i++)
     allArgv[i + 2] = argv[i];
 
-  if (!JS_CallFunctionName(cx, resolverObj, name, allArgc, allArgv, rval))
+  if (!JS_CallFunctionName(cx, resolverObj, name, allArgc, allArgv, rval)) {
+    PR_Free(allArgv);
     return JS_FALSE;
+  }
+
+  PR_Free(allArgv);
   return JS_TRUE;
 }
 
 static JSBool
 enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
           jsval *statep, jsid *idp)
-{  
+{
+  JSObject *iterator;
+ 
   switch (enum_op) {
   case JSENUMERATE_INIT:
     if (resolverHasMethod(cx, obj, "enumerate")) {
@@ -104,7 +113,7 @@ enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     return JS_FALSE;
   case JSENUMERATE_NEXT:
     jsval rval;
-    JSObject *iterator = JSVAL_TO_OBJECT(*statep);
+    iterator = JSVAL_TO_OBJECT(*statep);
     if (!JS_CallFunctionName(cx, iterator, "next", 0, NULL, &rval)) {
       if (JS_IsExceptionPending(cx)) {
         jsval exception;

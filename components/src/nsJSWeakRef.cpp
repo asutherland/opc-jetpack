@@ -9,6 +9,8 @@
 #include "nsServiceManagerUtils.h"
 #include "nsComponentManagerUtils.h"
 
+NS_IMPL_ISUPPORTS1(nsJSWeakRef, nsIJSWeakRef)
+
 static JSFunctionSpec endpointFunctions[] = {
   JS_FS("wrap",          wrapObject,       2, JSPROP_ENUMERATE, 0),
   JS_FS("unwrap",        unwrapObject,     1, JSPROP_ENUMERATE, 0),
@@ -79,4 +81,3 @@ NS_IMETHODIMP nsJSWeakRef::Get()
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS1(nsJSWeakRef, nsIJSWeakRef);

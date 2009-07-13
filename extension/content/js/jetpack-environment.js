@@ -285,7 +285,7 @@ JetpackEnv.setFutures(
      return function() { return "I'm from the future."; };
    },
 
-   "jetpack.os.clipboard": function(context) {
+   "jetpack.clipboard": function(context) {
      return new Clipboard();
    },
 
@@ -294,23 +294,31 @@ JetpackEnv.setFutures(
      return {require: loader.require};
    },
 
-   "jetpack.selection": function(context) Selection.makeExported(context),
+   "jetpack.selection": function(context) {
+     return Selection.makeExported(context);
+   },
 
    "jetpack.storage.simple": function (context) {
      var s = {};
-     Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
-     //XXXadw context.srcUrl or context.url?  We hash this as the feature's ID,
-     //  so it should be unique to this feature.
-     var ss = new s.SimpleStorage(context.srcUrl);
-     context.addUnloader({ unload: function () ss.teardown() });
+     Components.utils.import("resource://jetpack/modules/simple-storage.js",
+                             s);
+
+     // TODO: context.srcUrl or context.url?  We hash this as the
+     // feature's ID, so it should be unique to this feature. -adw
+     var ss = new s.simpleStorage.SimpleStorage(context.srcUrl);
+     s.simpleStorage.register(ss);
+     context.addUnloader({ unload: function () s.simpleStorage.unregister(ss)});
      return ss;
    },
 
-   "jetpack.slideBar": function(context) SlideBar.makeExported(context),
+   "jetpack.slideBar": function(context) {
+     return SlideBar.makeExported(context);
+   },
 
    "jetpack.audio": function(context) {
-       Components.utils.import("resource://jetpack/modules/audio.js");
-       return new Audio();
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/audio.js", s);
+     return new s.AudioModule();
    }
   });
 

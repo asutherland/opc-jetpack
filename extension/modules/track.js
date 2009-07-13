@@ -6,12 +6,14 @@ var MemoryTracking = {
   COMPACT_INTERVAL: 1000,
   _trackedObjects: {},
   track: function track(object, bin, stackFrameNumber) {
+    var frame = Components.stack.caller;
     var weakref = Components.utils.getWeakReference(object);
     if (!bin)
       bin = object.constructor.name;
+    if (bin == "Object")
+      bin = frame.name;
     if (!(bin in this._trackedObjects))
       this._trackedObjects[bin] = [];
-    var frame = Components.stack.caller;
 
     if (stackFrameNumber > 0)
       for (var i = 0; i < stackFrameNumber; i++)

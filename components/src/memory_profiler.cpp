@@ -13,7 +13,7 @@
 
 // Private structure to track the state of tracing the JS heap.
 
-typedef struct TracingState {
+typedef struct _TracingState {
   // Keeps track of what objects we've visited so far.
   JSDHashTable visited;
 
@@ -28,17 +28,17 @@ typedef struct TracingState {
 
   // Structure required to use JS tracing functions.
   JSTracer tracer;
-};
+} TracingState;
 
 // Static singleton for tracking the state of tracing the JS heap.
 static TracingState tracingState;
 
-typedef struct ChildTracingState {
+typedef struct _ChildTracingState {
   int num;
   void **things;
   uint32 *kinds;
   JSTracer tracer;
-};
+} ChildTracingState;
 
 static ChildTracingState childTracingState;
 
@@ -65,9 +65,11 @@ static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
 // JSTraceCallback to build a hashtable of existing object references.
 static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
 {
+  JSDHashEntryStub *entry;
+
   switch (kind) {
   case JSTRACE_OBJECT:
-    JSDHashEntryStub *entry = (JSDHashEntryStub *)
+    entry = (JSDHashEntryStub *)
       JS_DHashTableOperate(&tracingState.visited,
                            thing,
                            JS_DHASH_LOOKUP);
@@ -99,8 +101,9 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
   childTracingState.num = 0;
   JS_TraceChildren(&childTracingState.tracer, target, JSTRACE_OBJECT);
 
-  void *things[childTracingState.num];
-  uint32 kinds[childTracingState.num];
+  jsval *childrenVals;
+  void **things = (void **)PR_Malloc(childTracingState.num * sizeof(void *));
+  uint32 *kinds = (uint32 *)PR_Malloc(childTracingState.num * sizeof(uint32));
 
   childTracingState.things = things;
   childTracingState.kinds = kinds;
@@ -114,7 +117,7 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
       numObjectChildren++;
   }
 
-  jsval childrenVals[numObjectChildren];
+  childrenVals = (jsval *)PR_Malloc(numObjectChildren * sizeof(jsval));
 
   int currChild = 0;
   for (int i = 0; i < childTracingState.num; i++) {
@@ -126,15 +129,25 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
 
   if (numObjectChildren != currChild) {
     JS_ReportError(cx, "Assertion failure, numObjectChildren != currChild");
+    PR_Free(things);
+    PR_Free(kinds);
+    PR_Free(childrenVals);
     return JS_FALSE;
   }
 
   JSObject *children = JS_NewArrayObject(cx, numObjectChildren, childrenVals);
   if (children == NULL) {
     JS_ReportOutOfMemory(cx);
+    PR_Free(things);
+    PR_Free(kinds);
+    PR_Free(childrenVals);
     return JS_FALSE;
   }
 
+  PR_Free(things);
+  PR_Free(kinds);
+  PR_Free(childrenVals);
+ 
   return JS_DefineProperty(cx, info, "children", OBJECT_TO_JSVAL(children),
                            NULL, NULL, JSPROP_ENUMERATE);
 }
@@ -209,26 +222,32 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
 }
 
 static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
-                               jsid targetPropId, JSObject *target,
-                               JSContext *targetCx)
+                               jsid targetPropId, const char *name,
+                               JSObject *target, JSContext *targetCx)
 {
-  jsval id;
-  if (!JS_IdToValue(targetCx, targetPropId, &id)) {
-    JS_ReportError(cx, "JS_IdToValue() failed.");
-    return JS_FALSE;
-  }
-
   jsval value;
-  JSObject *valueObj;
-  if (!JS_LookupPropertyWithFlagsById(
-        targetCx,
-        target,
-        targetPropId,
-        JSRESOLVE_DETECTING,
-        &valueObj,
-        &value)) {
-    JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
-    return JS_FALSE;
+  if (name == NULL) {
+    JSObject *valueObj;
+    if (!JS_LookupPropertyWithFlagsById(
+          targetCx,
+          target,
+          targetPropId,
+          JSRESOLVE_DETECTING,
+          &valueObj,
+          &value)) {
+      JS_ReportError(cx, "JS_LookupPropertyWithFlagsById() failed.");
+      return JS_FALSE;
+    }
+  } else {
+    if (!JS_LookupPropertyWithFlags(
+          targetCx,
+          target,
+          name,
+          JSRESOLVE_DETECTING,
+          &value)) {
+      JS_ReportError(cx, "JS_LookupPropertyWithFlags() failed.");
+      return JS_FALSE;
+    }
   }
 
   if (JSVAL_IS_OBJECT(value)) {
@@ -247,15 +266,26 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
   } else
     value = JSVAL_NULL;
 
-  if (!JS_DefinePropertyById(
-        cx, propInfo,
-        // TODO: Is it OK to use this ID from a different JSRuntime?
-        targetPropId,
-        value,
-        NULL,
-        NULL,
-        JSPROP_ENUMERATE))
-    return JS_FALSE;
+  if (name == NULL) {
+    if (!JS_DefinePropertyById(
+          cx, propInfo,
+          // TODO: Is it OK to use this ID from a different JSRuntime?
+          targetPropId,
+          value,
+          NULL,
+          NULL,
+          JSPROP_ENUMERATE))
+      return JS_FALSE;
+  } else {
+    if (!JS_DefineProperty(
+          cx, propInfo,
+          name,
+          value,
+          NULL,
+          NULL,
+          JSPROP_ENUMERATE))
+      return JS_FALSE;
+  }
 
   return JS_TRUE;
 }
@@ -277,7 +307,7 @@ static JSBool getPropertiesInfo2(JSContext *cx, JSObject *propInfo,
       break;
 
     if (!copyPropertyInfo(cx, propInfo,
-                          iterId, target,
+                          iterId, NULL, target,
                           targetCx))
       return JS_FALSE;
   }
@@ -305,7 +335,7 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
 
   for (int i = 0; i < ids->length; i++) {
     if (!copyPropertyInfo(cx, propInfo,
-                          ids->vector[i], target,
+                          ids->vector[i], NULL, target,
                           targetCx)) {
       success = JS_FALSE;
       break;
@@ -403,6 +433,38 @@ static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
   if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry))
     *rval = OBJECT_TO_JSVAL((JSObject *) id);
   else
+    *rval = JSVAL_NULL;
+
+  return JS_TRUE;
+}
+
+static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
+                             jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (!JSVAL_IS_STRING(argv[1])) {
+    JS_ReportError(cx, "Must supply a string as second parameter.");
+    return JS_FALSE;
+  }
+
+  char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+    JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+    *rval = OBJECT_TO_JSVAL(info);
+
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
+    JSContext *targetCx = tracingState.tracer.context;
+
+    if (!copyPropertyInfo(cx, info,
+                          NULL, name, target,
+                          targetCx))
+      return JS_FALSE;
+  } else
     *rval = JSVAL_NULL;
 
   return JS_TRUE;
@@ -549,12 +611,12 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
-typedef struct RootMapStruct {
+typedef struct _RootMapStruct {
   JSBool rval;
   int length;
   JSContext *cx;
   JSObject *array;
-};
+} RootMapStruct;
 
 static intN rootMapFun(void *rp, const char *name, void *data)
 {
@@ -608,6 +670,7 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
+  JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),
   JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
   JS_FS_END
 };
@@ -655,7 +718,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     JS_ReportError(cx, "Couldn't create server JS context.");
     return JS_FALSE;
   }
-  JS_SetOptions(serverCx, JSOPTION_VAROBJFIX);
+  JS_SetOptions(serverCx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
   JS_SetVersion(serverCx, JSVERSION_LATEST);
 
   JS_BeginRequest(serverCx);

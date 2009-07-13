@@ -14,7 +14,7 @@ USE_STATIC_LIBS = 1
 
 XPI_NAME = jetpack
 
-REQUIRES	= \
+REQUIRES = \
 		  xpcom \
 		  string \
 		  js \
