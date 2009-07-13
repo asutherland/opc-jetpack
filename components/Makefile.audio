@@ -15,7 +15,7 @@ ifeq ($(sys), Linux)
   so = so
   cppflags += -shared
 else
-ifeq ($(sys), MINGW32_NT-6.0)
+ifeq ($(sys), MINGW32_NT-5.2)
   os = WINNT
   compiler = msvc
   cxx = cl
@@ -136,6 +136,7 @@ else
 ifeq ($(os), WINNT)
   libdirs := $(patsubst %,-LIBPATH:%,$(libdirs))
   libs := $(patsubst %,$(sdkdir)/lib/%.lib,$(libs))
+  headers += -I/d/libsndfile/include -I/d/portaudio/include
   cppflags += -c -nologo -O1 -GR- -TP -MT -Zc:wchar_t- -W3 -Gy $(headers) \
     -DNDEBUG -DTRIMMED -D_CRT_SECURE_NO_DEPRECATE=1 \
     -D_CRT_NONSTDC_NO_DEPRECATE=1 -DWINVER=0x500 -D_WIN32_WINNT=0x500 \
@@ -147,7 +148,9 @@ ifeq ($(os), WINNT)
     -DD_INO=d_ino
   ldflags += -DLL -NOLOGO -SUBSYSTEM:WINDOWS -NXCOMPAT -SAFESEH -IMPLIB:fake.lib \
     $(libdirs) $(libs) \
-    kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib
+    kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib \
+    /d/portaudio/build/msvc/Win32/Release/portaudio_x86.lib \
+    /d/libsndfile/libsndfile-1.lib
   rcflags := -r $(headers)
 endif
 endif

@@ -40,7 +40,11 @@
 
 #include "IAudioRecorder.h"
 #include "portaudio.h"
+
+// MSVC Weirdness
+#define __int64_t __int64
 #include "sndfile.h"
+#undef __int64_t
 
 #include "prmem.h"
 #include "nsIPipe.h"

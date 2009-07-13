@@ -39,7 +39,11 @@
 #define AudioEncoder_h_
 
 #include "IAudioEncoder.h"
+
+// MSVC Weirdness
+#define __int64_t __int64
 #include "sndfile.h"
+#undef __int64_t
 
 #include "prmem.h"
 #include "nsIFile.h"
