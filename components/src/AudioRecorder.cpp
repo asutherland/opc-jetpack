@@ -39,7 +39,28 @@
 
 NS_IMPL_ISUPPORTS1(AudioRecorder, IAudioRecorder)
 
-AudioRecorder::AudioRecorder()
+AudioRecorder *AudioRecorder::gAudioRecordingService = nsnull;
+
+AudioRecorder *
+AudioRecorder::GetSingleton()
+{
+    if (gAudioRecordingService) {
+        NS_ADDREF(gAudioRecordingService);
+        return gAudioRecordingService;
+    }
+    
+    gAudioRecordingService = new AudioRecorder();
+    if (gAudioRecordingService) {
+        NS_ADDREF(gAudioRecordingService);
+        if (NS_FAILED(gAudioRecordingService->Init()))
+            NS_RELEASE(gAudioRecordingService);
+    }
+    
+    return gAudioRecordingService;
+}
+
+nsresult
+AudioRecorder::Init()
 {   
     stream = NULL;
     recording = 0;
@@ -48,30 +69,10 @@ AudioRecorder::AudioRecorder()
     err = Pa_Initialize();
     if (err != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not initialize PortAudio! %d\n", err);
+        return NS_ERROR_FAILURE;
     }
     
-    /* Open stream */
-    PaStreamParameters inputParameters;    
-    inputParameters.device = Pa_GetDefaultInputDevice();
-    inputParameters.channelCount = 2;
-    inputParameters.sampleFormat = PA_SAMPLE_TYPE;
-    inputParameters.suggestedLatency =
-        Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
-    inputParameters.hostApiSpecificStreamInfo = NULL;
-
-    err = Pa_OpenStream(
-            &stream,
-            &inputParameters,
-            NULL,
-            SAMPLE_RATE,
-            FRAMES_PER_BUFFER,
-            paClipOff,
-            this->RecordToFileCallback,
-            this
-    );
-    if (err != paNoError) {
-        fprintf(stderr, "JEP Audio:: Could not open stream! %d", err);
-    }
+    return NS_OK;
 }
 
 AudioRecorder::~AudioRecorder()
@@ -80,6 +81,8 @@ AudioRecorder::~AudioRecorder()
     if ((err = Pa_Terminate()) != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not terminate PortAudio! %d\n", err);
     }
+    
+    gAudioRecordingService = nsnull;
 }
 
 #define TABLE_SIZE 36
@@ -238,8 +241,32 @@ AudioRecorder::StartRecordToFile(nsACString& file)
 
 	file.Assign(path.get(), strlen(path.get()));
 
+    /* Open stream */
+    PaError err;
+    PaStreamParameters inputParameters;    
+    inputParameters.device = Pa_GetDefaultInputDevice();
+    inputParameters.channelCount = 2;
+    inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+    inputParameters.suggestedLatency =
+        Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
+    inputParameters.hostApiSpecificStreamInfo = NULL;
+
+    err = Pa_OpenStream(
+            &stream,
+            &inputParameters,
+            NULL,
+            SAMPLE_RATE,
+            FRAMES_PER_BUFFER,
+            paClipOff,
+            this->RecordToFileCallback,
+            this
+    );
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not open stream! %d", err);
+    }
+    
     /* Start recording */
-    PaError err = Pa_StartStream(stream);
+    err = Pa_StartStream(stream);
     if (err != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
         return NS_ERROR_FAILURE;

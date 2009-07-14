@@ -41,7 +41,8 @@
 #include "AudioEncoder.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(AudioEncoder)
-NS_GENERIC_FACTORY_CONSTRUCTOR(AudioRecorder)
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(AudioRecorder,
+                                         AudioRecorder::GetSingleton)
 
 static nsModuleComponentInfo components[] =
 {

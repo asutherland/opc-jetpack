@@ -81,19 +81,23 @@
 class AudioRecorder : public IAudioRecorder
 {
 public:
-    AudioRecorder();
     NS_DECL_ISUPPORTS
     NS_DECL_IAUDIORECORDER
 
+    nsresult Init();
+    static AudioRecorder *GetSingleton();
+    virtual ~AudioRecorder();
+    AudioRecorder(){}
+    
     nsCOMPtr<nsIAsyncInputStream> mPipeIn;
     nsCOMPtr<nsIAsyncOutputStream> mPipeOut;
 
 private:
-    ~AudioRecorder();
     int recording;
     PaStream *stream;
 	SNDFILE *outfile;
-
+    static AudioRecorder *gAudioRecordingService;
+    
 protected:
     static int RecordCallback(const void *input, void *output,
         unsigned long framesPerBuffer,
