@@ -71,8 +71,14 @@ AudioModule.prototype = {
     // and Ogg/Vorbis file.
     //
     recordToFile: function() {
-        this._path = Re.startRecordToFile();
-		this.isRecording = true;
+        try {
+            this._path = Re.startRecordToFile();
+        } catch (e) {
+            return false;
+        }
+        
+        this.isRecording = true;
+        return true;
     },
 
     // === {{{AudioModule.stopRecording()}}} ===
@@ -84,7 +90,7 @@ AudioModule.prototype = {
     //
     stopRecording: function() {
         Re.stop();
-		this.isRecording = false;
+        this.isRecording = false;
 		
         let src = new Fi(this._path);
         let dst = getOrCreateDirectory();

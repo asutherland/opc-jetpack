@@ -140,6 +140,39 @@ EscapeBackslash(nsACString& str)
 	}
 }
 
+/*
+ * Try to intelligently fetch a default input device
+ */
+static PaDeviceIndex
+GetDefaultInputDevice()
+{
+    int i, numDevices;
+    PaDeviceIndex def;
+    const PaDeviceInfo *deviceInfo;
+    
+    numDevices = Pa_GetDeviceCount();
+    if (numDevices < 0) {
+        fprintf(stderr, "JEP Audio:: No audio devices found!\n");
+        return paNoDevice;
+    }
+    
+    /* Try default input */
+    if ((def = Pa_GetDefaultInputDevice()) != paNoDevice) {
+        return def;
+    }
+    
+    /* No luck, iterate and check for API specific input device */
+    for (i = 0; i < numDevices; i++) {
+        deviceInfo = Pa_GetDeviceInfo(i);
+        if (i == Pa_GetHostApiInfo(deviceInfo->hostApi)->defaultInputDevice) {
+            return i;
+        }
+    }
+    
+    /* No device :( */
+    return paNoDevice;
+}
+
 int
 AudioRecorder::RecordCallback(const void *input, void *output,
         unsigned long framesPerBuffer,
@@ -237,7 +270,7 @@ AudioRecorder::StartRecordToFile(nsACString& file)
     PaDeviceIndex dev;
 	nsCOMPtr<nsIFile> o;
 
-    dev = Pa_GetDefaultInputDevice();
+    dev = GetDefaultInputDevice();
     if (dev == paNoDevice) {
         fprintf(stderr, "JEP Audio:: Could not find input device!\n");
         return NS_ERROR_UNEXPECTED;
