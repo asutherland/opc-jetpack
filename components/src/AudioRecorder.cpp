@@ -207,9 +207,17 @@ AudioRecorder::StartRecordToFile(nsACString& file)
         return NS_ERROR_FAILURE;
     }
 
+    /* Check for audio input device */
     nsresult rv;
+    PaDeviceIndex dev;
 	nsCOMPtr<nsIFile> o;
 
+    dev = Pa_GetDefaultInputDevice();
+    if (dev == paNoDevice) {
+        fprintf(stderr, "JEP Audio:: Could not find input device!\n");
+        return NS_ERROR_UNEXPECTED;
+    }
+    
     /* Allocate OGG file */
     char buf[13];
     nsCAutoString path;
@@ -244,11 +252,11 @@ AudioRecorder::StartRecordToFile(nsACString& file)
     /* Open stream */
     PaError err;
     PaStreamParameters inputParameters;    
-    inputParameters.device = Pa_GetDefaultInputDevice();
+    inputParameters.device = dev;
     inputParameters.channelCount = 2;
     inputParameters.sampleFormat = PA_SAMPLE_TYPE;
     inputParameters.suggestedLatency =
-        Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
+        Pa_GetDeviceInfo(dev)->defaultLowInputLatency;
     inputParameters.hostApiSpecificStreamInfo = NULL;
 
     err = Pa_OpenStream(
