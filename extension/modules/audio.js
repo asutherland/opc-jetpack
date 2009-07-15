@@ -89,7 +89,7 @@ AudioModule.prototype = {
         let src = new Fi(this._path);
         let dst = getOrCreateDirectory();
 
-        src.moveTo(dst, '');
+        src.copyTo(dst, '');
         dst.append(src.leafName);
 
         return dst.path;

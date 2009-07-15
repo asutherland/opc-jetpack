@@ -115,6 +115,31 @@ MakeRandomString(char *buf, PRInt32 bufLen)
     *buf = 0;
 }
 
+/*
+ * This replaces \ with \\ so that Windows paths are sane
+ */
+static void
+EscapeBackslash(nsACString& str)
+{
+	const char *sp;
+	const char *mp = "\\";
+	const char *np = "\\\\";
+
+	PRUint32 sl;
+	PRUint32 ml = 1;
+	PRUint32 nl = 2;
+
+	sl = NS_CStringGetData(str, &sp);
+	for (const char* iter = sp; iter <= sp + sl - ml; ++iter) {
+	    if (memcmp(iter, mp, ml) == 0) {
+            PRUint32 offset = iter - sp;
+            NS_CStringSetDataRange(str, offset, ml, np, nl);
+            sl = NS_CStringGetData(str, &sp);
+            iter = sp + offset + nl - 1;
+	    }
+	}
+}
+
 int
 AudioRecorder::RecordCallback(const void *input, void *output,
         unsigned long framesPerBuffer,
@@ -247,6 +272,7 @@ AudioRecorder::StartRecordToFile(nsACString& file)
         return NS_ERROR_FAILURE;
     }
 
+    EscapeBackslash(path);
 	file.Assign(path.get(), strlen(path.get()));
 
     /* Open stream */
