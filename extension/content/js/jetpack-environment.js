@@ -163,7 +163,7 @@ window.addLazyLoaders(
      "Notifications"
    ],
    "js/selection.js": [
-     "Selection"
+     "_Selection"
    ],
    "js/slidebar.js": [
      "SlideBar"
@@ -298,7 +298,7 @@ JetpackEnv.setFutures(
    },
 
    "jetpack.selection": function(context) {
-     return Selection.makeExported(context);
+     return _Selection.makeExported(context);
    },
 
    "jetpack.storage.simple": function (context) {
