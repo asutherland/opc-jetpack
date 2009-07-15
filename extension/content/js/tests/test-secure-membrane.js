@@ -20,8 +20,10 @@ var SecureMembraneTests = {
 
       ensureEqual("tabs.focused.isClosed");
       ensureEqual("tabs.focused.url");
-      console.log(sandbox.tabs.focused);
+      self.assertEqual(tryCode("'' + tabs"), "[Tabs]");
+      self.assertEqual(tryCode("tabs.nonexistent"), undefined);
       self.assertEqual(tryCode("tabs.__proto__"), undefined);
+      tabHarness.unload();
     } else
       console.warn("SecureMembrane is not available; skipping test.");
   }

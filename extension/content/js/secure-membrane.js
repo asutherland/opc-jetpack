@@ -45,7 +45,6 @@ var SecureMembrane = {
   },
 
   Wrapper: function Wrapper(obj) {
-    dump("new wrapper\n");
     this.obj = obj;
   }
 };
@@ -66,24 +65,22 @@ SecureMembrane.Wrapper.prototype = {
                   "caller": null},
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
-    dump("getproperty " + name + "\n");
     if (name in this.badProperties)
       return null;
-    return SecureMembrane.wrap(wrappee[name]);
+    if (name in wrappee)
+      return SecureMembrane.wrap(wrappee[name]);
+    return undefined;
   },
 
   setProperty: function(wrappee, wrapper, name, defaultValue) {
-    dump("setproperty\n");
     throw "object properties are read-only";
   },
 
   delProperty: function(wrappee, wrapper, name) {
-    dump("delproperty\n");
     throw "object properties are read-only";
   },
 
   call: function call(wrappee, wrapper, thisObj, args) {
-    dump("call\n");
     if (typeof(wrappee) == "function") {
       var wrappedArgs = [];
       args.forEach(function(arg) {
@@ -101,13 +98,16 @@ SecureMembrane.Wrapper.prototype = {
   },
 
   enumerate: function(wrappee, wrapper) {
-    dump("ENUMERATE!\n");
     for (name in wrappee)
       yield name;
   },
 
+  convert: function(wrappee, wrapper, type) {
+    // TODO: When, if ever, do we want to call valueOf()?
+    return wrappee.toString();
+  },
+
   iteratorObject: function(wrappee, wrapper, keysonly) {
-    dump("iterator " + keysonly + "\n");
     if (keysonly) {
       function keyIterator() {
         for (name in wrappee)
