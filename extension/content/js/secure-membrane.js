@@ -104,6 +104,7 @@ SecureMembrane.Wrapper.prototype = {
 
   convert: function(wrappee, wrapper, type) {
     // TODO: When, if ever, do we want to call valueOf()?
+    // TODO: Do we want to catch exceptions?
     return wrappee.toString();
   },
 
