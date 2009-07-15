@@ -176,6 +176,9 @@ window.addLazyLoaders(
    ],
    "js/timers.js": [
      "Timers"
+   ],
+   "js/secure-membrane.js": [
+     "SecureMembrane"
    ]
   });
 
