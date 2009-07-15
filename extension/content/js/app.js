@@ -608,7 +608,10 @@ $(window).ready(
         App.viewSource(window.location.href, null);
       });
     $("#force-gc").click(App.forceGC);
-    $("#run-tests").click(function() { Tests.run(); });
+    $("#run-tests").click(
+      function() {
+        Tests.run(null, $("#test-filter").val());
+      });
 
     if (App.isFirefoxOld)
       $(".developer-warnings").append($("#old-firefox-version"));
