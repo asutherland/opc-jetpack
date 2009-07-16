@@ -140,14 +140,15 @@ function traverseRoundup(objNum) {
     //debug("traverseRoundup: ", objInfo);
     
     if (objInfo.nativeClass == "Function" && objInfo.properties) { //} && objInfo.properties.prototype) {
-        debug("Function: ", objInfo);
+        //debug("Function: ", objInfo);
         for (var key in objInfo.properties) {
             if (key == "prototype") {
                 debug("prototype found for ", objInfo);
                 // var type = getType(objInfo);
                 // debug("Type: ", type);
-                typeMap[objInfo.properties["prototype"]] = objInfo;
-                addTypeSizeAndCount(objInfo.prototype, objInfo.size);
+                //debug("Function value for properties.prototype: ", objInfo.properties[key]);
+                typeMap[objInfo.properties[key]] = objInfo;
+                //addTypeSizeAndCount(objInfo.prototype, objInfo.size);
                 break;
             }
         }
@@ -162,20 +163,16 @@ function traverseRoundup(objNum) {
     } else if (objInfo.nativeClass == "Array") {
         //debug("Array: ", objInfo);
         if (objInfo.children) for (var x = 0; x < objInfo.children.length; x++) {
-            //var kid = objInfo.children[x];
-            var kid = getObjectInfoAndPrototype(objInfo.children[x]);
+            var kid = objInfo.children[x];
+            //var kid = getObjectInfoAndPrototype(objInfo.children[x]);
 
             if (kid != objInfo.prototype && kid != objInfo.parent) { // not the parent scope or prototype chain
                 //debug("Kid got through 2: ", kid);
                 var arrayItem = getObjectInfoAndPrototype(kid);
+                //debug("Kid " + kid + " has prototype " + arrayItem.prototype);
+
                 if (arrayItem && arrayItem.prototype) {
-                    if (typeSize[arrayItem.prototype]) {
-                        typeSize[arrayItem.prototype] += arrayItem.size;
-                        typeCount[arrayItem.prototype]++;
-                    } else {
-                        typeSize[arrayItem.prototype] = arrayItem.size;
-                        typeCount[arrayItem.prototype] = 1;
-                    }
+                    addTypeSizeAndCount(arrayItem.prototype, arrayItem.size);
                 }
             }
         }
