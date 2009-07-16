@@ -53,7 +53,15 @@ SecureMembrane.Wrapper.prototype = {
   name: "SecureMembrane",
 
   // The kind of membrane we want to wrap untrusted code in.
-  wrapUntrusted: XPCSafeJSObjectWrapper,
+  wrapUntrusted: function wrapUntrusted(obj) {
+    var wrapper = SecureMembrane.binary.getWrapper(obj);
+    // TODO: What if the object is wrapped many times? We may need to
+    // recurse through all the levels of wrapping.
+    if (wrapper !== null && wrapper.name == this.name)
+      // Actually, it's already wrapped with a SecureMembrane, so we trust it.
+      return SecureMembrane.binary.unwrap(obj);
+    return XPCSafeJSObjectWrapper(obj);
+  },
 
   isPropertyDangerous: function(name) {
     switch (name) {
@@ -66,6 +74,14 @@ SecureMembrane.Wrapper.prototype = {
       return true;
     default:
       return false;
+    }
+  },
+
+  resolve: function(wrappee, wrapper, name) {
+    if (name in wrappee) {
+      var resolved = this.safeGetProperty(wrappee, name);
+      wrapper[name] = resolved;
+      return wrapper;
     }
   },
 
@@ -88,6 +104,10 @@ SecureMembrane.Wrapper.prototype = {
   },
 
   setProperty: function(wrappee, wrapper, name, defaultValue) {
+    if (Components.stack.filename == Components.stack.caller.filename)
+      // We're being called by our own wrapper code, e.g. resolve, so
+      // don't write back to our wrappee.
+      return defaultValue;
     if (this.isPropertyDangerous(name))
       throw "Permission to set " + name + " denied";
     try {
@@ -138,7 +158,7 @@ SecureMembrane.Wrapper.prototype = {
     try {
       var str = wrappee.toString();
       if (typeof(str) == "string")
-        retval = str;
+        retval = "[SecureMembraned " + str + "]";
     } catch (e) {}
     return retval;
   },

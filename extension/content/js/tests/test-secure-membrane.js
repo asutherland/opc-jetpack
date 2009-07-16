@@ -25,7 +25,7 @@ var SecureMembraneTests = {
       testCodeBehavior("tabs.focused.url");
 
       // Test coercion to string.
-      self.assertEqual(tryCode("'' + tabs"), "[Tabs]");
+      self.assertEqual(tryCode("'' + tabs"), "[SecureMembraned [Tabs]]");
 
       // Test dangerous properties.
       self.assertEqual(tryCode("tabs.nonexistent"), undefined);
