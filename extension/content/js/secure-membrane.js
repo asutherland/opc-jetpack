@@ -104,8 +104,13 @@ SecureMembrane.Wrapper.prototype = {
 
   convert: function(wrappee, wrapper, type) {
     // TODO: When, if ever, do we want to call valueOf()?
-    // TODO: Do we want to catch exceptions?
-    return wrappee.toString();
+    var retval = "<error>";
+    try {
+      var str = wrappee.toString();
+      if (typeof(str) == "string")
+        retval = str;
+    } catch (e) {}
+    return retval;
   },
 
   iteratorObject: function(wrappee, wrapper, keysonly) {

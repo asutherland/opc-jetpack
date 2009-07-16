@@ -28,6 +28,9 @@ var SecureMembraneTests = {
       self.assertEqual(tryCode("tabs.__parent__"), undefined);
       self.assertEqual(tryCode("tabs.__proto__"), undefined);
       tabHarness.unload();
+
+      var thing = {toString: function() { throw "NO"; } };
+      self.assertEqual('' + SecureMembrane.wrap(thing), "<error>");
     } else
       console.warn("SecureMembrane is not available; skipping test.");
   }
