@@ -55,7 +55,7 @@ SecureMembrane.Wrapper.prototype = {
   // The kind of membrane we want to wrap untrusted code in.
   wrapUntrusted: XPCSafeJSObjectWrapper,
 
-  getProperty: function(wrappee, wrapper, name, defaultValue) {
+  isPropertyDangerous: function(name) {
     switch (name) {
     case "eval":
     case "prototype":
@@ -63,28 +63,58 @@ SecureMembrane.Wrapper.prototype = {
     case "__proto__":
     case "__parent__":
     case "caller":
-      // Bad property names that we never want to give anything access
-      // to.
-      return undefined;
+      return true;
+    default:
+      return false;
     }
+  },
+
+  safeGetProperty: function(wrappee, name) {
+    if (this.isPropertyDangerous(name))
+      return undefined;
+    var value;
+    try {
+      value = wrappee[name];
+    } catch (e) {
+      throw SecureMembrane.wrap(e);
+    }
+    return SecureMembrane.wrap(value);
+  },
+
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
     if (name in wrappee)
-      return SecureMembrane.wrap(wrappee[name]);
+      return this.safeGetProperty(wrappee, name);
     return undefined;
   },
 
   setProperty: function(wrappee, wrapper, name, defaultValue) {
-    throw "object properties are read-only";
+    if (this.isPropertyDangerous(name))
+      throw "Permission to set " + name + " denied";
+    try {
+      wrappee[name] = this.wrapUntrusted(defaultValue);
+    } catch (e) {
+      throw SecureMembrane.wrap(e);
+    }
+    return defaultValue;
   },
 
   delProperty: function(wrappee, wrapper, name) {
-    throw "object properties are read-only";
+    if (this.isPropertyDangerous(name))
+      throw "Permission to delete " + name + " denied";
+    try {
+      delete wrappee[name];
+    } catch (e) {
+      throw SecureMembrane.wrap(e);
+    }
+    return true;
   },
 
   call: function call(wrappee, wrapper, thisObj, args) {
     if (typeof(wrappee) == "function") {
       var wrappedArgs = [];
+      var self = this;
       args.forEach(function(arg) {
-                     wrappedArgs.push(this.wrapUntrusted(arg));
+                     wrappedArgs.push(self.wrapUntrusted(arg));
                    });
       try {
         var result = wrappee.apply(this.wrapUntrusted(thisObj),
@@ -121,9 +151,10 @@ SecureMembrane.Wrapper.prototype = {
       }
       return keyIterator();
     } else {
+      var self = this;
       function keyValueIterator() {
         for (name in wrappee)
-          yield [name, SecureMembrane.wrap(wrappee[name])];
+          yield [name, self.safeGetProperty(wrappee, name)];
       }
       return keyValueIterator();
     }
