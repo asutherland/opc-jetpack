@@ -122,7 +122,7 @@ var Tests = {
     }
   },
 
-  run: function run(cb) {
+  run: function run(cb, filter) {
     var self = this;
     var testSuites = {};
 
@@ -141,6 +141,8 @@ var Tests = {
     var tests = [];
 
     for (name in testSuites) {
+      if (filter && name.indexOf(filter) == -1)
+        continue;
       var suite = testSuites[name];
       for (testName in suite)
         if (testName[0] != '_')

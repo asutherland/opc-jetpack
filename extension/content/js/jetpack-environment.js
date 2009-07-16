@@ -163,7 +163,7 @@ window.addLazyLoaders(
      "Notifications"
    ],
    "js/selection.js": [
-     "Selection"
+     "_Selection"
    ],
    "js/slidebar.js": [
      "SlideBar"
@@ -176,6 +176,9 @@ window.addLazyLoaders(
    ],
    "js/timers.js": [
      "Timers"
+   ],
+   "js/secure-membrane.js": [
+     "SecureMembrane"
    ]
   });
 
@@ -295,7 +298,7 @@ JetpackEnv.setFutures(
    },
 
    "jetpack.selection": function(context) {
-     return Selection.makeExported(context);
+     return _Selection.makeExported(context);
    },
 
    "jetpack.storage.simple": function (context) {
@@ -319,6 +322,12 @@ JetpackEnv.setFutures(
      var s = {};
      Components.utils.import("resource://jetpack/modules/audio.js", s);
      return new s.AudioModule();
+   },
+
+   "jetpack.pageMods": function(context) {
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/page-modification.js", s);
+     return new s.PageMods(context.sandbox.jetpack);
    }
   });
 

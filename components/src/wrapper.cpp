@@ -34,6 +34,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+// TODO: When we call JS_GetReservedSlot(), we really need to
+// propagate the "reserved slot index out of range" error that it
+// might throw; otherwise, it'll eventually get thrown from somewhere
+// else, and we'll be completely confused.
+
 #include "wrapper.h"
 
 // Reserved slot ID for the resolver (meta) object
@@ -45,6 +50,13 @@
 static JSBool
 resolverHasMethod(JSContext *cx, JSObject *obj, const char *name)
 {
+  // If we're the prototype of some other object, then obj won't be of
+  // the JSClass we need it to be, so just deny that our membrane has
+  // the method we're looking for.
+  JSClass *klass = JS_GET_CLASS(cx, obj);
+  if (klass != &sFlexibleWrapper_JSClass.base)
+    return JS_FALSE;
+
   jsval resolver;
   if (!JS_GetReservedSlot(cx, obj, SLOT_RESOLVER, &resolver))
     return JS_FALSE;

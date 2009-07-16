@@ -45,7 +45,10 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // page and tracks each context's added callbacks to trigger each when selection
 // changes.
 
-let Selection = let (T = {
+// TODO: We're renaming Selection to _Selection for now because debug
+// builds of Minefield 3.6a1pre are defining a window.Selection object that
+// we can't override. -AV
+let _Selection = let (T = {
   //////////////////////////////////////////////////////////////////////////////
   //// JetpackEnv
 

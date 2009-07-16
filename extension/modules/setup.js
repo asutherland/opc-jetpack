@@ -148,15 +148,8 @@ let JetpackSetup = {
         function onWindowLoad() {
           window.removeEventListener("load", onWindowLoad, false);
           var tabbrowser = window.getBrowser();
-          tabbrowser.addEventListener(
-            "load",
-            function onBrowserLoad() {
-              tabbrowser.removeEventListener("load", onBrowserLoad, false);
-              var tab = tabbrowser.addTab("about:jetpack");
-              tabbrowser.selectedTab = tab;
-            },
-            false
-          );
+          var tab = tabbrowser.addTab("about:jetpack");
+          tabbrowser.selectedTab = tab;
         },
         false
       );

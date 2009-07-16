@@ -697,6 +697,8 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
+  // TODO: We might want to JS_GC() before starting the trace.
+
   tracingState.runtime = JS_GetRuntime(cx);
   tracingState.result = JS_TRUE;
   tracingState.namedObjects = namedObjects;
@@ -706,6 +708,10 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   if (!tracingState.result)
     return JS_FALSE;
+
+  // TODO: We might want to lock the JS runtime of the caller here
+  // to ensure that the object graph doesn't change while we're
+  // profiling the memory.
 
   JSRuntime *serverRuntime = JS_NewRuntime(8L * 1024L * 1024L);
   if (serverRuntime == NULL) {

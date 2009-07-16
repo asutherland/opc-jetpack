@@ -321,9 +321,11 @@ def render_docs(options):
                                                           TEMPLATE)
 
 @task
-@cmdopts(JSBRIDGE_OPTIONS)
+@cmdopts(JSBRIDGE_OPTIONS +
+         [("filter=", "f",
+           "Run only test suites containing the given string.")])
 def test(options):
-    """Run test suite."""
+    """Run unit and functional tests."""
 
     done_event = threading.Event()
     result = Bunch()
@@ -348,7 +350,7 @@ def test(options):
     remote = start_jetpack(options, listener)
 
     try:
-        remote.window.JSBridge.runTests()
+        remote.window.JSBridge.runTests(options.get("filter"))
         done_event.wait(MAX_TEST_RUN_TIME)
         if not done_event.isSet():
             raise Exception('Maximum test run time exceeded.')

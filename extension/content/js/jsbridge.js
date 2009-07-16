@@ -39,7 +39,7 @@ var JSBridge = {
 
   // Run the tests from jsbridge. Needed because jsbridge doesn't
   // transmit 'this' properly.
-  runTests: function runTests() {
+  runTests: function runTests(filter) {
     var cl = new Logging.ConsoleListener();
     cl.onMessage = function onMessage(msg) {
       if (!(msg.sourceName && msg.sourceName.indexOf('http') == 0))
@@ -49,7 +49,9 @@ var JSBridge = {
       function onDone(result) {
         JSBridge.events.fireEvent('jetpack:result', result);
         cl.unload();
-      });
+      },
+      filter
+    );
   }
 };
 
