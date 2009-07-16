@@ -62,11 +62,22 @@ var JetpackRuntime = {
     var jsm = {};
     Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
                             jsm);
-    var sandboxFactory = new jsm.SandboxFactory({});
-    jsm = null;
-
     var code = feed.getCode();
-    var sandbox = sandboxFactory.makeSandbox({});
+
+    var sandboxFactory;
+    var unsafeSandbox;
+    var sandbox;
+
+    if (SecureMembrane.isAvailable) {
+      sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
+      unsafeSandbox = sandboxFactory.makeSandbox({});
+      sandbox = new Object();
+      unsafeSandbox.__proto__ = SecureMembrane.wrap(sandbox);
+    } else {
+      sandboxFactory = new jsm.SandboxFactory({});
+      unsafeSandbox = sandbox = sandboxFactory.makeSandbox({});
+    }
+    jsm = null;
 
     sandbox.location = feed.srcUri.spec;
 
@@ -129,7 +140,7 @@ var JetpackRuntime = {
       var codeSections = [{length: code.length,
                            filename: feed.srcUri.spec,
                            lineNumber: 1}];
-      sandboxFactory.evalInSandbox(code, sandbox, codeSections);
+      sandboxFactory.evalInSandbox(code, unsafeSandbox, codeSections);
     } catch (e) {
       console.exception(e);
     }
