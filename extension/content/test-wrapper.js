@@ -52,6 +52,23 @@ function assertThrows(func, validator, msg) {
   throw new Error("Assertion failed: " + msg);
 }
 
+(function testObjectsWithWrappersAsProtosWork() {
+   var membrane = {
+     resolve: function(wrappee, wrapper, name) {
+       wrapper[name] = true;
+       return wrapper;
+     },
+     getProperty: function(wrappee, wrapper, name, defaultValue) {
+       return 5;
+     }
+   };
+   var thing = wrap({}, membrane);
+   assertEqual(thing.blarg, 5);
+   var strangeThing = new Object();
+   strangeThing.__proto__ = thing;
+   assertEqual(strangeThing.blarg, 5);
+ })();
+
 var resolver = {
   resolve: function(wrappee, wrapper, name) {
     print("resolve on " + name);
