@@ -20,8 +20,12 @@ var SecureMembraneTests = {
 
       ensureEqual("tabs.focused.isClosed");
       ensureEqual("tabs.focused.url");
+
       self.assertEqual(tryCode("'' + tabs"), "[Tabs]");
       self.assertEqual(tryCode("tabs.nonexistent"), undefined);
+      self.assertEqual(tryCode("tabs.prototype"), undefined);
+      self.assertEqual(tryCode("tabs.caller"), undefined);
+      self.assertEqual(tryCode("tabs.__parent__"), undefined);
       self.assertEqual(tryCode("tabs.__proto__"), undefined);
       tabHarness.unload();
     } else

@@ -55,18 +55,18 @@ SecureMembrane.Wrapper.prototype = {
   // The kind of membrane we want to wrap untrusted code in.
   wrapUntrusted: XPCSafeJSObjectWrapper,
 
-  // Bad property names that we never want to give anything access
-  // to.
-  badProperties: {"eval": null,
-                  "prototype": null,
-                  "Components": null,
-                  "__proto__": null,
-                  "__parent__": null,
-                  "caller": null},
-
   getProperty: function(wrappee, wrapper, name, defaultValue) {
-    if (name in this.badProperties)
-      return null;
+    switch (name) {
+    case "eval":
+    case "prototype":
+    case "Components":
+    case "__proto__":
+    case "__parent__":
+    case "caller":
+      // Bad property names that we never want to give anything access
+      // to.
+      return undefined;
+    }
     if (name in wrappee)
       return SecureMembrane.wrap(wrappee[name]);
     return undefined;
