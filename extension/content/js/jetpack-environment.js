@@ -322,6 +322,12 @@ JetpackEnv.setFutures(
      var s = {};
      Components.utils.import("resource://jetpack/modules/audio.js", s);
      return new s.AudioModule();
+   },
+
+   "jetpack.pageMods": function(context) {
+     var s = {};
+     Components.utils.import("resource://jetpack/modules/page-modification.js", s);
+     return new s.PageMods(context.sandbox.jetpack);
    }
   });
 
