@@ -52,16 +52,47 @@ const Fi = Components.Constructor(
             "@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithPath");
+const Ff = Components.Constructor(
+            "@mozilla.org/file/local;1",
+            "nsILocalFile",
+            "initWithFile");
+const Ds = Cc["@mozilla.org/file/directory_service;1"].
+           getService(Ci.nsIProperties);
 
 function AudioModule() {
     // Don't fail if the binary audio component is missing.
     try {
         Re = Cc["@labs.mozilla.com/audio/recorder;1"].
-            getService(Ci.IAudioRecorder);
+             getService(Ci.IAudioRecorder);
         this.recorder = {};
         this.isRecording = false;
     } catch (e) {
-        return {};
+        /* We may be failing because of Windows! 
+           I AM A HACK. FIXME!
+        */
+        let ddir = Ds.get("CurProcD", Ci.nsIFile);
+        
+        let cdir = getWindowsComponentDir();
+        cdir.append("portaudio_x86.dll");
+        let pDll = new Ff(cdir);
+        if (pDll.exists())
+            pDll.moveTo(ddir, '');
+        
+        cdir = getWindowsComponentDir();
+        cdir.append("libsndfile-1.dll");
+        let sDll = new Ff(cdir);
+        if (sDll.exists())
+            sDll.moveTo(ddir, '');
+        
+        try {
+            Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+                getService(Ci.IAudioRecorder);
+            this.recorder = {};
+            this.isRecording = false;
+        } catch (e) {
+            /* Really give up */
+            return {};
+        }
     }
 }
 AudioModule.prototype = {
@@ -129,14 +160,24 @@ function ensureDirectoryExists(aFile) {
 }
 
 function getOrCreateDirectory() {
-    let dir = Cc["@mozilla.org/file/directory_service;1"].
-        getService(Ci.nsIProperties);
-    let file = dir.get("ProfD", Ci.nsIFile);
+    let file = Ds.get("ProfD", Ci.nsIFile);
 
     file.append("jetpack");
     ensureDirectoryExists(file);
     file.append("audio");
     ensureDirectoryExists(file);
 
+    return file;
+}
+
+function getWindowsComponentDir() {
+    let file = Ds.get("ProfD", Ci.nsIFile);
+    
+    file.append("extensions");
+    file.append("jetpack@labs.mozilla.com");
+    file.append("platform");
+    file.append("WINNT_x86-msvc");
+    file.append("components");
+    
     return file;
 }
