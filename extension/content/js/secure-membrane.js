@@ -20,7 +20,8 @@ var SecureMembrane = {
     return binary;
   },
 
-  wrap: function wrap(thing) {
+  // Wrap a thing coming from trusted code, for export to untrusted code.
+  wrapTrusted: function wrapTrusted(thing) {
     switch (typeof(thing)) {
     case "number":
     case "string":
@@ -39,29 +40,29 @@ var SecureMembrane = {
     // TODO: What if the object is wrapped many times? We may need to
     // recurse through all the levels of wrapping.
     if (wrapper !== null &&
-        wrapper.name == this.Wrapper.prototype.name)
+        wrapper.name == this.TrustedWrapper.prototype.name)
       return thing;
-    return this.binary.wrap(thing, new this.Wrapper(thing));
+    return this.binary.wrap(thing, new this.TrustedWrapper(thing));
   },
 
-  Wrapper: function Wrapper(obj) {
-    this.obj = obj;
-  }
-};
-
-SecureMembrane.Wrapper.prototype = {
-  name: "SecureMembrane",
-
-  // The kind of membrane we want to wrap untrusted code in.
-  wrapUntrusted: function wrapUntrusted(obj) {
-    var wrapper = SecureMembrane.binary.getWrapper(obj);
+  // Wrap a thing coming from untrusted code, for export to trusted code.
+  wrapUntrusted: function wrapUntrusted(thing) {
+    var wrapper = SecureMembrane.binary.getWrapper(thing);
     // TODO: What if the object is wrapped many times? We may need to
     // recurse through all the levels of wrapping.
     if (wrapper !== null && wrapper.name == this.name)
       // Actually, it's already wrapped with a SecureMembrane, so we trust it.
-      return SecureMembrane.binary.unwrap(obj);
-    return XPCSafeJSObjectWrapper(obj);
+      return SecureMembrane.binary.unwrap(thing);
+    return XPCSafeJSObjectWrapper(thing);
   },
+
+  TrustedWrapper: function TrustedWrapper(obj) {
+    this.obj = obj;
+  }
+};
+
+SecureMembrane.TrustedWrapper.prototype = {
+  name: "SecureMembrane",
 
   isPropertyDangerous: function(name) {
     switch (name) {
@@ -92,9 +93,9 @@ SecureMembrane.Wrapper.prototype = {
     try {
       value = wrappee[name];
     } catch (e) {
-      throw SecureMembrane.wrap(e);
+      throw SecureMembrane.wrapTrusted(e);
     }
-    return SecureMembrane.wrap(value);
+    return SecureMembrane.wrapTrusted(value);
   },
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
@@ -111,9 +112,9 @@ SecureMembrane.Wrapper.prototype = {
     if (this.isPropertyDangerous(name))
       throw "Permission to set " + name + " denied";
     try {
-      wrappee[name] = this.wrapUntrusted(defaultValue);
+      wrappee[name] = SecureMembrane.wrapUntrusted(defaultValue);
     } catch (e) {
-      throw SecureMembrane.wrap(e);
+      throw SecureMembrane.wrapTrusted(e);
     }
     return defaultValue;
   },
@@ -124,7 +125,7 @@ SecureMembrane.Wrapper.prototype = {
     try {
       delete wrappee[name];
     } catch (e) {
-      throw SecureMembrane.wrap(e);
+      throw SecureMembrane.wrapTrusted(e);
     }
     return true;
   },
@@ -132,17 +133,16 @@ SecureMembrane.Wrapper.prototype = {
   call: function call(wrappee, wrapper, thisObj, args) {
     if (typeof(wrappee) == "function") {
       var wrappedArgs = [];
-      var self = this;
       args.forEach(function(arg) {
-                     wrappedArgs.push(self.wrapUntrusted(arg));
+                     wrappedArgs.push(SecureMembrane.wrapUntrusted(arg));
                    });
       try {
-        var result = wrappee.apply(this.wrapUntrusted(thisObj),
+        var result = wrappee.apply(SecureMembrane.wrapUntrusted(thisObj),
                                    wrappedArgs);
       } catch (e) {
-        throw SecureMembrane.wrap(e);
+        throw SecureMembrane.wrapTrusted(e);
       }
-      return SecureMembrane.wrap(result);
+      return SecureMembrane.wrapTrusted(result);
     } else
       throw "object is not callable";
   },

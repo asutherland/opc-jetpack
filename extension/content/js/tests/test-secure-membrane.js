@@ -2,14 +2,14 @@ var SecureMembraneTests = {
   testSecureMembraneWorks: function(self) {
     if (SecureMembrane.isAvailable) {
       // Test that the wrapping of primitive types/built-ins is pass-through.
-      self.assertEqual(SecureMembrane.wrap(null), null);
-      self.assertEqual(SecureMembrane.wrap(5), 5);
-      self.assertEqual(SecureMembrane.wrap(false), false);
+      self.assertEqual(SecureMembrane.wrapTrusted(null), null);
+      self.assertEqual(SecureMembrane.wrapTrusted(5), 5);
+      self.assertEqual(SecureMembrane.wrapTrusted(false), false);
 
       var sandbox = Components.utils.Sandbox("http://www.foo.com");
       var tabHarness = new Tabs();
       var tabs = tabHarness.tabs;
-      sandbox.tabs = SecureMembrane.wrap(tabs);
+      sandbox.tabs = SecureMembrane.wrapTrusted(tabs);
 
       function tryCode(code) {
         return Components.utils.evalInSandbox(code, sandbox);
@@ -37,13 +37,13 @@ var SecureMembraneTests = {
 
       // Test coercion to string raising error.
       var thing = {toString: function() { throw "NO"; } };
-      self.assertEqual('' + SecureMembrane.wrap(thing), "<error>");
+      self.assertEqual('' + SecureMembrane.wrapTrusted(thing), "<error>");
 
       // Test function calling.
       function sampleFunc(x) {
         return x.foo + 1;
       }
-      sandbox.sampleFunc = SecureMembrane.wrap(sampleFunc);
+      sandbox.sampleFunc = SecureMembrane.wrapTrusted(sampleFunc);
       self.assertEqual(tryCode("sampleFunc({foo: 4})"), 5);
 
       var sampleObj = {
@@ -55,7 +55,7 @@ var SecureMembraneTests = {
           this._foo = x + 1;
         }
       };
-      sandbox.sampleObj = SecureMembrane.wrap(sampleObj);
+      sandbox.sampleObj = SecureMembrane.wrapTrusted(sampleObj);
       // Ensure the setter works.
       tryCode("sampleObj.foo = 5");
       // Ensure the getter works.

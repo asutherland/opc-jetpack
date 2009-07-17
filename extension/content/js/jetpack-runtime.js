@@ -72,7 +72,7 @@ var JetpackRuntime = {
       sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
       unsafeSandbox = sandboxFactory.makeSandbox({});
       sandbox = new Object();
-      unsafeSandbox.__proto__ = SecureMembrane.wrap(sandbox);
+      unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
     } else {
       sandboxFactory = new jsm.SandboxFactory({});
       unsafeSandbox = sandbox = sandboxFactory.makeSandbox({});
