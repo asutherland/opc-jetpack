@@ -266,12 +266,37 @@ assertThrows(function() {
              "caller doesn't have permission to call it.",
              "By default, wrappers shouldn't allow function calls.");
 
+// TODO: There should be an easier way of wrapping a function, yo.
 var funcWrapper = wrap(function(x) { return x + 1; },
                        {call: function(wrappee, wrapper, thisObj, args) {
                           return wrappee.apply(thisObj, args);
+                        },
+                        getProperty: function(wrappee, wrapper, name, defaultValue) {
+                          if (name == "call") {
+                            return wrap(
+                              wrappee,
+                              {call: function(wrappee, wrapper, thisObj, args) {
+                                 var realThis = args[0];
+                                 var realArgs = [];
+                                 for (var i = 1; i < args.length; i++)
+                                   realArgs.push(args[i]);
+                                 return wrappee.apply(realThis, realArgs);
+                               }});
+                          }
+                          if (name == "apply") {
+                            return wrap(
+                              wrappee,
+                              {call: function(wrappee, wrapper, thisObj, args) {
+                                 var realThis = args[0];
+                                 var realArgs = args[1];
+                                 return wrappee.apply(realThis, realArgs);
+                               }});
+                          }
                         }});
 assertEqual(typeof(funcWrapper), "function");
 assertEqual(funcWrapper(1), 2);
+assertEqual(funcWrapper.call(this, 1), 2);
+assertEqual(funcWrapper.apply(this, [1]), 2);
 
 assertThrows(function() {
                var Constructor = wrap(function(x) { this.x = 1; }, {});
