@@ -47,12 +47,13 @@ var SecureMembrane = {
 
   // Wrap a thing coming from untrusted code, for export to trusted code.
   wrapUntrusted: function wrapUntrusted(thing) {
-    var wrapper = SecureMembrane.binary.getWrapper(thing);
+    var wrapper = this.binary.getWrapper(thing);
     // TODO: What if the object is wrapped many times? We may need to
     // recurse through all the levels of wrapping.
-    if (wrapper !== null && wrapper.name == this.name)
+    if (wrapper !== null &&
+        wrapper.name == this.TrustedWrapper.prototype.name)
       // Actually, it's already wrapped with a SecureMembrane, so we trust it.
-      return SecureMembrane.binary.unwrap(thing);
+      return this.binary.unwrap(thing);
     return XPCSafeJSObjectWrapper(thing);
   },
 
