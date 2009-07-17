@@ -39,26 +39,149 @@ var SecureMembrane = {
     var wrapper = this.binary.getWrapper(thing);
     // TODO: What if the object is wrapped many times? We may need to
     // recurse through all the levels of wrapping.
-    if (wrapper !== null &&
-        wrapper.name == this.TrustedWrapper.prototype.name)
-      return thing;
+    if (wrapper !== null) {
+      if (wrapper.name == this.UntrustedWrapper.prototype.name)
+        // It's already untrusted, so return the wrappee.
+        return this.binary.unwrap(thing);
+      if (wrapper.name == this.TrustedWrapper.prototype.name)
+        // It's already wrapped for export to untrusted code, so
+        // just return it.
+        return thing;
+    }
     return this.binary.wrap(thing, new this.TrustedWrapper(thing));
   },
 
   // Wrap a thing coming from untrusted code, for export to trusted code.
   wrapUntrusted: function wrapUntrusted(thing) {
+    switch (typeof(thing)) {
+    case "number":
+    case "string":
+    case "boolean":
+    case "undefined":
+      return thing;
+    case "object":
+      if (thing === null)
+        return null;
+      // TODO: What about regular expressions? There was something in
+      // the original XPCSafeJSObjectWrapper that cleared some state
+      // with regexps.
+    }
+
     var wrapper = this.binary.getWrapper(thing);
     // TODO: What if the object is wrapped many times? We may need to
     // recurse through all the levels of wrapping.
-    if (wrapper !== null &&
-        wrapper.name == this.TrustedWrapper.prototype.name)
-      // Actually, it's already wrapped with a SecureMembrane, so we trust it.
-      return this.binary.unwrap(thing);
-    return XPCSafeJSObjectWrapper(thing);
+    if (wrapper !== null) {
+      if (wrapper.name == this.TrustedWrapper.prototype.name)
+        // Actually, it's already wrapped with a SecureMembrane, so we
+        // trust it; just return the wrappee.
+        return this.binary.unwrap(thing);
+      if (wrapper.name == this.UntrustedWrapper.prototype.name)
+        // It's already wrapped for export to trusted code, so just
+        // return it.
+        return thing;
+    }
+    thing = XPCSafeJSObjectWrapper(thing);
+    return this.binary.wrap(thing, new this.UntrustedWrapper(thing));
+  },
+
+  UntrustedWrapper: function UntrustedWrapper(obj) {
+    this.obj = obj;
   },
 
   TrustedWrapper: function TrustedWrapper(obj) {
     this.obj = obj;
+  }
+};
+
+SecureMembrane.UntrustedWrapper.prototype = {
+  name: "UntrustedMembrane",
+
+  enumerate: function(wrappee, wrapper) {
+    for (name in wrappee)
+      yield name;
+  },
+
+  iteratorObject: function(wrappee, wrapper, keysonly) {
+    if (keysonly) {
+      function keyIterator() {
+        for (name in wrappee)
+          yield name;
+      }
+      return keyIterator();
+    } else {
+      var self = this;
+      function keyValueIterator() {
+        for (name in wrappee)
+          yield [name, SecureMembrane.wrapUntrusted(wrappee[name])];
+      }
+      return keyValueIterator();
+    }
+  },
+
+  apply: function apply(thisObj, args) {
+    var wrapper = this;
+    var self = SecureMembrane.binary.getWrapper(wrapper);
+    var wrappee = SecureMembrane.binary.unwrap(wrapper);
+    if (!(self && wrappee))
+      throw "apply() called on incompatible object " + this;
+    var argsArray = [];
+    for (var i = 1; i < args.length; i++)
+      argsArray.push(args[i]);
+    return self.call(wrappee, wrapper, thisObj, argsArray);
+  },
+
+  call: function call(thisObj) {
+    var wrapper = this;
+    var self = SecureMembrane.binary.getWrapper(wrapper);
+    var wrappee = SecureMembrane.binary.unwrap(wrapper);
+    if (!(self && wrappee))
+      throw "call() called on incompatible object " + this;
+    var argsArray = [];
+    for (var i = 1; i < arguments.length; i++)
+      argsArray.push(arguments[i]);
+    return self.call(wrappee, wrapper, thisObj, argsArray);
+  },
+
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
+    if (name in wrappee) {
+      if (typeof(wrappee) == "function") {
+        switch (name) {
+        case "apply":
+          return this.apply;
+        case "call":
+          return this.call;
+        }
+      }
+      return SecureMembrane.wrapUntrusted(wrappee[name]);
+    }
+  },
+
+  convert: function(wrappee, wrapper, type) {
+    // TODO: When, if ever, do we want to call valueOf()?
+    if (!(type == "string" || type == "undefined"))
+      return wrapper;
+    var retval = "<error>";
+    try {
+      var str = wrappee.toString();
+      if (typeof(str) == "string")
+        retval = "[UntrustedMembraned " + str + "]";
+    } catch (e) {}
+    return retval;
+  },
+
+  call: function call(wrappee, wrapper, thisObj, args) {
+    if (typeof(wrappee) == "function") {
+      var wrappedArgs = [];
+      args.forEach(function(arg) {
+                     wrappedArgs.push(SecureMembrane.wrapTrusted(arg));
+                   });
+      // If an exception gets thrown, it'll be XPCSafeJSObjectWrapped,
+      // so no biggie.
+      var result = wrappee.apply(SecureMembrane.wrapTrusted(thisObj),
+                                 wrappedArgs);
+      return SecureMembrane.wrapUntrusted(result);
+    } else
+      throw "object is not callable";
   }
 };
 
@@ -155,6 +278,8 @@ SecureMembrane.TrustedWrapper.prototype = {
 
   convert: function(wrappee, wrapper, type) {
     // TODO: When, if ever, do we want to call valueOf()?
+    if (!(type == "string" || type == "undefined"))
+      return wrapper;
     var retval = "<error>";
     try {
       var str = wrappee.toString();
