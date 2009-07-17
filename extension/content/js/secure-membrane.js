@@ -90,32 +90,6 @@ var SecureMembrane = {
 
   TrustedWrapper: function TrustedWrapper(obj) {
     this.obj = obj;
-  }
-};
-
-SecureMembrane.UntrustedWrapper.prototype = {
-  name: "UntrustedMembrane",
-
-  enumerate: function(wrappee, wrapper) {
-    for (name in wrappee)
-      yield name;
-  },
-
-  iteratorObject: function(wrappee, wrapper, keysonly) {
-    if (keysonly) {
-      function keyIterator() {
-        for (name in wrappee)
-          yield name;
-      }
-      return keyIterator();
-    } else {
-      var self = this;
-      function keyValueIterator() {
-        for (name in wrappee)
-          yield [name, SecureMembrane.wrapUntrusted(wrappee[name])];
-      }
-      return keyValueIterator();
-    }
   },
 
   apply: function apply(thisObj, args) {
@@ -140,19 +114,43 @@ SecureMembrane.UntrustedWrapper.prototype = {
     for (var i = 1; i < arguments.length; i++)
       argsArray.push(arguments[i]);
     return self.call(wrappee, wrapper, thisObj, argsArray);
+  }
+};
+
+SecureMembrane.BaseWrapper = {
+  isPropertyDangerous: function(name) {
+    switch (name) {
+    case "eval":
+    case "prototype":
+    case "Components":
+    case "__proto__":
+    case "__parent__":
+    case "caller":
+      return true;
+    default:
+      return false;
+    }
   },
 
-  getProperty: function(wrappee, wrapper, name, defaultValue) {
-    if (name in wrappee) {
-      if (typeof(wrappee) == "function") {
-        switch (name) {
-        case "apply":
-          return this.apply;
-        case "call":
-          return this.call;
-        }
+  enumerate: function(wrappee, wrapper) {
+    for (name in wrappee)
+      yield name;
+  },
+
+  iteratorObject: function(wrappee, wrapper, keysonly) {
+    if (keysonly) {
+      function keyIterator() {
+        for (name in wrappee)
+          yield name;
       }
-      return SecureMembrane.wrapUntrusted(wrappee[name]);
+      return keyIterator();
+    } else {
+      var self = this;
+      function keyValueIterator() {
+        for (name in wrappee)
+          yield [name, this.safeGetProperty(wrappee, name)];
+      }
+      return keyValueIterator();
     }
   },
 
@@ -164,9 +162,31 @@ SecureMembrane.UntrustedWrapper.prototype = {
     try {
       var str = wrappee.toString();
       if (typeof(str) == "string")
-        retval = "[UntrustedMembraned " + str + "]";
+        retval = "[object " + this.name + " " + str + "]";
     } catch (e) {}
     return retval;
+  }
+}
+
+SecureMembrane.UntrustedWrapper.prototype = {
+  name: "UntrustedMembrane",
+
+  safeGetProperty: function(wrappee, name) {
+    return SecureMembrane.wrapUntrusted(wrappee[name]);
+  },
+
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
+    if (name in wrappee) {
+      if (typeof(wrappee) == "function") {
+        switch (name) {
+        case "apply":
+          return SecureMembrane.apply;
+        case "call":
+          return SecureMembrane.call;
+        }
+      }
+      return SecureMembrane.wrapUntrusted(wrappee[name]);
+    }
   },
 
   call: function call(wrappee, wrapper, thisObj, args) {
@@ -182,25 +202,13 @@ SecureMembrane.UntrustedWrapper.prototype = {
       return SecureMembrane.wrapUntrusted(result);
     } else
       throw "object is not callable";
-  }
+  },
+
+  __proto__: SecureMembrane.BaseWrapper
 };
 
 SecureMembrane.TrustedWrapper.prototype = {
   name: "SecureMembrane",
-
-  isPropertyDangerous: function(name) {
-    switch (name) {
-    case "eval":
-    case "prototype":
-    case "Components":
-    case "__proto__":
-    case "__parent__":
-    case "caller":
-      return true;
-    default:
-      return false;
-    }
-  },
 
   resolve: function(wrappee, wrapper, name) {
     if (name in wrappee) {
@@ -271,38 +279,5 @@ SecureMembrane.TrustedWrapper.prototype = {
       throw "object is not callable";
   },
 
-  enumerate: function(wrappee, wrapper) {
-    for (name in wrappee)
-      yield name;
-  },
-
-  convert: function(wrappee, wrapper, type) {
-    // TODO: When, if ever, do we want to call valueOf()?
-    if (!(type == "string" || type == "undefined"))
-      return wrapper;
-    var retval = "<error>";
-    try {
-      var str = wrappee.toString();
-      if (typeof(str) == "string")
-        retval = "[SecureMembraned " + str + "]";
-    } catch (e) {}
-    return retval;
-  },
-
-  iteratorObject: function(wrappee, wrapper, keysonly) {
-    if (keysonly) {
-      function keyIterator() {
-        for (name in wrappee)
-          yield name;
-      }
-      return keyIterator();
-    } else {
-      var self = this;
-      function keyValueIterator() {
-        for (name in wrappee)
-          yield [name, self.safeGetProperty(wrappee, name)];
-      }
-      return keyValueIterator();
-    }
-  }
+  __proto__: SecureMembrane.BaseWrapper
 };
