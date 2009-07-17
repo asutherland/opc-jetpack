@@ -266,35 +266,44 @@ assertThrows(function() {
              "caller doesn't have permission to call it.",
              "By default, wrappers shouldn't allow function calls.");
 
-// TODO: There should be an easier way of wrapping a function, yo.
-var funcWrapper = wrap(function(x) { return x + 1; },
-                       {call: function(wrappee, wrapper, thisObj, args) {
-                          return wrappee.apply(thisObj, args);
-                        },
-                        getProperty: function(wrappee, wrapper, name, defaultValue) {
-                          if (name == "call") {
-                            return wrap(
-                              wrappee,
-                              {call: function(wrappee, wrapper, thisObj, args) {
-                                 var realThis = args[0];
-                                 var realArgs = [];
-                                 for (var i = 1; i < args.length; i++)
-                                   realArgs.push(args[i]);
-                                 return wrappee.apply(realThis, realArgs);
-                               }});
-                          }
-                          if (name == "apply") {
-                            return wrap(
-                              wrappee,
-                              {call: function(wrappee, wrapper, thisObj, args) {
-                                 var realThis = args[0];
-                                 var realArgs = args[1];
-                                 return wrappee.apply(realThis, realArgs);
-                               }});
-                          }
-                        }});
+var callingWrapper = {
+  call: function(wrappee, wrapper, thisObj, args) {
+    try {
+      var result = wrappee.apply(thisObj, args);
+      return result;
+    } catch (e) {
+      print("uhoh: " + e);
+      return undefined;
+    }
+  },
+  getProperty: function(wrappee, wrapper, name, defaultValue) {
+    if (name == "__parent__")
+      return undefined;
+    if (name in wrappee)
+      return wrap(wrappee[name], callingWrapper);
+  },
+  convert: function(wrappee, wrapper, type) {
+    if (type == "object")
+      return wrapper;
+    if (type == "function") {
+      // TODO: Not sure how secure doing this is in the general case.  Could
+      // the function below somehow be passed into untrusted code?  If so, said
+      // code could look at the function's __parent__ and get access to our
+      // global TCB's namespace.
+      return function() {
+        return wrappee.apply(this, arguments);
+      };
+    }
+    return wrappee.toString();
+  }
+};
+
+var funcWrapper = wrap(function(x) { return x + 1; }, callingWrapper);
+
 assertEqual(typeof(funcWrapper), "function");
+assertEqual(funcWrapper.__parent__, undefined);
 assertEqual(funcWrapper(1), 2);
+assertEqual(funcWrapper.call.__parent__, undefined);
 assertEqual(funcWrapper.call(this, 1), 2);
 assertEqual(funcWrapper.apply(this, [1]), 2);
 
