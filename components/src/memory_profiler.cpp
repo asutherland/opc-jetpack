@@ -748,6 +748,22 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Profiling failed.");
     wasSuccessful = JS_FALSE;
+  } else {
+    if (JSVAL_IS_STRING(serverRval)) {
+      JSString *valueStr = JS_NewUCStringCopyZ(
+        cx,
+        JS_GetStringChars(JSVAL_TO_STRING(serverRval))
+        );
+      if (valueStr == NULL) {
+        JS_ReportOutOfMemory(cx);
+        wasSuccessful = JS_FALSE;
+      } else
+        *rval = STRING_TO_JSVAL(valueStr);
+    } else if (!JSVAL_IS_GCTHING(serverRval)) {
+      *rval = serverRval;
+    } else {
+      *rval = JSVAL_VOID;
+    }
   }
 
   /* Cleanup. */

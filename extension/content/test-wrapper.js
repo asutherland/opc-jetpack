@@ -505,24 +505,14 @@ function runMemoryProfilingTest(func, namedObjects) {
 
   var funcInfo = functionInfo(func);
 
-  profileMemory(code, funcInfo.filename, funcInfo.lineNumber,
-                namedObjects);
+  return profileMemory(code, funcInfo.filename, funcInfo.lineNumber,
+                       namedObjects);
 }
 
 // This function's source code is injected into the separate JS
 // runtime of the memory profiler.
 function memoryProfilingTests(global) {
   var visited = {};
-
-  function recursiveGetInfo(id) {
-    var info = getObjectInfo(id);
-    if (info) {
-      for (var i = 0; i < roots.length; i++) {
-        recursiveGetInfo();
-      }
-    }
-  }
-
   var visitedCount = 0;
   var namedObjects = getNamedObjects();
   var leftToVisit = [namedObjects[name] for (name in namedObjects)];
@@ -622,8 +612,10 @@ function getBrowserWindows() {
   return windows;
 }
 
-runMemoryProfilingTest(memoryProfilingTests,
-                       getBrowserWindows());
+assertEqual(runMemoryProfilingTest(function() { return 1; }), 1);
+assertEqual(runMemoryProfilingTest(function() { return 'foo'; }), 'foo');
+
+runMemoryProfilingTest(memoryProfilingTests, getBrowserWindows());
 
 print("Done profiling memory.");
 
