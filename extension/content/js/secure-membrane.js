@@ -92,6 +92,7 @@ var SecureMembrane = {
     this.obj = obj;
   },
 
+  // TODO: This is a workaround for #505494.
   apply: function apply(thisObj, args) {
     var wrapper = this;
     var self = SecureMembrane.binary.getWrapper(wrapper);
@@ -104,6 +105,7 @@ var SecureMembrane = {
     return self.call(wrappee, wrapper, thisObj, argsArray);
   },
 
+  // TODO: This is a workaround for #505494.
   call: function call(thisObj) {
     var wrapper = this;
     var self = SecureMembrane.binary.getWrapper(wrapper);
