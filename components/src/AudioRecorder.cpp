@@ -181,14 +181,14 @@ AudioRecorder::RecordCallback(const void *input, void *output,
         void *userData)
 {
     unsigned long i;
-    const short *rptr = (const short *)input;
+    PRUint32 written;
+    const float *rptr = (const float *)input;
 
     nsIAsyncOutputStream *op = static_cast<AudioRecorder*>(userData)->mPipeOut;
 
     if (input != NULL) {
         for (i = 0; i < framesPerBuffer; i++) {
-            PRUint32 written;
-            op->Write((const char *)rptr, (PRUint32)sizeof(short) * 2, &written);
+            op->Write((const char *)rptr, (PRUint32)(sizeof(float) * 2), &written);
             rptr++;
             rptr++;
         }
@@ -211,7 +211,7 @@ AudioRecorder::RecordToFileCallback(const void *input, void *output,
 
     if (input != NULL) {
         for (i = 0; i < framesPerBuffer; i++) {
-			sf_writef_float(out, rptr, 1);
+            sf_writef_float(out, rptr, 1);
             rptr++;
             rptr++;
         }
@@ -236,7 +236,7 @@ AudioRecorder::Start(nsIAsyncInputStream** out)
     if (!pipe)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    nsresult rv = pipe->Init(PR_TRUE, PR_FALSE, 0, PR_UINT32_MAX, NULL);
+    nsresult rv = pipe->Init(PR_TRUE, PR_TRUE, 0, PR_UINT32_MAX, NULL);
     if (NS_FAILED(rv)) return rv;
 
     pipe->GetInputStream(getter_AddRefs(mPipeIn));

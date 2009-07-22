@@ -60,124 +60,123 @@ const Ds = Cc["@mozilla.org/file/directory_service;1"].
            getService(Ci.nsIProperties);
 
 function AudioModule() {
-    // Don't fail if the binary audio component is missing.
+  // Don't fail if the binary audio component is missing.
+  try {
+    Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+         getService(Ci.IAudioRecorder);
+    this.recorder = {};
+    this.isRecording = false;
+  } catch (e) {
+    // We may be failing because of Windows! 
+    // I AM A HACK. FIXME!
+    let ddir = Ds.get("CurProcD", Ci.nsIFile);
+
+    let cdir = getWindowsComponentDir();
+    cdir.append("portaudio_x86.dll");
+    let pDll = new Ff(cdir);
+    if (pDll.exists())
+      pDll.moveTo(ddir, '');
+        
+    cdir = getWindowsComponentDir();
+    cdir.append("libsndfile-1.dll");
+    let sDll = new Ff(cdir);
+    if (sDll.exists())
+      sDll.moveTo(ddir, '');
+        
     try {
-        Re = Cc["@labs.mozilla.com/audio/recorder;1"].
-             getService(Ci.IAudioRecorder);
-        this.recorder = {};
-        this.isRecording = false;
+      Re = Cc["@labs.mozilla.com/audio/recorder;1"].
+           getService(Ci.IAudioRecorder);
+      this.recorder = {};
+      this.isRecording = false;
     } catch (e) {
-        /* We may be failing because of Windows! 
-           I AM A HACK. FIXME!
-        */
-        let ddir = Ds.get("CurProcD", Ci.nsIFile);
-        
-        let cdir = getWindowsComponentDir();
-        cdir.append("portaudio_x86.dll");
-        let pDll = new Ff(cdir);
-        if (pDll.exists())
-            pDll.moveTo(ddir, '');
-        
-        cdir = getWindowsComponentDir();
-        cdir.append("libsndfile-1.dll");
-        let sDll = new Ff(cdir);
-        if (sDll.exists())
-            sDll.moveTo(ddir, '');
-        
-        try {
-            Re = Cc["@labs.mozilla.com/audio/recorder;1"].
-                getService(Ci.IAudioRecorder);
-            this.recorder = {};
-            this.isRecording = false;
-        } catch (e) {
-            /* Really give up */
-            return {};
-        }
+      // Really give up
+      return {};
     }
+  }
 }
 AudioModule.prototype = {
-	// === {{{AudioModule.recordToFile()}}} ===
-    //
-    // Starts recording audio and encoding it into
-    // and Ogg/Vorbis file.
-    //
-    recordToFile: function() {
-        try {
-            this._path = Re.startRecordToFile();
-        } catch (e) {
-            return false;
-        }
-        
-        this.isRecording = true;
-        return true;
-    },
-
-    // === {{{AudioModule.stopRecording()}}} ===
-    //
-    // Stops recording. If recording was started
-    // with {{{recordToFile}}} then this routine will
-    // return the full (local) path of the Ogg/Vorbis
-    // file that the audio was saved to.
-    //
-    stopRecording: function() {
-        Re.stop();
-        this.isRecording = false;
-		
-        let src = new Fi(this._path);
-        let dst = getOrCreateDirectory();
-
-        src.copyTo(dst, '');
-        dst.append(src.leafName);
-
-        return dst.path;
-    },
-    
-    // === {{{AudioModule.playFile(path)}}} ===
-    //
-    // Plays an audio file located at {{{path}}}.
-    //
-    playFile: function(path) {
-        let win = null;
-        while (!win) {
-            win = get("chrome://jetpack/content/index.html");
-        }
-        let tag = win.document.createElement("audio");
-        tag.setAttribute("src", path);
-        tag.setAttribute("autoplay", "true");
-        win.document.body.appendChild(tag);
+  // === {{{AudioModule.recordToFile()}}} ===
+  //
+  // Starts recording audio and encoding it into
+  // and Ogg/Vorbis file.
+  //
+  recordToFile: function() {
+    try {
+      this._path = Re.startRecordToFile();
+    } catch (e) {
+      return false;
     }
+        
+    this.isRecording = true;
+    return true;
+  },
+
+  // === {{{AudioModule.stopRecording()}}} ===
+  //
+  // Stops recording. If recording was started
+  // with {{{recordToFile}}} then this routine will
+  // return the full (local) path of the Ogg/Vorbis
+  // file that the audio was saved to.
+  //
+  stopRecording: function() {
+    Re.stop();
+    this.isRecording = false;
+		
+    let src = new Fi(this._path);
+    let dst = getOrCreateDirectory();
+
+    src.copyTo(dst, '');
+    dst.append(src.leafName);
+
+    return dst.path;
+  },
+    
+  // === {{{AudioModule.playFile(path)}}} ===
+  //
+  // Plays an audio file located at {{{path}}}.
+  //
+  playFile: function(path) {
+    let win = null;
+    while (!win) {
+      win = get("chrome://jetpack/content/index.html");
+    }
+    let tag = win.document.createElement("audio");
+    tag.setAttribute("src", path);
+    tag.setAttribute("autoplay", "true");
+    win.document.body.appendChild(tag);
+  }
 }
 
 function ensureDirectoryExists(aFile) {
-    if (aFile.exists()) {
-        if (!aFile.isDirectory()) {
-            throw new Error("File " + aFile.path + 
-                " exists but is not a directory");
-        }
-    } else {
-        aFile.create(aFile.DIRECTORY_TYPE, 0755);
+  if (aFile.exists()) {
+    if (!aFile.isDirectory()) {
+      throw new Error("File " + aFile.path + 
+      " exists but is not a directory");
     }
+  } else {
+    aFile.create(aFile.DIRECTORY_TYPE, 0755);
+  }
 }
 
 function getOrCreateDirectory() {
-    let file = Ds.get("ProfD", Ci.nsIFile);
+  let file = Ds.get("ProfD", Ci.nsIFile);
 
-    file.append("jetpack");
-    ensureDirectoryExists(file);
-    file.append("audio");
-    ensureDirectoryExists(file);
+  file.append("jetpack");
+  ensureDirectoryExists(file);
+  file.append("audio");
+  ensureDirectoryExists(file);
 
-    return file;
+  return file;
 }
 
 function getWindowsComponentDir() {
-    let file = Ds.get("ProfD", Ci.nsIFile);
+  let file = Ds.get("ProfD", Ci.nsIFile);
     
-    file.append("extensions");
-    file.append("jetpack@labs.mozilla.com");
-    file.append("platform");
-    file.append("WINNT_x86-msvc");
-    file.append("components");
-    
-    return file;
+  file.append("extensions");
+  file.append("jetpack@labs.mozilla.com");
+  file.append("platform");
+  file.append("WINNT_x86-msvc");
+  file.append("components");
+
+  return file;
 }
