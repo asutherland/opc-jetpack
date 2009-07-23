@@ -25,6 +25,8 @@ if __name__ == '__main__':
 
 import os
 import sys
+import fnmatch
+import distutils.dir_util
 import xml.dom.minidom
 import zipfile
 import shutil
@@ -414,6 +416,15 @@ def xpcom(options):
             xpcom_info.os = line.split("=")[1].strip()
         elif line.startswith("TARGET_XPCOM_ABI"):
             xpcom_info.abi = line.split("=")[1].strip()
+        elif line.startswith("MOZILLA_VERSION"):
+            xpcom_info.mozilla_version = line.split("=")[1].strip()
+        elif (line.startswith("MOZ_DEBUG") and
+              not line.startswith("MOZ_DEBUG_")):
+            raw_value = line.split("=")[1].strip()
+            if not raw_value:
+                xpcom_info.is_debug = 0
+            else:
+                xpcom_info.is_debug = int(raw_value)
 
     platform = "%(os)s_%(abi)s" % xpcom_info
     print "Building XPCOM binary components for %s" % platform
@@ -423,11 +434,13 @@ def xpcom(options):
     comp_dest_dir = os.path.join(options.srcdir, rel_dest_dir)
     comp_xpi_dir = os.path.join(options.objdir, "dist", "xpi-stage",
                                 "jetpack", "components")
-    comp_plat_dir = os.path.join(options.path_to_ext_root, "platform",
-                                 platform, "components")
+    comp_plat_dir1 = os.path.join(options.my_dir, "lib",
+                                  platform, xpcom_info.mozilla_version)
+    comp_plat_dir2 = os.path.join(options.path_to_ext_root, "lib",
+                                  xpcom_info.mozilla_version)
+
     clear_dir(comp_dest_dir)
     clear_dir(comp_xpi_dir)
-    clear_dir(comp_plat_dir)
 
     shutil.copytree(comp_src_dir, comp_dest_dir)
 
@@ -451,7 +464,29 @@ def xpcom(options):
     run_program(["make"],
                 cwd=os.path.join(options.objdir, rel_dest_dir))
 
-    shutil.copytree(comp_xpi_dir, comp_plat_dir)
+    xptfiles = []
+    libfiles = []
+    for filename in os.listdir(comp_xpi_dir):
+        if fnmatch.fnmatch(filename, '*.xpt'):
+            xptfiles.append(filename)
+        else:
+            libfiles.append(filename)
+
+    def copy_libs(dest_dir):
+        clear_dir(dest_dir)
+        distutils.dir_util.mkpath(dest_dir)
+        for filename in libfiles:
+            shutil.copy(os.path.join(comp_xpi_dir, filename),
+                        dest_dir)
+
+    if not xpcom_info.is_debug:
+        copy_libs(comp_plat_dir1)
+    copy_libs(comp_plat_dir2)
+
+    for filename in xptfiles:
+        shutil.copy(os.path.join(comp_xpi_dir, filename),
+                    os.path.join(options.path_to_ext_root, "components"))
+
     for filename in os.listdir(comp_xpi_dir):
         shutil.copy(os.path.join(comp_xpi_dir, filename),
                     xpcom_info.components_dir)
