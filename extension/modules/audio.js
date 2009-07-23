@@ -48,14 +48,19 @@ var EXPORTED_SYMBOLS = ["AudioModule"];
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-const Fi = Components.Constructor(
+const CC = Components.Constructor;
+const Fi = CC(
             "@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithPath");
-const Ff = Components.Constructor(
+const Ff = CC(
             "@mozilla.org/file/local;1",
             "nsILocalFile",
             "initWithFile");
+const Bi = CC(
+            "@mozilla.org/binaryinputstream;1",
+            "nsIBinaryInputStream",
+            "setInputStream");
 const Ds = Cc["@mozilla.org/file/directory_service;1"].
            getService(Ci.nsIProperties);
 
@@ -64,8 +69,11 @@ function AudioModule() {
   try {
     Re = Cc["@labs.mozilla.com/audio/recorder;1"].
          getService(Ci.IAudioRecorder);
-    this.recorder = {};
-    this.isRecording = false;
+    En = Cc["@labs.mozilla.com/audio/encoder;1"].
+         getService(Ci.IAudioEncoder);
+    CT = Cc["@mozilla.org/thread-manager;1"].
+         getService().currentThread;
+    this.isRecording = 0;
   } catch (e) {
     // We may be failing because of Windows! 
     // I AM A HACK. FIXME!
@@ -86,8 +94,7 @@ function AudioModule() {
     try {
       Re = Cc["@labs.mozilla.com/audio/recorder;1"].
            getService(Ci.IAudioRecorder);
-      this.recorder = {};
-      this.isRecording = false;
+      this.isRecording = 0;
     } catch (e) {
       // Really give up
       return {};
@@ -107,10 +114,23 @@ AudioModule.prototype = {
       return false;
     }
         
-    this.isRecording = true;
+    this.isRecording = 1;
     return true;
   },
-
+  
+  // === {{{AudioModule.recordToFile()}}} ===
+  //
+  // Starts recording audio and feeds raw frames
+  // (PCM float sampled at 44000Hz) to the output
+  // end of an nsIPipe.
+  //
+  recordToPipe: function() {
+    this._pipe = Re.start();
+    this._pipe.asyncWait(new inputStreamListener(), 0, 0, CT);
+    this._path = En.createOgg();
+    this.isRecording = 2;
+  },
+  
   // === {{{AudioModule.stopRecording()}}} ===
   //
   // Stops recording. If recording was started
@@ -119,16 +139,25 @@ AudioModule.prototype = {
   // file that the audio was saved to.
   //
   stopRecording: function() {
-    Re.stop();
-    this.isRecording = false;
-		
-    let src = new Fi(this._path);
-    let dst = getOrCreateDirectory();
+    switch (this.isRecording) {
+      case 0:
+        throw "Not recording!";
+        break;
+      case 1:
+        Re.stop();
+        this.isRecording = 0;
+        let src = new Fi(this._path);
+        let dst = getOrCreateDirectory();
 
-    src.copyTo(dst, '');
-    dst.append(src.leafName);
+        src.copyTo(dst, '');
+        dst.append(src.leafName);
 
-    return dst.path;
+        return dst.path;
+      case 2:
+        Re.stop();
+        dump("Wrote to " + this._path + "\n");
+        break;
+    }
   },
     
   // === {{{AudioModule.playFile(path)}}} ===
@@ -179,4 +208,33 @@ function getWindowsComponentDir() {
   file.append("components");
 
   return file;
+}
+
+function inputStreamListener() {}
+inputStreamListener.prototype = {
+  _readBytes: function(input, count) {
+    return new Bi(input).readByteArray(count);
+  },
+  
+  onInputStreamReady: function(input) {
+    try {
+      let bytes = this._readBytes(input, input.available()).join('');
+      // Each frame is 2 bytes
+      let diff = bytes.length % 2;
+      En.appendFrames(bytes.substr(0, bytes.length - diff));
+    } catch (e) {
+      dump("Pipe exception " + e + ", assumed it was closed!\n");
+      En.finalize();
+      return;
+    }
+    
+    input.asyncWait(this, 0, 0, CT);
+  },
+
+  QueryInterface: function(aIID) {
+    if (aIID.equals(Ci.nsIInputStreamCallback) ||
+        aIID.equals(Ci.nsISupports))
+        return this;
+    throw Cr.NS_ERROR_NO_INTERFACE;
+  }
 }

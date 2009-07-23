@@ -63,19 +63,17 @@
                            { 0x92, 0x7d, 0xbe, 0x13, 0xa3, 0xc6, 0x92, 0x54 } }
 
 #ifndef SAMPLE_RATE
-#define SAMPLE_RATE         (44000)
-#endif
-#ifndef SAMPLE_SILENCE
-#define SAMPLE_SILENCE      (0.0f)
-#endif
-#ifndef NUM_CHANNELS
-#define NUM_CHANNELS        (2)
+#define SAMPLE_RATE         (16000)
 #endif
 #ifndef FRAMES_PER_BUFFER
-#define FRAMES_PER_BUFFER   (1024)
+#define FRAMES_PER_BUFFER   (4096)
+#endif
+#ifndef NUM_CHANNELS
+#define NUM_CHANNELS        (1)
 #endif
 #ifndef PA_SAMPLE_TYPE
-#define PA_SAMPLE_TYPE      paFloat32
+#define PA_SAMPLE_TYPE      paInt16
+typedef short SAMPLE;
 #endif
 
 class AudioRecorder : public IAudioRecorder
@@ -89,8 +87,8 @@ public:
     virtual ~AudioRecorder();
     AudioRecorder(){}
     
-    nsCOMPtr<nsIAsyncInputStream> mPipeIn;
-    nsCOMPtr<nsIAsyncOutputStream> mPipeOut;
+    nsIAsyncInputStream *mPipeIn;
+    nsIAsyncOutputStream *mPipeOut;
 
 private:
     int recording;

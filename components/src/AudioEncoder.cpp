@@ -126,7 +126,7 @@ AudioEncoder::CreateOgg(nsACString& file)
 NS_IMETHODIMP
 AudioEncoder::AppendFrames(const nsACString& frames)
 {
-	PRUint32 len;
+	PRUint32 len, fr;
 	const char* data;
 	
 	if (encoding != 1) {
@@ -136,19 +136,19 @@ AudioEncoder::AppendFrames(const nsACString& frames)
 	
 	len = NS_CStringGetData(frames, &data);
 	
-	if (len % NUM_CHANNELS != 0) {
+	if (len % (NUM_CHANNELS * sizeof(SAMPLE)) != 0) {
 		fprintf(stderr, "JEP Audio:: Frame count not multiple of channels! %d\n", len);
 		return NS_ERROR_FAILURE;
 	}
 	
-	// fprintf(stderr, "Address of buffer %lx of len %d\n", data, len);
+    fr = len / (NUM_CHANNELS * sizeof(SAMPLE));
+	//fprintf(stderr, "Address of buffer %lx of len %d\n", data, len);
 	
-	if (sf_writef_short(outfile, (const short int *)data,
-		len / NUM_CHANNELS) != len / NUM_CHANNELS) {
+    if (sf_writef_short(outfile, (const SAMPLE *)data, fr) != fr) {
 		fprintf(stderr, "JEP Audio:: Could not append frames!\n");
 		return NS_ERROR_FAILURE;
 	} else {
-		fprintf(stderr, "Wrote %d!\n", len);
+		fprintf(stderr, "Wrote %d!\n", fr);
 	}
 	return NS_OK;
 }

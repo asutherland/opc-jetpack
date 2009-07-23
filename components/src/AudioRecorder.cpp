@@ -182,13 +182,14 @@ AudioRecorder::RecordCallback(const void *input, void *output,
 {
     unsigned long i;
     PRUint32 written;
-    const float *rptr = (const float *)input;
+    const SAMPLE *rptr = (const SAMPLE *)input;
 
     nsIAsyncOutputStream *op = static_cast<AudioRecorder*>(userData)->mPipeOut;
 
     if (input != NULL) {
         for (i = 0; i < framesPerBuffer; i++) {
-            op->Write((const char *)rptr, (PRUint32)(sizeof(float) * 2), &written);
+            op->Write((const char *)rptr,
+                        (PRUint32)(sizeof(SAMPLE) * NUM_CHANNELS), &written);
             rptr++;
             rptr++;
         }
@@ -205,13 +206,13 @@ AudioRecorder::RecordToFileCallback(const void *input, void *output,
         void *userData)
 {
     unsigned long i;
-    const float *rptr = (const float *)input;
+    const SAMPLE *rptr = (const SAMPLE *)input;
 
     SNDFILE *out = static_cast<AudioRecorder*>(userData)->outfile;
 
     if (input != NULL) {
         for (i = 0; i < framesPerBuffer; i++) {
-            sf_writef_float(out, rptr, 1);
+            sf_writef_short(out, rptr, 1);
             rptr++;
             rptr++;
         }
@@ -239,14 +240,46 @@ AudioRecorder::Start(nsIAsyncInputStream** out)
     nsresult rv = pipe->Init(PR_TRUE, PR_TRUE, 0, PR_UINT32_MAX, NULL);
     if (NS_FAILED(rv)) return rv;
 
-    pipe->GetInputStream(getter_AddRefs(mPipeIn));
-    pipe->GetOutputStream(getter_AddRefs(mPipeOut));
+    pipe->GetInputStream(&mPipeIn);
+    pipe->GetOutputStream(&mPipeOut);
 
     recording = 1;
     *out = mPipeIn;
 
+    /* Check for audio input device */
+    PaDeviceIndex dev;
+    dev = GetDefaultInputDevice();
+    if (dev == paNoDevice) {
+        fprintf(stderr, "JEP Audio:: Could not find input device!\n");
+        return NS_ERROR_UNEXPECTED;
+    }
+    
+    /* Open stream */
+    PaError err;
+    PaStreamParameters inputParameters;    
+    inputParameters.device = dev;
+    inputParameters.channelCount = 2;
+    inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+    inputParameters.suggestedLatency =
+        Pa_GetDeviceInfo(dev)->defaultLowInputLatency;
+    inputParameters.hostApiSpecificStreamInfo = NULL;
+
+    err = Pa_OpenStream(
+            &stream,
+            &inputParameters,
+            NULL,
+            SAMPLE_RATE,
+            FRAMES_PER_BUFFER,
+            paClipOff,
+            this->RecordCallback,
+            this
+    );
+    if (err != paNoError) {
+        fprintf(stderr, "JEP Audio:: Could not open stream! %d", err);
+    }
+    
     /* Start recording */
-    PaError err = Pa_StartStream(stream);
+    err = Pa_StartStream(stream);
     if (err != paNoError) {
         fprintf(stderr, "JEP Audio:: Could not start stream! %d", err);
         return NS_ERROR_FAILURE;
@@ -361,7 +394,6 @@ AudioRecorder::Stop()
     
 	if (recording == 1) {
 		mPipeOut->Close();
-		mPipeOut->Release();
 	}
     recording = 0;
     return NS_OK;
