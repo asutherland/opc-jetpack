@@ -180,14 +180,24 @@ def xpi(options):
 
     resolve_options(options)
 
-    zfname = "%s-%s.xpi" % (options.ext_name.lower(), options.ext_version)
-    zf = zipfile.ZipFile(zfname, "w", zipfile.ZIP_DEFLATED)
-    for dirpath, dirnames, filenames in os.walk(options.path_to_ext_root):
-        for filename in filenames:
-            abspath = os.path.join(dirpath, filename)
-            arcpath = abspath[len(options.path_to_ext_root)+1:]
-            zf.write(abspath, arcpath)
-    print "Created %s." % zfname
+    platforms = os.listdir(os.path.join(options.my_dir, "lib"))
+
+    for platform in platforms:
+        zfname = "%s-%s-%s.xpi" % (options.ext_name.lower(),
+                                   options.ext_version,
+                                   platform)
+        copy_libs(options, platform)
+        zf = zipfile.ZipFile(zfname, "w", zipfile.ZIP_DEFLATED)
+        for dirpath, dirnames, filenames in os.walk(options.path_to_ext_root):
+            if platform in dirnames:
+                # We're in the extension/platform directory, get rid of files for
+                # other platforms.
+                dirnames[:] = [platform]
+            for filename in filenames:
+                abspath = os.path.join(dirpath, filename)
+                arcpath = abspath[len(options.path_to_ext_root)+1:]
+                zf.write(abspath, arcpath)
+        print "Created %s." % zfname
 
 def start_jsbridge(options):
     import mozrunner
@@ -392,14 +402,18 @@ def run_program(args, **kwargs):
         print "Process failed with exit code %d." % retval
         sys.exit(retval)
 
-def copy_libs(options):
-    if sys.platform == "darwin":
-        platform = "Darwin_x86-gcc3"
-    elif sys.platform.startswith("linux"):
-        platform = "Linux_x86-gcc3"
-    else:
-        # Assume Windows.
-        platform = "WINNT_x86-msvc"
+def copy_libs(options, platform = None):
+    """Copy the platform-specific dynamic library files from our versioned
+    repository into the extension's temporary directory."""
+
+    if platform is None:
+        if sys.platform == "darwin":
+            platform = "Darwin_x86-gcc3"
+        elif sys.platform.startswith("linux"):
+            platform = "Linux_x86-gcc3"
+        else:
+            # Assume Windows.
+            platform = "WINNT_x86-msvc"
     src_dir = os.path.join(options.my_dir, "lib", platform)
     dest_dir = os.path.join(options.path_to_ext_root, "lib")
     clear_dir(dest_dir)
