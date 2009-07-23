@@ -21,7 +21,7 @@ var SecureMembrane = {
   },
 
   // Wrap a thing coming from trusted code, for export to untrusted code.
-  wrapTrusted: function wrapTrusted(thing) {
+  wrapTrusted: function wrapTrusted(thing, isApply) {
     switch (typeof(thing)) {
     case "number":
     case "string":
@@ -48,7 +48,7 @@ var SecureMembrane = {
         // just return it.
         return thing;
     }
-    return this.binary.wrap(thing, new this.TrustedWrapper(thing));
+    return this.binary.wrap(thing, new this.TrustedWrapper(thing, isApply));
   },
 
   // Wrap a thing coming from untrusted code, for export to trusted code.
@@ -88,8 +88,9 @@ var SecureMembrane = {
     this.obj = obj;
   },
 
-  TrustedWrapper: function TrustedWrapper(obj) {
+  TrustedWrapper: function TrustedWrapper(obj, isApply) {
     this.obj = obj;
+    this.isApply = isApply;
   },
 
   // TODO: This is a workaround for #505494.
@@ -102,19 +103,6 @@ var SecureMembrane = {
     var argsArray = [];
     for (var i = 1; i < args.length; i++)
       argsArray.push(args[i]);
-    return self.call(wrappee, wrapper, thisObj, argsArray);
-  },
-
-  // TODO: This is a workaround for #505494.
-  call: function call(thisObj) {
-    var wrapper = this;
-    var self = SecureMembrane.binary.getWrapper(wrapper);
-    var wrappee = SecureMembrane.binary.unwrap(wrapper);
-    if (!(self && wrappee))
-      throw "call() called on incompatible object " + this;
-    var argsArray = [];
-    for (var i = 1; i < arguments.length; i++)
-      argsArray.push(arguments[i]);
     return self.call(wrappee, wrapper, thisObj, argsArray);
   }
 };
@@ -179,14 +167,9 @@ SecureMembrane.UntrustedWrapper.prototype = {
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
     if (name in wrappee) {
-      if (typeof(wrappee) == "function") {
-        switch (name) {
-        case "apply":
-          return SecureMembrane.apply;
-        case "call":
-          return SecureMembrane.call;
-        }
-      }
+      if (typeof(wrappee) == "function" && name == "apply")
+        // TODO: This is a workaround for #505494.
+        return SecureMembrane.apply;
       return SecureMembrane.wrapUntrusted(wrappee[name]);
     }
   },
@@ -233,6 +216,10 @@ SecureMembrane.TrustedWrapper.prototype = {
   },
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
+    if (typeof(wrappee) == "function" && name == "apply") {
+      // TODO: This is a workaround for #505494.
+      return SecureMembrane.wrapTrusted(wrappee, true);
+    }
     if (name in wrappee)
       return this.safeGetProperty(wrappee, name);
     return undefined;
@@ -271,8 +258,16 @@ SecureMembrane.TrustedWrapper.prototype = {
                      wrappedArgs.push(SecureMembrane.wrapUntrusted(arg));
                    });
       try {
-        var result = wrappee.apply(SecureMembrane.wrapUntrusted(thisObj),
-                                   wrappedArgs);
+        var result;
+        if (this.isApply && wrappedArgs.length > 1) {
+          // TODO: This is a workaround for #505494.
+          var realArray = [wrappedArgs[1][i]
+                           for (i in wrappedArgs[1])];
+          result = wrappee.apply(wrappedArgs[0], realArray);
+        } else {
+          result = wrappee.apply(SecureMembrane.wrapUntrusted(thisObj),
+                                 wrappedArgs);
+        }
       } catch (e) {
         throw SecureMembrane.wrapTrusted(e);
       }

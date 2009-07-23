@@ -69,9 +69,7 @@ var SecureMembraneTests = {
       sandbox.foo = SecureMembrane.wrapTrusted(
         function foo(x) { return x+1; }
       );
-      // TODO: This should work once either #505494 is fixed or
-      // we implement a workaround for it.
-      //self.assertEqual(tryCode("foo.apply(this, [5])"), 6);
+      self.assertEqual(tryCode("foo.apply(this, [5])"), 6);
       self.assertEqual(tryCode("foo.call(this, 5)"), 6);
     } else
       console.warn("SecureMembrane is not available; skipping test.");
