@@ -39,6 +39,7 @@ FBL.ns(
             // Supress pointless 'not well formed' errors when
             // XHRs retrieve content that obviously isn't XML.
             Firebug.showXMLErrors = false;
+            Firebug.activateSameOrigin = false;
           }
         },
         loadedContext: function(context) {
