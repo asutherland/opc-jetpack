@@ -531,7 +531,13 @@ def xpcom(options):
 
     # Now run unit tests via xpcshell.
 
+    env = {}
+    env.update(os.environ)
+    if sys.platform.startswith("linux"):
+        env['LD_LIBRARY_PATH'] = os.path.dirname(options.xpcshell)
+
     run_program([options.xpcshell,
                  os.path.join(options.my_dir, "extension",
                               "content", "test-wrapper.js")],
+                env=env,
                 cwd=os.path.dirname(options.xpcshell))
