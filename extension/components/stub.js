@@ -11,7 +11,7 @@ function NSGetModule() {
     registerSelf: function(compMgr, location, loaderStr, type) {
       var appInfo = Cc["@mozilla.org/xre/app-info;1"]
                     .getService(Ci.nsIXULAppInfo);
-      var platformVersion = appInfo.platformVersion;
+      var platformVersion = appInfo.platformVersion.substring(0, 5);
       var libFile = location.parent.parent;
       libFile.append("lib");
       libFile.append(platformVersion);

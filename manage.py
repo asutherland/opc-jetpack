@@ -450,7 +450,7 @@ def xpcom(options):
         elif line.startswith("TARGET_XPCOM_ABI"):
             xpcom_info.abi = line.split("=")[1].strip()
         elif line.startswith("MOZILLA_VERSION"):
-            xpcom_info.mozilla_version = line.split("=")[1].strip()
+            xpcom_info.mozilla_version = line.split("=")[1].strip()[:5]
         elif (line.startswith("MOZ_DEBUG") and
               not line.startswith("MOZ_DEBUG_")):
             raw_value = line.split("=")[1].strip()
