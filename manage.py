@@ -158,6 +158,9 @@ def install(options):
     fileobj = open(options.extension_file, "w")
     fileobj.write(options.firefox_path_to_ext_root)
     fileobj.close()
+
+    copy_libs(options)
+
     print "Extension '%s' installed to profile '%s'." % (options.ext_id,
                                                          options.profile)
 
@@ -369,6 +372,9 @@ def test(options):
 def clean(options):
     """Removes all intermediate and non-essential files."""
 
+    resolve_options(options)
+    clear_dir(os.path.join(options.path_to_ext_root, "lib"))
+
     EXTENSIONS_TO_REMOVE = [".pyc", ".orig"]
 
     for dirpath, dirnames, filenames in os.walk(os.getcwd()):
@@ -385,6 +391,19 @@ def run_program(args, **kwargs):
     if retval:
         print "Process failed with exit code %d." % retval
         sys.exit(retval)
+
+def copy_libs(options):
+    if sys.platform == "darwin":
+        platform = "Darwin_x86-gcc3"
+    elif sys.platform.startswith("linux"):
+        platform = "Linux_x86-gcc3"
+    else:
+        # Assume Windows.
+        platform = "WINNT_x86-msvc"
+    src_dir = os.path.join(options.my_dir, "lib", platform)
+    dest_dir = os.path.join(options.path_to_ext_root, "lib")
+    clear_dir(dest_dir)
+    shutil.copytree(src_dir, dest_dir)
 
 @task
 @cmdopts([("srcdir=", "t", "The root of your mozilla-central checkout"),
