@@ -93,7 +93,8 @@ var Extension = {
                       .rootTreeItem
                       .QueryInterface(Ci.nsIInterfaceRequestor)
                       .getInterface(Ci.nsIDOMWindow);
-     var browser = mainWindow.getBrowserFromContentWindow(window);
+     var browser = JetpackAppNuances.getBrowserFromContentWindow(mainWindow,
+                                                                 window);
 
      Extension.visibleMainWindow = mainWindow;
      Extension.visibleBrowser = browser;

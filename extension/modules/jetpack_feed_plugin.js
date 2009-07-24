@@ -59,8 +59,11 @@ function FeedPlugin(feedManager) {
 
   this.type = TYPE;
 
-  let Application = Components.classes["@mozilla.org/fuel/application;1"]
-                    .getService(Components.interfaces.fuelIApplication);
+  let Application = Cc["@mozilla.org/fuel/application;1"] ?
+                    Cc["@mozilla.org/fuel/application;1"]
+                      .getService(Ci.fuelIApplication) :
+                    Cc["@mozilla.org/steel/application;1"]
+                      .getService(Ci.steelIApplication);
 
   this.onSubscribeClick = function DFP_onSubscribeClick(targetDoc,
                                                         commandsUrl,

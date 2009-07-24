@@ -91,7 +91,7 @@ function BrowserWatcher(options) {
   var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
            .getService(Ci.nsIWindowMediator);
 
-  var enumerator = wm.getEnumerator("navigator:browser");
+  var enumerator = wm.getEnumerator(JetpackAppNuances.appWindowType);
 
   while (enumerator.hasMoreElements()) {
     var chromeWindow = enumerator.getNext();
@@ -110,7 +110,7 @@ function BrowserWatcher(options) {
       removeListener();
       var type = chromeWindow.document.documentElement
                  .getAttribute("windowtype");
-      if (type == "navigator:browser")
+      if (type == JetpackAppNuances.appWindowType)
         loadAndBind(chromeWindow);
     }
     chromeWindow.addEventListener("load", onLoad, false);

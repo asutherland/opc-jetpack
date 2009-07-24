@@ -128,7 +128,7 @@ var simpleStorage = {
 function SimpleStorage(aFeatureUrl) {
   MemoryTracking.track(this);
 
-  ensureFx35();
+  ensureGecko191();
   if (typeof(aFeatureUrl) !== "string" || !aFeatureUrl)
     throw new Error("Feature URL must be a nonempty string.");
 
@@ -306,12 +306,14 @@ function createSyncTimer() {
 }
 
 // Simple storage is supported on Firefox 3.5+ only.
-function ensureFx35() {
-  var versionParts = Cc["@mozilla.org/xre/app-info;1"].
-                     getService(Ci.nsIXULAppInfo).
-                     version.split(".");
-  if (versionParts[0][0] == 3 && versionParts[1][0] < 5)
-    throw new Error("jetpack.storage.simple requires Firefox 3.5 or later.");
+function ensureGecko191() {
+  var appInfo = Cc["@mozilla.org/xre/app-info;1"].
+                getService(Ci.nsIXULAppInfo);
+  var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"].
+                       getService(Ci.nsIVersionComparator);
+
+  if (versionChecker.compare(appInfo.platformVersion, "1.9.1") < 0)
+    throw new Error("jetpack.storage.simple requires Gecko 1.9.1 or later.");
 }
 
 // Hashes the given feature URL.  Hey, an ID.

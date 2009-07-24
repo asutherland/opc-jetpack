@@ -4,4 +4,16 @@
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/javascript;version=1.7"
           src="chrome://jetpack/content/js/xul/browser.js"/>
+  <script type="application/javascript;version=1.7"
+          src="chrome://jetpack/content/js/jetpack-app-nuances.js"/>
+  <menupopup id="taskPopup">
+    <menuitem id="jetpack" insertafter="javascriptConsole"
+              label="about:jetpack" accesskey="t"
+              oncommand="JetpackAppNuances.openTab('about:jetpack', false);"/>
+  </menupopup>
+  <menupopup id="menu_ToolsPopup">
+    <menuitem id="jetpack" insertafter="javascriptConsole"
+              label="about:jetpack" accesskey="t"
+              oncommand="JetpackAppNuances.openTab('about:jetpack', false);"/>
+  </menupopup>
 </overlay>

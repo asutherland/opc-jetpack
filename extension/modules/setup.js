@@ -50,8 +50,11 @@ Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
 var Cc = Components.classes;
 var Ci = Components.interfaces;
 
-let Application = Components.classes["@mozilla.org/fuel/application;1"]
-                  .getService(Components.interfaces.fuelIApplication);
+let Application = Cc["@mozilla.org/fuel/application;1"] ?
+                  Cc["@mozilla.org/fuel/application;1"]
+                    .getService(Ci.fuelIApplication) :
+                  Cc["@mozilla.org/steel/application;1"]
+                    .getService(Ci.steelIApplication);
 
 let gServices;
 
@@ -147,9 +150,16 @@ let JetpackSetup = {
         "load",
         function onWindowLoad() {
           window.removeEventListener("load", onWindowLoad, false);
-          var tabbrowser = window.getBrowser();
-          var tab = tabbrowser.addTab("about:jetpack");
-          tabbrowser.selectedTab = tab;
+          // If we're Thunderbird, do things slightly differently...
+          if (Application.name == "Thunderbird") {
+            window.document.getElementById("tabmail")
+              .openTab("contentTab", {contentPage: "about:jetpack"});
+          }
+          else {
+            var tabbrowser = window.getBrowser();
+            var tab = tabbrowser.addTab("about:jetpack");
+            tabbrowser.selectedTab = tab;
+          }
         },
         false
       );

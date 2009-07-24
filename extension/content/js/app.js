@@ -239,11 +239,14 @@ var App = {
   },
 
   get isFirefoxOld() {
-    var appInfo = Cc["@mozilla.org/xre/app-info;1"]
-                  .getService(Ci.nsIXULAppInfo);
+    // For non-Firefox apps, we don't need to display this warning as it is
+    // performed by install.rdf
+    if (Application.name != "Firefox")
+      return false;
+
     var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"]
                          .getService(Ci.nsIVersionComparator);
-    if (versionChecker.compare(appInfo.version, "3.1b3") < 0)
+    if (versionChecker.compare(Application.version, "3.1b3") < 0)
       return true;
     return false;
   },
