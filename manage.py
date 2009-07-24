@@ -385,7 +385,7 @@ def clean(options):
     resolve_options(options)
     clear_dir(os.path.join(options.path_to_ext_root, "lib"))
 
-    EXTENSIONS_TO_REMOVE = [".pyc", ".orig"]
+    EXTENSIONS_TO_REMOVE = [".pyc", ".orig", ".rej"]
 
     for dirpath, dirnames, filenames in os.walk(os.getcwd()):
         if ".hg" in dirnames:
