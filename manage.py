@@ -43,6 +43,10 @@ from paver.easy import *
 # located.
 EXT_SUBDIR = "extension"
 
+# Valid applications that this extension supports. The first one listed
+# is the default used if one isn't explicitly provided on the command-line.
+VALID_APPS = ['firefox', 'thunderbird']
+
 # When launching a temporary new Firefox profile, use these preferences.
 DEFAULT_FIREFOX_PREFS = {
     'browser.startup.homepage' : 'about:blank',
@@ -108,30 +112,40 @@ DEFAULT_THUNDERBIRD_PREFS = {
     'mailnews.start_page_override.mstone' :  "ignore",
     }
 
+PROFILE_DIRS = Bunch(
+    firefox = Bunch(
+        darwin = "~/Library/Application Support/Firefox/",
+        windows = "Mozilla\\Firefox",
+        linux = "~/.mozilla/firefox/"
+        ),
+    thunderbird = Bunch(
+        darwin = "~/Library/Thunderbird/",
+        windows = "Mozilla\\Thunderbird",
+        linux = "~/.thunderbird/"
+        )
+    )
+
 def clear_dir(dirname):
     if os.path.exists(dirname) and os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
-def find_profile_dir(name):
+def find_profile_dir(app, name):
     """
-    Given the name of a Firefox profile, attempts to find the absolute
-    path to its directory.  If it can't be found, None is returned.
+    Given the name of an application and its profile, attempts
+    to find the absolute path to its directory.  If it can't be found,
+    None is returned.
     """
 
     base_path = None
     if sys.platform == "darwin":
-        base_path = os.path.expanduser(
-            "~/Library/Application Support/Firefox/"
-            )
-    elif sys.platform.startswith("win"):
+        base_path = os.path.expanduser(PROFILE_DIRS[app].darwin)
+    elif (sys.platform.startswith("win") or
+          sys.platform == "cygwin"):
         # TODO: This only works on 2000/XP/Vista, not 98/Me.
         appdata = os.environ["APPDATA"]
-        base_path = os.path.join(appdata, "Mozilla\\Firefox")
-    elif sys.platform == "cygwin":
-        appdata = os.environ["APPDATA"]
-        base_path = os.path.join(appdata, "Mozilla\\Firefox")
+        base_path = os.path.join(appdata, PROFILE_DIRS[app].windows)
     else:
-        base_path = os.path.expanduser("~/.mozilla/firefox/")
+        base_path = os.path.expanduser(PROFILE_DIRS[app].linux)
     inifile = os.path.join(base_path, "profiles.ini")
     config = ConfigParser()
     config.read(inifile)
@@ -158,12 +172,16 @@ def get_install_rdf_property(path_to_ext_root, property):
 
 def resolve_options(options, ext_subdir = EXT_SUBDIR):
     if not options.get('app'):
-        options.app = 'firefox'
+        options.app = VALID_APPS[0]
     if not options.get('profile'):
         options.profile = 'default'
 
+    if options.app not in VALID_APPS:
+        print "Unrecognized or unsupported application: %s." % options.app
+        sys.exit(1)
+
     options.my_dir = os.path.dirname(os.path.abspath(options.pavement_file))
-    options.profile_dir = find_profile_dir(options.profile)
+    options.profile_dir = find_profile_dir(options.app, options.profile)
     options.path_to_ext_root = os.path.join(options.my_dir, ext_subdir)
 
     options.ext_id = get_install_rdf_property(options.path_to_ext_root,
@@ -207,16 +225,20 @@ def remove_extension(options):
         else:
             os.remove(options.extension_file)
 
-INSTALL_OPTIONS = [("profile=", "p", "Profile name.")]
+APP_OPTION = ("app=", "a", "Application to use. Defaults to %s. "
+              "Valid choices are: %s." % (VALID_APPS[0],
+                                          ", ".join(VALID_APPS)))
+
+INSTALL_OPTIONS = [("profile=", "p", "Profile name."),
+                   APP_OPTION]
 JSBRIDGE_OPTIONS = [("port=", "p", "Port to use for jsbridge communication."),
                     ("binary=", "b", "Path to application binary."),
-                    ("app=", "a", "Application to use. Defaults to "
-                     "'firefox'; can also be 'thunderbird'.")]
+                    APP_OPTION]
 
 @task
 @cmdopts(INSTALL_OPTIONS)
 def install(options):
-    """Install the extension to a Firefox profile."""
+    """Install the extension to an application profile."""
 
     resolve_options(options)
     remove_extension(options)
@@ -230,18 +252,20 @@ def install(options):
 
     copy_libs(options)
 
-    print "Extension '%s' installed to profile '%s'." % (options.ext_id,
-                                                         options.profile)
+    print "Extension '%s' installed to %s profile '%s'." % (options.ext_id,
+                                                            options.app,
+                                                            options.profile)
 
 @task
 @cmdopts(INSTALL_OPTIONS)
 def uninstall(options):
-    """Uninstall the extension from a Firefox profile."""
+    """Uninstall the extension from an application profile."""
 
     resolve_options(options)
     remove_extension(options)
-    print "Extension '%s' uninstalled from profile '%s'." % (options.ext_id,
-                                                             options.profile)
+    print "Extension '%s' uninstalled from %s profile '%s'." % (options.ext_id,
+                                                                options.app,
+                                                                options.profile)
 
 @task
 def xpi(options):
@@ -288,8 +312,6 @@ def start_jsbridge(options):
         profile_class = mozrunner.ThunderbirdProfile
         preferences = DEFAULT_THUNDERBIRD_PREFS
         runner_class = mozrunner.ThunderbirdRunner
-    else:
-        raise Exception('Unknown app: %s' % options.app)
 
     profile = profile_class(plugins=plugins, preferences=preferences)
     runner = runner_class(profile=profile,
