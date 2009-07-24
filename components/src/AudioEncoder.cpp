@@ -124,27 +124,25 @@ AudioEncoder::CreateOgg(nsACString& file)
  * Append a single stereo frame to the ogg file
  */
 NS_IMETHODIMP
-AudioEncoder::AppendFrames(PRInt16 *frames, PRUint32 numBytes)
-{
-	PRUint32 fr = numBytes / (NUM_CHANNELS * sizeof(SAMPLE));
-	
+AudioEncoder::AppendFrames(PRInt32 *frames, PRUint32 numBytes)
+{	
 	if (encoding != 1) {
 		fprintf(stderr, "JEP Audio:: Encoding did not begin, cannot append!\n");
 		return NS_ERROR_FAILURE;
 	}
 	
-	if (numBytes % (NUM_CHANNELS * sizeof(SAMPLE)) != 0) {
-		fprintf(stderr, "JEP Audio:: Frame count not multiple of channels! %d\n", numBytes);
-		return NS_ERROR_FAILURE;
-	}
-	
-    if (sf_writef_short(outfile, (const SAMPLE *)frames, fr) != fr) {
-		fprintf(stderr, "JEP Audio:: Could not append frames!\n");
-		return NS_ERROR_FAILURE;
-	} else {
-		fprintf(stderr, "Wrote %d!\n", fr);
-	}
-	return NS_OK;
+    if (numBytes % (NUM_CHANNELS * sizeof(SAMPLE)) != 0) {
+        fprintf(stderr, "JEP Audio:: Frame count not multiple of channels!"
+                        " %d\n", numBytes);
+        return NS_ERROR_FAILURE;
+    }
+
+    PRUint32 fr = numBytes / (NUM_CHANNELS * sizeof(SAMPLE));
+    if (sf_writef_int(outfile, (const SAMPLE *)frames, fr) != fr) {
+        fprintf(stderr, "JEP Audio:: Could not append frames!\n");
+        return NS_ERROR_FAILURE;
+    }
+    return NS_OK;
 }
 
 /*

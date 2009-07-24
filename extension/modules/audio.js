@@ -216,17 +216,17 @@ function inputStreamListener() {
 inputStreamListener.prototype = {
   onInputStreamReady: function(input) {
     try {
-        this._data = this._data.concat(
-          new Bi(input).readByteArray(input.available())
-        );
+      this._data = this._data.concat(
+        new Bi(input).readByteArray(input.available())
+      );
     } catch (e) {
       dump("Pipe exception " + e + ", assumed it was closed!\n");
       En.finalize();
       return;
     }
     
-    // Each frame is 2 bytes
-    let diff = this._data.length % 2;
+    // 4 bytes * 2 channels = 8 byte frame
+    let diff = this._data.length % 8;
     let clen = this._data.length - diff;
     En.appendFrames(this._data.slice(0, clen), clen);
     this._data = this._data.slice(clen, diff);

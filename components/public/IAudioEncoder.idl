@@ -43,7 +43,7 @@ interface IAudioEncoder : nsISupports
 {
     ACString createOgg();
     void appendFrames(
-      [array, size_is(numBytes)] in PRInt16 frames,
+      [array, size_is(numBytes)] in PRInt32 frames,
       in unsigned long numBytes
     );
     void finalize();

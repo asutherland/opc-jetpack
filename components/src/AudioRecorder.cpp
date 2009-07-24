@@ -180,18 +180,13 @@ AudioRecorder::RecordCallback(const void *input, void *output,
         PaStreamCallbackFlags statusFlags,
         void *userData)
 {
-    unsigned long i;
     PRUint32 written;
-    const SAMPLE *rptr = (const SAMPLE *)input;
-
     nsIAsyncOutputStream *op = static_cast<AudioRecorder*>(userData)->mPipeOut;
 
     if (input != NULL) {
-        for (i = 0; i < framesPerBuffer; i++) {
-            op->Write((const char *)rptr,
-                        (PRUint32)(sizeof(SAMPLE) * NUM_CHANNELS), &written);
-            rptr++;
-        }
+        op->Write((const char *)input,
+            (PRUint32)(sizeof(SAMPLE) * NUM_CHANNELS * framesPerBuffer),
+                &written);
     }
     
     return paContinue;
@@ -204,16 +199,10 @@ AudioRecorder::RecordToFileCallback(const void *input, void *output,
         PaStreamCallbackFlags statusFlags,
         void *userData)
 {
-    unsigned long i;
-    const SAMPLE *rptr = (const SAMPLE *)input;
-
     SNDFILE *out = static_cast<AudioRecorder*>(userData)->outfile;
 
     if (input != NULL) {
-        for (i = 0; i < framesPerBuffer; i++) {
-            sf_writef_short(out, rptr, 1);
-            rptr++;
-        }
+        sf_writef_int(out, (const SAMPLE *)input, framesPerBuffer);
     }
     
     return paContinue;

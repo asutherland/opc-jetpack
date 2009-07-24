@@ -63,17 +63,17 @@
                            { 0x92, 0x7d, 0xbe, 0x13, 0xa3, 0xc6, 0x92, 0x54 } }
 
 #ifndef SAMPLE_RATE
-#define SAMPLE_RATE         (16000)
+#define SAMPLE_RATE         (44000)
 #endif
 #ifndef FRAMES_PER_BUFFER
-#define FRAMES_PER_BUFFER   (4096)
+#define FRAMES_PER_BUFFER   (512)
 #endif
 #ifndef NUM_CHANNELS
-#define NUM_CHANNELS        (1)
+#define NUM_CHANNELS        (2)
 #endif
 #ifndef PA_SAMPLE_TYPE
-#define PA_SAMPLE_TYPE      paInt16
-typedef short SAMPLE;
+#define PA_SAMPLE_TYPE      paInt32
+typedef int SAMPLE;
 #endif
 
 class AudioRecorder : public IAudioRecorder

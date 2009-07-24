@@ -61,14 +61,14 @@
                           { 0x81, 0x0C, 0x12, 0x8F, 0xD7, 0xD7, 0x76, 0xDE } }
 
 #ifndef SAMPLE_RATE
-#define SAMPLE_RATE         (16000)
+#define SAMPLE_RATE         (44000)
 #endif
 #ifndef NUM_CHANNELS
-#define NUM_CHANNELS        (1)
+#define NUM_CHANNELS        (2)
 #endif
 #ifndef PA_SAMPLE_TYPE
-#define PA_SAMPLE_TYPE      paInt16
-typedef short SAMPLE;
+#define PA_SAMPLE_TYPE      paInt32
+typedef int SAMPLE;
 #endif
 
 class AudioEncoder : public IAudioEncoder
