@@ -43,6 +43,71 @@ from paver.easy import *
 # located.
 EXT_SUBDIR = "extension"
 
+# When launching a temporary new Firefox profile, use these preferences.
+DEFAULT_FIREFOX_PREFS = {
+    'browser.startup.homepage' : 'about:blank',
+    'startup.homepage_welcome_url' : 'about:blank',
+    }
+
+# When launching a temporary new Thunderbird profile, use these preferences.
+# Note that these were taken from:
+# http://mxr.mozilla.org/comm-central/source/mail/test/mozmill/runtest.py
+DEFAULT_THUNDERBIRD_PREFS = {
+    # say yes to debug output via dump
+    'browser.dom.window.dump.enabled': True,
+    # say no to slow script warnings
+    'dom.max_chrome_script_run_time': 200,
+    'dom.max_script_run_time': 0,
+    # disable extension stuffs
+    'extensions.update.enabled'    : False,
+    'extensions.update.notifyUser' : False,
+    # do not ask about being the default mail client
+    'mail.shell.checkDefaultClient': False,
+    # disable non-gloda indexing daemons
+    'mail.winsearch.enable': False,
+    'mail.winsearch.firstRunDone': True,
+    'mail.spotlight.enable': False,
+    'mail.spotlight.firstRunDone': True,
+    # disable address books for undisclosed reasons
+    'ldap_2.servers.osx.position': 0,
+    'ldap_2.servers.oe.position': 0,
+    # disable the first use junk dialog
+    'mailnews.ui.junk.firstuse': False,
+    # other unknown voodoo
+    # -- dummied up local accounts to stop the account wizard
+    'mail.account.account1.server' :  "server1",
+    'mail.account.account2.identities' :  "id1",
+    'mail.account.account2.server' :  "server2",
+    'mail.accountmanager.accounts' :  "account1,account2",
+    'mail.accountmanager.defaultaccount' :  "account2",
+    'mail.accountmanager.localfoldersserver' :  "server1",
+    'mail.identity.id1.fullName' :  "Tinderbox",
+    'mail.identity.id1.smtpServer' :  "smtp1",
+    'mail.identity.id1.useremail' :  "tinderbox@invalid.com",
+    'mail.identity.id1.valid' :  True,
+    'mail.root.none-rel' :  "[ProfD]Mail",
+    'mail.root.pop3-rel' :  "[ProfD]Mail",
+    'mail.server.server1.directory-rel' :  "[ProfD]Mail/Local Folders",
+    'mail.server.server1.hostname' :  "Local Folders",
+    'mail.server.server1.name' :  "Local Folders",
+    'mail.server.server1.type' :  "none",
+    'mail.server.server1.userName' :  "nobody",
+    'mail.server.server2.check_new_mail' :  False,
+    'mail.server.server2.directory-rel' :  "[ProfD]Mail/tinderbox",
+    'mail.server.server2.download_on_biff' :  True,
+    'mail.server.server2.hostname' :  "tinderbox",
+    'mail.server.server2.login_at_startup' :  False,
+    'mail.server.server2.name' :  "tinderbox@invalid.com",
+    'mail.server.server2.type' :  "pop3",
+    'mail.server.server2.userName' :  "tinderbox",
+    'mail.smtp.defaultserver' :  "smtp1",
+    'mail.smtpserver.smtp1.hostname' :  "tinderbox",
+    'mail.smtpserver.smtp1.username' :  "tinderbox",
+    'mail.smtpservers' :  "smtp1",
+    'mail.startup.enabledMailCheckOnce' :  True,
+    'mailnews.start_page_override.mstone' :  "ignore",
+    }
+
 def clear_dir(dirname):
     if os.path.exists(dirname) and os.path.isdir(dirname):
         shutil.rmtree(dirname)
@@ -92,6 +157,8 @@ def get_install_rdf_property(path_to_ext_root, property):
     return element.firstChild.nodeValue
 
 def resolve_options(options, ext_subdir = EXT_SUBDIR):
+    if not options.get('app'):
+        options.app = 'firefox'
     if not options.get('profile'):
         options.profile = 'default'
 
@@ -142,7 +209,9 @@ def remove_extension(options):
 
 INSTALL_OPTIONS = [("profile=", "p", "Profile name.")]
 JSBRIDGE_OPTIONS = [("port=", "p", "Port to use for jsbridge communication."),
-                    ("binary=", "b", "Path to Firefox binary.")]
+                    ("binary=", "b", "Path to application binary."),
+                    ("app=", "a", "Application to use. Defaults to "
+                     "'firefox'; can also be 'thunderbird'.")]
 
 @task
 @cmdopts(INSTALL_OPTIONS)
@@ -211,14 +280,21 @@ def start_jsbridge(options):
     options.binary = options.get('binary')
 
     plugins = [jsbridge.extension_path, options.path_to_ext_root]
-    profile = mozrunner.FirefoxProfile(
-        plugins=plugins,
-        preferences={'browser.startup.homepage' : 'about:blank',
-                     'startup.homepage_welcome_url' : 'about:blank'}
-        )
-    runner = mozrunner.FirefoxRunner(profile=profile,
-                                     binary=options.binary,
-                                     cmdargs=["-jsbridge", str(options.port)])
+    if options.app == 'firefox':
+        profile_class = mozrunner.FirefoxProfile
+        preferences = DEFAULT_FIREFOX_PREFS
+        runner_class = mozrunner.FirefoxRunner
+    elif options.app == 'thunderbird':
+        profile_class = mozrunner.ThunderbirdProfile
+        preferences = DEFAULT_THUNDERBIRD_PREFS
+        runner_class = mozrunner.ThunderbirdRunner
+    else:
+        raise Exception('Unknown app: %s' % options.app)
+
+    profile = profile_class(plugins=plugins, preferences=preferences)
+    runner = runner_class(profile=profile,
+                          binary=options.binary,
+                          cmdargs=["-jsbridge", str(options.port)])
     runner.start()
 
     back_channel, bridge = jsbridge.wait_and_create_network("127.0.0.1",
@@ -284,7 +360,8 @@ def start_jetpack(options, listener):
 @task
 @cmdopts(JSBRIDGE_OPTIONS)
 def run(options):
-    """Run Firefox in a temporary new profile with the extension installed."""
+    """Run the application in a temporary new profile with the extension
+    installed."""
 
     remote = start_jsbridge(options)
 
