@@ -47,7 +47,7 @@ var JetpackEnvironmentTests = {
   testGeneral: function(self) {
     this._withSandbox(
       function() {
-        self.assert(this.jetpack.lib.twitter.Twit);
+        self.assert(this.jetpack.lib.twitter);
         self.assert(this.jetpack.notifications.show);
         self.assert(this.jetpack.tabs.focused);
         self.assert(this.jetpack.statusBar.append);

@@ -229,11 +229,13 @@ jetpack.statusBar.append({
           <pre name="code" class="jscript">var twitter = jetpack.lib.twitter
 var oldTweet = null;
 
-function getTweet(){
-  twitter.getTwitLatestStatus( "osunick", function(tweet){
-    var newTweet = tweet.text;
-    if( oldTweet != newTweet ){
-      jetpack.notifications.show( newTweet );
+function getTweet() {
+  twitter.statuses.user_timeline({
+    id: "osunick",
+    success: function (tweets) {
+      var newTweet = tweets[0].text;
+      if( oldTweet != newTweet )
+        jetpack.notifications.show( newTweet );
       oldTweet = newTweet;
     }
   });
@@ -249,7 +251,7 @@ setInterval( getTweet, 1000*60 );
 
           <p>For now, the easiest way to get documentation on the Twitter
           library is to read the <a
-          href="http://hg.mozilla.org/labs/jetpack/file/tip/extension/content/js/twitter.js">commented
+          href="http://hg.mozilla.org/labs/jetpack/raw-file/tip/extension/index.html#content/js/twitter.js">commented
           source</a>.</p>
 
           <h4>Chapter 5: Email Notifier</h4>

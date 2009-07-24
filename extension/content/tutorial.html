@@ -206,11 +206,13 @@ jetpack.statusBar.append({
 var twitter = jetpack.lib.twitter
 var oldTweet = null;
 
-function getTweet(){
-  twitter.getTwitLatestStatus( "osunick", function(tweet){
-    var newTweet = tweet.text;
-    if( oldTweet != newTweet ){
-      jetpack.notifications.show( newTweet );
+function getTweet() {
+  twitter.statuses.user_timeline({
+    id: "osunick",
+    success: function (tweets) {
+      var newTweet = tweets[0].text;
+      if( oldTweet != newTweet )
+        jetpack.notifications.show( newTweet );
       oldTweet = newTweet;
     }
   });

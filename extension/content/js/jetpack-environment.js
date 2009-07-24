@@ -157,7 +157,7 @@ window.addLazyLoaders(
      "Clipboard"
    ],
    "js/twitter.js": [
-     "Twitter"
+     "twitter"
    ],
    "js/notifications.js": [
      "Notifications"
@@ -217,7 +217,7 @@ JetpackEnv.addImporter(
 
 JetpackEnv.addLazyLoaders({
    "jetpack.lib.twitter": function(context) {
-     return Twitter;
+     return twitter();
    },
 
    "jetpack.future": function(context) {
