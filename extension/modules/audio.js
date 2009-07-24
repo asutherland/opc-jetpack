@@ -210,24 +210,26 @@ function getWindowsComponentDir() {
   return file;
 }
 
-function inputStreamListener() {}
+function inputStreamListener() {
+  this._data = [];
+}
 inputStreamListener.prototype = {
-  _readBytes: function(input, count) {
-    return new Bi(input).readByteArray(count);
-  },
-  
   onInputStreamReady: function(input) {
     try {
-      let bytes = this._readBytes(input, input.available()).join('');
-      // Each frame is 2 bytes
-      let diff = bytes.length % 2;
-      En.appendFrames(bytes.substr(0, bytes.length - diff));
+        this._data = this._data.concat(
+          new Bi(input).readByteArray(input.available())
+        );
     } catch (e) {
       dump("Pipe exception " + e + ", assumed it was closed!\n");
       En.finalize();
       return;
     }
     
+    // Each frame is 2 bytes
+    let diff = this._data.length % 2;
+    let clen = this._data.length - diff;
+    En.appendFrames(this._data.slice(0, clen), clen);
+    this._data = this._data.slice(clen, diff);
     input.asyncWait(this, 0, 0, CT);
   },
 

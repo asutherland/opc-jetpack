@@ -191,7 +191,6 @@ AudioRecorder::RecordCallback(const void *input, void *output,
             op->Write((const char *)rptr,
                         (PRUint32)(sizeof(SAMPLE) * NUM_CHANNELS), &written);
             rptr++;
-            rptr++;
         }
     }
     
@@ -213,7 +212,6 @@ AudioRecorder::RecordToFileCallback(const void *input, void *output,
     if (input != NULL) {
         for (i = 0; i < framesPerBuffer; i++) {
             sf_writef_short(out, rptr, 1);
-            rptr++;
             rptr++;
         }
     }
