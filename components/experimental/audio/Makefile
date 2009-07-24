@@ -49,8 +49,8 @@ so_target = $(target:=.$(so))
 cpp_objects = $(cpp_sources:.cpp=.o)
 
 # source and path configurations
-idl = public/IAudioEncoder.idl public/IAudioRecorder.idl
-cpp_sources = src/AudioEncoder.cpp src/AudioRecorder.cpp src/AudioModule.cpp
+idl = IAudioEncoder.idl IAudioRecorder.idl
+cpp_sources = AudioEncoder.cpp AudioRecorder.cpp AudioModule.cpp
 
 sdkdir ?= ${MOZSDKDIR}
 xpidl = $(sdkdir)/bin/xpidl
@@ -69,7 +69,7 @@ idl_typelib = $(idl:.idl=.xpt)
 cpp_objects = $(cpp_sources:.cpp=.o)
 so_target = $(target:=.$(so))
 
-headers = -I. -Isrc/ \
+headers = -I. \
           -I$(sdkdir)/include \
           -I$(sdkdir)/include/system_wrappers \
           -I$(sdkdir)/include/xpcom \
@@ -173,7 +173,7 @@ build: $(so_target) $(idl_typelib)
 
 clean: 
 	rm -f $(so_target) $(cpp_objects) \
-	IAudioEncoder.xpt IAudioRecorder.xpt IAudioEncoder.h IAudioRecorder.h \
+  $(idl_typelib) $(idl_headers) \
 	$(target:=.res) fake.lib fake.exp
 
 # rules to build the c headers and .xpt from idl
