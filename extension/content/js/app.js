@@ -27,6 +27,9 @@ var App = {
       // TODO: Show cached code if the feed isn't auto-updating.
       App.viewSource(feed.srcUri.spec, null);
       break;
+    case "force-reinstall":
+      JetpackRuntime.forceFeedUpdate(feed);
+    break;
     case "uninstall":
       feed.remove();
       break;
@@ -215,6 +218,7 @@ var App = {
     if (eventName == "subscribe") {
       // We're a subscribed feed.
       this._addButton(div, "uninstall");
+      this._addButton(div, "force-reinstall", "refresh");
       parent = $("#installed-jetpacks");
     } else {
       // We're an unsubscribed feed.
