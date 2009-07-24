@@ -13,6 +13,13 @@ parameter:
 
   python manage.py install --profile=testing
 
+Jetpack also experimentally supports Thunderbird, and most of
+manage.py's commands can be applied to Thunderbird with the '--app'
+option. For instance, to install Jetpack for development purposes to
+your Thunderbird profile called 'work', run:
+
+  python manage.py install --app=thunderbird --profile=work
+
 Using Jetpack
 -------------
 
