@@ -68,7 +68,12 @@ var JetpackRuntime = {
     var unsafeSandbox;
     var sandbox;
 
-    if (SecureMembrane.isAvailable) {
+    var useSecureMembrane = Application.prefs.getValue(
+      "extensions.jetpack.useSecureMembrane",
+      false
+      );
+
+    if (useSecureMembrane && SecureMembrane.isAvailable) {
       sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
       unsafeSandbox = sandboxFactory.makeSandbox({});
       sandbox = new Object();
