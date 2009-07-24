@@ -78,6 +78,6 @@ var SecureMembraneTests = {
       self.assertEqual(wrappedFoo.apply(this, [5]), 10);
       self.assertEqual(wrappedFoo.call(this, 5), 10);
     } else
-      console.warn("SecureMembrane is not available; skipping test.");
+      throw new Error("SecureMembrane is not available.");
   }
 };
