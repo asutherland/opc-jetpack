@@ -179,6 +179,9 @@ window.addLazyLoaders(
    ],
    "js/secure-membrane.js": [
      "SecureMembrane"
+   ],
+   "js/info.js": [
+    "Information"
    ]
   });
 
@@ -212,8 +215,8 @@ JetpackEnv.addImporter(
     }
   });
 
-JetpackEnv.addLazyLoaders(
-  {"jetpack.lib.twitter": function(context) {
+JetpackEnv.addLazyLoaders({
+   "jetpack.lib.twitter": function(context) {
      return Twitter;
    },
 
@@ -272,8 +275,12 @@ JetpackEnv.addLazyLoaders(
          return statusBar.append(options);
        }
      };
+   },
+   
+   "jetpack.info": function(context) {
+     return new Information(); 
    }
-  });
+});
 
 // == Futures ==
 //
