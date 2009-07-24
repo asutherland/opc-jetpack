@@ -71,6 +71,12 @@ var SecureMembraneTests = {
       );
       self.assertEqual(tryCode("foo.apply(this, [5])"), 6);
       self.assertEqual(tryCode("foo.call(this, 5)"), 6);
+
+      tryCode("function foo(x) { return x*2; }");
+      var wrappedFoo = SecureMembrane.wrapUntrusted(sandbox.foo);
+      self.assertEqual(wrappedFoo(5), 10);
+      self.assertEqual(wrappedFoo.apply(this, [5]), 10);
+      self.assertEqual(wrappedFoo.call(this, 5), 10);
     } else
       console.warn("SecureMembrane is not available; skipping test.");
   }

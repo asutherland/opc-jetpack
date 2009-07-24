@@ -101,7 +101,7 @@ var SecureMembrane = {
     if (!(self && wrappee))
       throw "apply() called on incompatible object " + this;
     var argsArray = [];
-    for (var i = 1; i < args.length; i++)
+    for (var i = 0; i < args.length; i++)
       argsArray.push(args[i]);
     return self.call(wrappee, wrapper, thisObj, argsArray);
   }
