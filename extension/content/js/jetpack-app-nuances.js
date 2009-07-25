@@ -60,17 +60,22 @@ else if (Application.name == "Thunderbird") {
       return aWindow.document.getElementById("tabmail").tabStrip;
     },
     openTab: function(aUrl, aInBackground) {
-      document.getElementById('tabmail').openTab('contentTab', {contentPage: aUrl,
-                                                                background: aInBackground});
+      document.getElementById('tabmail').openTab(
+        'contentTab',
+        {contentPage: aUrl,
+         background: aInBackground}
+      );
     },
     getBrowserFromContentWindow: function(aMainWindow, aWindow) {
       var tabmail = aMainWindow.document.getElementById("tabmail");
       var tabInfo = tabmail.tabInfo;
 
       for (var i = 0; i < tabInfo.length; ++i) {
-        var browserFunc = tabInfo[i].mode.getBrowser || tabInfo[i].mode.tabType.getBrowser;
+        var browserFunc = (tabInfo[i].mode.getBrowser ||
+                           tabInfo[i].mode.tabType.getBrowser);
         if (browserFunc) {
-          var possBrowser = browserFunc.call(tabInfo[i].mode.tabType, tabInfo[i]);
+          var possBrowser = browserFunc.call(tabInfo[i].mode.tabType,
+                                             tabInfo[i]);
           if (possBrowser && possBrowser.contentWindow == aWindow)
             return possBrowser;
         }
