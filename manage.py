@@ -637,6 +637,7 @@ def xpcom(options):
 
     run_program([options.xpcshell,
                  os.path.join(options.my_dir, "extension",
-                              "content", "test-wrapper.js")],
+                              "content", "js", "tests",
+                              "test-wrapper.js")],
                 env=env,
                 cwd=os.path.dirname(options.xpcshell))
