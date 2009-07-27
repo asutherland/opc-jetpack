@@ -41,8 +41,9 @@
 #import <Cocoa/Cocoa.h>
 #import "iTunes.h"
 
-#include "nsObjCExceptions.h"
+#include "nsMemory.h"
 #include "IMusicPlayer.h"
+#include "nsObjCExceptions.h"
 
 #define ITUNES_PLAYER_CONTRACTID "@labs.mozilla.com/music/itunes;1"
 #define ITUNES_PLAYER_CLASSNAME  "iTunes Player Control"

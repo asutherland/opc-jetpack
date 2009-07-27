@@ -83,7 +83,10 @@ NS_IMETHODIMP
 iTunesPlayer::Play()
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
     [iTunes playOnce:NO];
+    return NS_OK;
+    
     NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
 }
 
@@ -91,7 +94,10 @@ NS_IMETHODIMP
 iTunesPlayer::Pause()
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
     [iTunes pause];
+    return NS_OK;
+    
     NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
 }
 
@@ -99,6 +105,52 @@ NS_IMETHODIMP
 iTunesPlayer::Stop()
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
     [iTunes stop];
+    return NS_OK;
+    
+    NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+}
+
+NS_IMETHODIMP
+iTunesPlayer::GetCurrentTrack(PRUint32 *count, char ***result)
+{
+    NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
+    // We return an array of "title", "artist", "album"
+    *count = 3;
+    char **outArray = (char **)nsMemory::Alloc((*count) * sizeof(char *));
+    if (!outArray)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    iTunesTrack *ct = [iTunes currentTrack];
+    outArray[0] = (char *)nsMemory::Clone(
+        [[ct name] cStringUsingEncoding:NSUTF8StringEncoding],
+        [[ct name] lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1
+    );
+    if (!outArray[0]) {
+        NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(0, outArray);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    outArray[1] = (char *)nsMemory::Clone(
+        [[ct artist] cStringUsingEncoding:NSUTF8StringEncoding],
+        [[ct artist] lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1
+    );
+    if (!outArray[1]) {
+        NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(1, outArray);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }          
+    outArray[2] = (char *)nsMemory::Clone(
+        [[ct album] cStringUsingEncoding:NSUTF8StringEncoding],
+        [[ct album] lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1
+    );
+    if (!outArray[2]) {
+        NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(2, outArray);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    *result = outArray;
+    return NS_OK;
+    
     NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
 }

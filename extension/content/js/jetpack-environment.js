@@ -10,6 +10,8 @@
 // have instant access to it without needing to explicitly
 // import anything.
 
+const Cu = Components.utils;
+
 var JetpackEnv = {
   importers: {},
   globals: {},
@@ -44,7 +46,7 @@ var JetpackEnv = {
             console.logFromCaller([source, "is deprecated, please use",
                                    dest, "instead."], "warn");
             delete self[name];
-            self[name] = Components.utils.evalInSandbox(dest, context.sandbox);
+            self[name] = Cu.evalInSandbox(dest, context.sandbox);
             return self[name];
           });
       });
@@ -310,8 +312,7 @@ JetpackEnv.setFutures(
 
    "jetpack.storage.simple": function (context) {
      var s = {};
-     Components.utils.import("resource://jetpack/modules/simple-storage.js",
-                             s);
+     Cu.import("resource://jetpack/modules/simple-storage.js", s);
 
      // TODO: context.srcUrl or context.url?  We hash this as the
      // feature's ID, so it should be unique to this feature. -adw
@@ -327,14 +328,20 @@ JetpackEnv.setFutures(
 
    "jetpack.audio": function(context) {
      var s = {};
-     Components.utils.import("resource://jetpack/modules/audio.js", s);
+     Cu.import("resource://jetpack/modules/audio.js", s);
      return new s.AudioModule();
    },
 
    "jetpack.pageMods": function(context) {
      var s = {};
-     Components.utils.import("resource://jetpack/modules/page-modification.js", s);
+     Cu.import("resource://jetpack/modules/page-modification.js", s);
      return new s.PageMods(context.sandbox.jetpack);
+   },
+   
+   "jetpack.music": function(context) {
+     var s = {};
+     Cu.import("resource://jetpack/modules/music.js", s);
+     return new s.MusicModule();
    }
   });
 

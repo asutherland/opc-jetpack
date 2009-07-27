@@ -41,6 +41,11 @@
 interface IMusicPlayer : nsISupports
 {
   void play();
-	void stop();
+  void stop();
   void pause();
+  void getCurrentTrack(
+    out unsigned long aCount,
+    [array, size_is(aCount), retval] out string info
+  );
 };
+
