@@ -1,4 +1,4 @@
-#include "nsJSWeakRef.h"
+#include "nsJetpack.h"
 #include "tcb.h"
 #include "wrapper.h"
 #include "memory_profiler.h"
@@ -9,7 +9,7 @@
 #include "nsServiceManagerUtils.h"
 #include "nsComponentManagerUtils.h"
 
-NS_IMPL_ISUPPORTS1(nsJSWeakRef, nsIJSWeakRef)
+NS_IMPL_ISUPPORTS1(nsJetpack, nsIJetpack)
 
 static JSFunctionSpec endpointFunctions[] = {
   JS_FS("wrap",          wrapObject,       2, JSPROP_ENUMERATE, 0),
@@ -22,15 +22,15 @@ static JSFunctionSpec endpointFunctions[] = {
   JS_FS_END
 };
 
-nsJSWeakRef::nsJSWeakRef()
+nsJetpack::nsJetpack()
 {
 }
 
-nsJSWeakRef::~nsJSWeakRef()
+nsJetpack::~nsJetpack()
 {
 }
 
-NS_IMETHODIMP nsJSWeakRef::Set()
+NS_IMETHODIMP nsJetpack::Get()
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPConnect> xpc = do_GetService(
@@ -75,9 +75,3 @@ NS_IMETHODIMP nsJSWeakRef::Set()
 
   return NS_OK;
 }
-
-NS_IMETHODIMP nsJSWeakRef::Get()
-{
-  return NS_OK;
-}
-

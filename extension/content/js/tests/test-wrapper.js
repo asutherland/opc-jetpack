@@ -16,9 +16,9 @@ var WrapperTests = {
     const Ci = Components.interfaces;
     const Cu = Components.utils;
 
-    var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
-                  .createInstance(Ci.nsIJSWeakRef);
-    var endpoint = factory.set();
+    var factory = Cc["@labs.mozilla.com/jetpackdi;1"]
+                  .createInstance(Ci.nsIJetpack);
+    var endpoint = factory.get();
     for (name in endpoint) {
       if (endpoint.hasOwnProperty(name)) {
         var obj = endpoint[name];

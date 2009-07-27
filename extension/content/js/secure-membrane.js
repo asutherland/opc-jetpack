@@ -12,9 +12,9 @@ var SecureMembrane = {
   },
 
   get binary() {
-    var factory = Cc["@labs.mozilla.com/jsweakrefdi;1"]
-                  .createInstance(Ci.nsIJSWeakRef);
-    var binary = factory.set();
+    var factory = Cc["@labs.mozilla.com/jetpackdi;1"]
+                  .createInstance(Ci.nsIJetpack);
+    var binary = factory.get();
     delete this.binary;
     this.binary = binary;
     return binary;

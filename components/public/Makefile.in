@@ -10,7 +10,7 @@ XPIDL_MODULE  = jetpack
 
 XPI_NAME = jetpack
 
-XPIDLSRCS = nsIJSWeakRef.idl \
+XPIDLSRCS = nsIJetpack.idl \
             $(NULL)
 
 include $(topsrcdir)/config/rules.mk

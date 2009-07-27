@@ -23,7 +23,7 @@ REQUIRES = \
 		  dom \
 		  $(NULL)
 
-CPPSRCS = nsJSWeakRef.cpp \
+CPPSRCS = nsJetpack.cpp \
           jetpackmodule.cpp \
           wrapper.cpp \
           tcb.cpp \

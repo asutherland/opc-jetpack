@@ -1,5 +1,5 @@
 #include "nsIGenericFactory.h"
-#include "nsJSWeakRef.h"
+#include "nsJetpack.h"
 
 #ifdef BUILD_AUDIO
 #include "AudioRecorder.h"
@@ -9,7 +9,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(AudioEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(AudioRecorder)
 #endif
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsJSWeakRef)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsJetpack)
 
 static nsModuleComponentInfo components[] =
 {
@@ -29,10 +29,10 @@ static nsModuleComponentInfo components[] =
     },
 #endif
     {
-        NSJSWEAKREFDI_CLASSNAME,
-        NSJSWEAKREFDI_CID,
-        NSJSWEAKREFDI_CONTRACTID,
-        nsJSWeakRefConstructor,
+        NSJETPACKDI_CLASSNAME,
+        NSJETPACKDI_CID,
+        NSJETPACKDI_CONTRACTID,
+        nsJetpackConstructor,
     }
 };
 
