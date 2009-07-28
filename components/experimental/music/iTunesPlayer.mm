@@ -113,6 +113,28 @@ iTunesPlayer::Stop()
 }
 
 NS_IMETHODIMP
+iTunesPlayer::GotoNextTrack()
+{
+    NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
+    [iTunes nextTrack];
+    return NS_OK;
+    
+    NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+}
+
+NS_IMETHODIMP
+iTunesPlayer::GotoPreviousTrack()
+{
+    NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
+    [iTunes previousTrack];
+    return NS_OK;
+    
+    NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+}
+
+NS_IMETHODIMP
 iTunesPlayer::GetCurrentTrack(PRUint32 *count, char ***result)
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;

@@ -47,5 +47,7 @@ interface IMusicPlayer : nsISupports
     out unsigned long aCount,
     [array, size_is(aCount), retval] out string info
   );
+  void gotoNextTrack();
+  void gotoPreviousTrack();
 };
 

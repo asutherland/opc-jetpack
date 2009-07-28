@@ -79,7 +79,23 @@ MusicModule.prototype = {
   pause: function() {
     Mu.pause();
   },
-    
+  
+  // === {{{MusicModule.gotoNextTrack()}}} ===
+  //
+  // Start playing the next track.
+  //
+  gotoNextTrack: function() {
+    Mu.gotoNextTrack();
+  },
+  
+  // === {{{MusicModule.gotoPreviousTrack()}}} ===
+  //
+  // Start playing the previous track.
+  //
+  gotoPreviousTrack: function() {
+    Mu.gotoPreviousTrack();
+  },
+  
   // === {{{MusicModule.getCurrentTrack}}} ===
   //
   // Returns information on the current track.
