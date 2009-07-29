@@ -638,6 +638,6 @@ def xpcom(options):
     run_program([options.xpcshell,
                  os.path.join(options.my_dir, "extension",
                               "content", "js", "tests",
-                              "test-wrapper.js")],
+                              "test-nsjetpack.js")],
                 env=env,
                 cwd=os.path.dirname(options.xpcshell))

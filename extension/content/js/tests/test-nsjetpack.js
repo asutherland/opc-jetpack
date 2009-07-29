@@ -549,7 +549,7 @@ var WrapperTests = {
     }
 
     assert(
-      functionInfo(memoryProfilingTests).filename.indexOf("test-wrapper") > 0,
+      functionInfo(memoryProfilingTests).filename.indexOf("test-nsjetpa") > 0,
       "functionInfo() must contain accurate filename component."
     );
 
