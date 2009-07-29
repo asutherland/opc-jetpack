@@ -203,28 +203,7 @@ function SimpleStorageImpl(aFeatureId) {
   // structure as described above is also deleted if the directories are empty.
 
   this.deleteBackingFile = function SimpleStorage_deleteBackingFile() {
-    try {
-      if (!jsonFile.exists())
-        return;
-      jsonFile.remove(false);
-
-      // Remove the storage, feature, and jetpack directories (in that order)
-      // if they are now empty.
-      let dir = jsonFile.parent;
-      for (let i = 0; i < 3; i++) {
-        if (dir.directoryEntries.hasMoreElements())
-          return;
-        dir.remove(false);
-        dir = dir.parent;
-      }
-    }
-    catch (err) {
-      // This method should only be called when the feature is purged, and
-      // there's nothing the caller can really do if this fails.  So, just
-      // report the error instead of throwing it.
-      let e = new SimpleStorageError("Error deleting JSON file: " + err);
-      Components.utils.reportError(e);
-    }
+    deleteBackingFileStructure(jsonFile);
   };
 
   // === {{{SimpleStorage.open()}}} ===
@@ -303,6 +282,33 @@ function createSyncTimer() {
   }, getSyncTimerPeriod(), syncTimer.TYPE_REPEATING_SLACK);
 
   return syncTimer;
+}
+
+// Deletes the backing file if it exists.  The {{{jetpack}}} directory
+// structure as described above is also deleted if the directories are empty.
+function deleteBackingFileStructure(aFile) {
+  try {
+    if (!aFile.exists())
+      return;
+    aFile.remove(false);
+
+    // Remove the storage, feature, and jetpack directories (in that order)
+    // if they are now empty.
+    let dir = aFile.parent;
+    for (let i = 0; i < 3; i++) {
+      if (dir.directoryEntries.hasMoreElements())
+        return;
+      dir.remove(false);
+      dir = dir.parent;
+    }
+  }
+  catch (err) {
+    // This method should only be called when the feature is purged, and
+    // there's nothing the caller can really do if this fails.  So, just
+    // report the error instead of throwing it.
+    let e = new SimpleStorageError("Error deleting file: " + err);
+    Components.utils.reportError(e);
+  }
 }
 
 // Simple storage is supported on Firefox 3.5+ only.
@@ -1181,8 +1187,13 @@ function SimpleStorageDeprecatedImpl(aFeatureId) {
     mapItemsAll(function (key, val) val, aUserCallback);
   }
 
+  // === {{{SimpleStorage.deleteDatabaseFile()}}} ===
+  //
+  // Deletes the store's backing database file.
+
   this.deleteDatabaseFile = function SimpleStorage_deleteDatabaseFile() {
-    throw new Error("NOT YET IMPLEMENTED");
+    var file = getDatabaseFile(aFeatureId);
+    deleteBackingFileStructure(file);
   };
 
   // === {{{SimpleStorage.teardown()}}} ===
@@ -1331,20 +1342,23 @@ function ensureValuesInItemsAreLegal(aItems) {
   }
 }
 
+// Returns the database nsIFile of the given feature.
+function getDatabaseFile(aFeatureId) {
+   var dir = Cc["@mozilla.org/file/directory_service;1"].
+             getService(Ci.nsIProperties);
+   var file = dir.get("ProfD", Ci.nsIFile);
+   file.append("jetpack");
+   file.append(aFeatureId);
+   file.append("storage");
+   file.append("simple.sqlite");
+   return file;
+}
+ 
 // Creates the given feature's database file if it doesn't already exist and
 // returns a connection to it.
 function getOrCreateDatabase(aFeatureId) {
-  var dir = Cc["@mozilla.org/file/directory_service;1"].
-            getService(Ci.nsIProperties);
-  var file = dir.get("ProfD", Ci.nsIFile);
-  file.append("jetpack");
-  ensureDirectoryExists(file);
-  file.append(aFeatureId);
-  ensureDirectoryExists(file);
-  file.append("storage");
-  ensureDirectoryExists(file);
-  file.append("simple.sqlite");
-
+  var file = getDatabaseFile(aFeatureId);
+  ensureDirectoryExists(file.parent);
   var stor = Cc["@mozilla.org/storage/service;1"].
              getService(Ci.mozIStorageService);
   return stor.openDatabase(file);
