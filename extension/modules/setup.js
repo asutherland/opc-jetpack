@@ -133,6 +133,10 @@ let JetpackSetup = {
 
       Extension.load("about:jetpack");
 
+      // We might need to do some bootstrapping on first run
+      if (currVersion == "firstrun")
+        this._bootstrap();
+
       this.__setupFinalizer();
     }
 
@@ -166,7 +170,55 @@ let JetpackSetup = {
     }
   },
 
-  get version() {
-    return Application.extensions.get("jetpack@labs.mozilla.com").version;
+  _bootstrap: function _bootstrap() {
+    // Figure out what Feature page linked to the Jetpack install
+    let query = Cc["@mozilla.org/browser/nav-history-service;1"].
+      getService(Ci.nsPIPlacesDatabase).DBConnection.createStatement(
+        "SELECT url FROM moz_places WHERE id = (" +
+          "SELECT place_id FROM moz_historyvisits WHERE id = (" +
+            "SELECT from_visit FROM moz_historyvisits WHERE place_id = (" +
+              "SELECT id FROM moz_places WHERE url = :url) " +
+            "ORDER BY id DESC LIMIT 1))");
+    query.params.url = "https://jetpack.mozillalabs.com/install.html";
+    if (!query.executeStep())
+      return;
+
+    // Load the Feature page in the hidden window to get the Feature <link>
+    let hiddenDoc = Cc["@mozilla.org/appshell/appShellService;1"].
+      getService(Ci.nsIAppShellService).hiddenDOMWindow.document.documentElement;
+    let iframe = hiddenDoc.ownerDocument.createElement("iframe");
+    iframe.addEventListener("DOMContentLoaded", function getFeature(event) {
+      // Clean up now that we've been triggered
+      iframe.removeEventListener("DOMContentLoaded", getFeature, false);
+      iframe.parentNode.removeChild(iframe);
+
+      // Look for the first Jetpack Feature <link>
+      Array.some(event.target.getElementsByTagName("link"), function(link) {
+        if (link.rel != "jetpack")
+          return false;
+
+        // Fetch the contents of the Feature
+        let req = new hiddenDoc.ownerDocument.defaultView.XMLHttpRequest();
+        req.open("GET", link.href, false);
+        req.overrideMimeType("text/plain; charset=x-user-defined");
+        req.send(null);
+        if (req.status != 200 && req.status != 0)
+          return false;
+
+        // Auto-subscribe to the Feature
+        gServices.feedManager.addSubscribedFeed({
+          canAutoUpdate: true,
+          sourceCode: req.responseText,
+          sourceUrl: link.href,
+          title: link.getAttribute("name") || event.target.title,
+          type: "jetpack",
+          url: query.row.url
+        });
+        return true;
+      });
+    }, false);
+    iframe.setAttribute("type", "content");
+    iframe.setAttribute("src", query.row.url);
+    hiddenDoc.appendChild(iframe);
   }
 };
