@@ -524,6 +524,56 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
+typedef struct _EnumerateState {
+  JSContext *cx;
+  JSObject *table;
+  JSBool result;
+} EnumerateState;
+
+static JSDHashOperator hashEnumerator(JSDHashTable *table,
+                                      JSDHashEntryHdr *hdr,
+                                      uint32 number,
+                                      void *arg)
+{
+  EnumerateState *state = (EnumerateState *) arg;
+  JSDHashEntryStub *entry = (JSDHashEntryStub *) hdr;
+
+  if (!JS_DefineElement(state->cx, state->table, (jsint) entry->key,
+                        JSVAL_TRUE, NULL, NULL,
+                        JSPROP_ENUMERATE | JSPROP_INDEX)) {
+    state->result = JS_FALSE;
+    JS_ReportError(state->cx, "JS_DefineElement() failed");
+    return JS_DHASH_STOP;
+  }
+
+  return JS_DHASH_NEXT;
+}
+
+static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
+                          jsval *argv, jsval *rval)
+{
+  EnumerateState state;
+  JSObject *table = JS_NewObject(cx, NULL, NULL, NULL);
+
+  if (table == NULL)
+    return JS_FALSE;
+
+  *rval = OBJECT_TO_JSVAL(table);
+
+  state.cx = cx;
+  state.table = table;
+  state.result = JS_TRUE;
+
+  JS_DHashTableEnumerate(&tracingState.visited,
+                         hashEnumerator,
+                         &state);
+
+  if (!state.result)
+    return JS_FALSE;
+
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -672,6 +722,7 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
   JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),
   JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
+  JS_FS("getObjectTable",       getObjTable,        0, 0, 0),
   JS_FS_END
 };
 

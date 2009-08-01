@@ -545,6 +545,17 @@ var WrapperTests = {
         }
       }
 
+      var table = getObjectTable();
+      for (id in table) {
+        if (!(id in visited)) {
+          visitedCount++;
+          var info = getObjectInfo(parseInt(id));
+          if (info && info.nativeClass in classProps) {
+            getObjectProperties(id, classProps[info.nativeClass]);
+          }
+        }
+      }
+
       print("Successfully visited " + visitedCount + " objects.");
     }
 
