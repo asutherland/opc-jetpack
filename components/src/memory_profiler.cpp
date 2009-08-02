@@ -538,8 +538,23 @@ static JSDHashOperator hashEnumerator(JSDHashTable *table,
   EnumerateState *state = (EnumerateState *) arg;
   JSDHashEntryStub *entry = (JSDHashEntryStub *) hdr;
 
+  jsval value = JSVAL_NULL;
+  JSObject *target = (JSObject *) entry->key;
+  JSContext *targetCx = tracingState.tracer.context;
+  JSClass *classp = JS_GET_CLASS(targetCx, target);
+
+  if (classp) {
+    JSString *name = JS_NewStringCopyZ(state->cx, classp->name);
+    if (name == NULL) {
+      JS_ReportOutOfMemory(state->cx);
+      state->result = JS_FALSE;
+      return JS_DHASH_STOP;
+    }
+    value = STRING_TO_JSVAL(name);
+  }
+
   if (!JS_DefineElement(state->cx, state->table, (jsint) entry->key,
-                        JSVAL_TRUE, NULL, NULL,
+                        value, NULL, NULL,
                         JSPROP_ENUMERATE | JSPROP_INDEX)) {
     state->result = JS_FALSE;
     JS_ReportError(state->cx, "JS_DefineElement() failed");
