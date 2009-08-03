@@ -1,0 +1,106 @@
+<html>
+<body>
+<div id="output"></div>
+<table id="table" border="1" style="display: none;">
+  <tr>
+    <td>function name (click to view source)</td>
+    <td>instances</td>
+    <td>total referents</td>
+    <td>is global?</td>
+    <td>times in prototype chains</td>
+  </tr>
+</table>
+<script src="js/ext/jquery.js"></script>
+<script src="js/ext/io.js"></script>
+<script>
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Cu = Components.utils;
+
+(function importEndpoint(exports) {
+   var factory = Cc["@labs.mozilla.com/jetpackdi;1"]
+                 .createInstance(Ci.nsIJetpack);
+   exports.endpoint = factory.get();
+ })(this);
+
+function log(message, isInstant) {
+  var elem = $("<pre></pre>");
+  if (!isInstant)
+    elem.hide();
+  elem.text(message);  
+  $("#output").append(elem);
+  if (!isInstant)
+    elem.slideDown();
+}
+
+function analyzeResult(result) {
+  var worker = new Worker('memory-profiler.worker.js');
+  worker.onmessage = function(event) {
+    var data = JSON.parse(event.data);
+    var funcInfos = [info for each (info in data.functions)];
+    funcInfos.sort(function(b, a) {
+      return a.rating - b.rating;
+    });
+    funcInfos.forEach(function(info) {
+      var row = $("<tr></tr>");
+      var name = $("<td></td>");
+      name.text(info.name + "()");
+      name.css({cursor: "pointer", fontFamily: "monospace"});
+      name.get(0).info = info;
+      name.click(function() {
+        window.openDialog("chrome://global/content/viewSource.xul",
+                          "_blank", "all,dialog=no",
+                          this.info.filename, null, null, this.info.lineStart);
+      });
+      row.append(name);
+
+      function addCell(content) {
+        var cell = $("<td></td>");
+        row.append(cell.text(content));
+      }
+
+      addCell(info.instances);
+      addCell(info.referents);
+      addCell(info.isGlobal);
+      addCell(info.protoCount);
+
+      $("#table").append(row);
+      $("#table").fadeIn();
+    });
+    log("Raw window data: " + JSON.stringify(data.windows));
+    if (data.rejectedTypes.length)
+      log("Rejected types: " + data.rejectedTypes.join(", "));
+    log("Done.");
+  }
+  worker.onerror = function(error) {
+    log("An error occurred: " + error.message);
+  }
+  worker.postMessage(result);
+}
+
+function doProfiling() {
+  Cu.import("resource://jetpack/modules/setup.js");
+  var file = JetpackSetup.getExtensionDirectory();
+  file.append('content');
+  file.append('memory-profiler.js');
+  var code = FileIO.read(file, 'utf-8');
+  var filename = FileIO.path(file);
+  window.foo = function blarg() {};
+  var start = new Date();
+  var result = endpoint.profileMemory(code, filename, 1);
+  var totalTime = (new Date()) - start;
+  log("time spent in memory profiling: " + totalTime + " ms");
+  log("analyzing data now, please wait.");
+  window.setTimeout(function() {
+    analyzeResult(result);
+  }, 0);
+}
+
+$(window).ready(function() {
+  Components.utils.forceGC();
+  log("profiling now, please wait.", true);
+  window.setTimeout(doProfiling, 0);
+});
+</script>
+</body>
+</html>
