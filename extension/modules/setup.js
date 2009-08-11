@@ -56,6 +56,9 @@ let Application = Cc["@mozilla.org/fuel/application;1"] ?
                   Cc["@mozilla.org/steel/application;1"]
                     .getService(Ci.steelIApplication);
 
+let observerSvc = Cc["@mozilla.org/observer-service;1"]
+                  .getService(Ci.nsIObserverService);
+
 let gServices;
 
 const VERSION_PREF ="extensions.jetpack.lastversion";
@@ -74,15 +77,30 @@ let JetpackSetup = {
     return extDir;
   },
 
+  __scheduleWelcomePageForFirefox: function __schedWelcomePageForFF() {
+    var observer = {
+      observe: function(subject, topic, data) {
+        observerSvc.removeObserver(this, "sessionstore-windows-restored");
+        var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+                 .getService(Ci.nsIWindowMediator);
+        var window = wm.getMostRecentWindow("navigator:browser");
+        var tabbrowser = window.getBrowser();
+        var tab = tabbrowser.addTab("about:jetpack");
+        tabbrowser.selectedTab = tab;
+      }
+    };
+
+    observerSvc.addObserver(observer, "sessionstore-windows-restored", false);
+  },
+
   __setupFinalizer: function __setupFinalizer() {
     var observer = {
       observe: function(subject, topic, data) {
+        observerSvc.removeObserver(this, "quit-application");
         gServices.feedManager.finalize();
       }
     };
 
-    var observerSvc = Cc["@mozilla.org/observer-service;1"]
-                      .getService(Ci.nsIObserverService);
     observerSvc.addObserver(observer, "quit-application", false);
   },
 
@@ -134,7 +152,8 @@ let JetpackSetup = {
       Extension.load("about:jetpack");
 
       // We might need to do some bootstrapping on first run
-      if (currVersion == "firstrun")
+      if (currVersion == "firstrun" &&
+          Application.name != "Thunderbird")
         this._bootstrap();
 
       this.__setupFinalizer();
@@ -150,23 +169,19 @@ let JetpackSetup = {
     if (this.isNewlyInstalledOrUpgraded &&
         !this._wasWelcomePageShownAtStartup) {
       this._wasWelcomePageShownAtStartup = true;
-      window.addEventListener(
-        "load",
-        function onWindowLoad() {
-          window.removeEventListener("load", onWindowLoad, false);
-          // If we're Thunderbird, do things slightly differently...
-          if (Application.name == "Thunderbird") {
+      if (Application.name == "Thunderbird") {
+        // If we're Thunderbird, do things slightly differently...
+        window.addEventListener(
+          "load",
+          function onWindowLoad() {
+            window.removeEventListener("load", onWindowLoad, false);
             window.document.getElementById("tabmail")
               .openTab("contentTab", {contentPage: "about:jetpack"});
-          }
-          else {
-            var tabbrowser = window.getBrowser();
-            var tab = tabbrowser.addTab("about:jetpack");
-            tabbrowser.selectedTab = tab;
-          }
-        },
-        false
-      );
+          },
+          false
+        );
+      } else
+        this.__scheduleWelcomePageForFirefox();
     }
   },
 
