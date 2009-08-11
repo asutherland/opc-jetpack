@@ -118,7 +118,7 @@ AudioModule.prototype = {
     return true;
   },
   
-  // === {{{AudioModule.recordToFile()}}} ===
+  // === {{{AudioModule.recordToPipe()}}} ===
   //
   // Starts recording audio and feeds raw frames
   // (PCM float sampled at 44000Hz) to the output

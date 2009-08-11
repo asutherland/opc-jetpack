@@ -35,16 +35,55 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "IMusicTrack.idl"
+#include "MusicTrack.h"
 
-[scriptable, uuid(6550cc02-c246-4b88-b7da-6a38632a6487)]
-interface IMusicPlayer : nsISupports
+NS_IMPL_ISUPPORTS1(MusicTrack, IMusicTrack)
+
+MusicTrack::MusicTrack()
+    : mTitle("None")
+    , mAlbum("None")
+    , mArtist("None")
 {
-  void play();
-  void stop();
-  void pause();
-  IMusicTrack getCurrentTrack();
-  void gotoNextTrack();
-  void gotoPreviousTrack();
-};
+}
+
+MusicTrack::~MusicTrack()
+{
+}
+
+nsresult
+MusicTrack::Init(const char *ti, const char *al, const char *ar, void *da)
+{
+    mTitle.Assign(ti, PR_UINT32_MAX);
+    mAlbum.Assign(al, PR_UINT32_MAX);
+    mArtist.Assign(ar, PR_UINT32_MAX);
+    mData = da;
+    
+    return NS_OK;
+}
+
+void *
+MusicTrack::GetData()
+{
+    return mData;
+}
+
+NS_IMETHODIMP
+MusicTrack::GetTitle(nsACString &value)
+{
+    value = mTitle;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+MusicTrack::GetAlbum(nsACString &value)
+{
+    value = mAlbum;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+MusicTrack::GetArtist(nsACString &value)
+{
+    value = mArtist;
+    return NS_OK;
+}

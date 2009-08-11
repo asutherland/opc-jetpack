@@ -49,8 +49,8 @@ so_target = $(target:=.$(so))
 cpp_objects = $(cpp_sources:.cpp=.o)
 
 # source and path configurations
-idl = IMusicPlayer.idl
-cpp_sources = 
+idl = IMusicPlayer.idl IMusicTrack.idl
+cpp_sources = MusicTrack.cpp
 cmm_sources = iTunesPlayer.mm MusicModule.mm
 
 sdkdir ?= ${MOZSDKDIR}

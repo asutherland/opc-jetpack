@@ -36,15 +36,11 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
-#include "IMusicTrack.idl"
 
-[scriptable, uuid(6550cc02-c246-4b88-b7da-6a38632a6487)]
-interface IMusicPlayer : nsISupports
+[scriptable, uuid(9b382bd0-281c-4469-a8ed-62c70f0eefc2)]
+interface IMusicTrack : nsISupports
 {
-  void play();
-  void stop();
-  void pause();
-  IMusicTrack getCurrentTrack();
-  void gotoNextTrack();
-  void gotoPreviousTrack();
+	readonly attribute ACString title;
+	readonly attribute ACString album;
+	readonly attribute ACString artist;
 };

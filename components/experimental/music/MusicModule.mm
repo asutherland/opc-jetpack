@@ -38,7 +38,9 @@
 
 #include "nsIGenericFactory.h"
 #include "iTunesPlayer.h"
+#include "MusicTrack.h"
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(MusicTrack)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(iTunesPlayer,
                                          iTunesPlayer::GetSingleton)
 
@@ -49,6 +51,13 @@ static nsModuleComponentInfo components[] =
     ITUNES_PLAYER_CID,
     ITUNES_PLAYER_CONTRACTID,
     iTunesPlayerConstructor,
+  },
+  
+  {
+    MUSIC_TRACK_CLASSNAME,
+    MUSIC_TRACK_CID,
+    MUSIC_TRACK_CONTRACTID,
+    MusicTrackConstructor
   }
 };
 

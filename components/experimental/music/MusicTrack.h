@@ -35,16 +35,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
-#include "IMusicTrack.idl"
+#ifndef MusicTrack_h_
+#define MusicTrack_h_
 
-[scriptable, uuid(6550cc02-c246-4b88-b7da-6a38632a6487)]
-interface IMusicPlayer : nsISupports
+#include "IMusicTrack.h"
+#include "nsStringAPI.h"
+
+#define MUSIC_TRACK_CONTRACTID "@labs.mozilla.com/music/track;1"
+#define MUSIC_TRACK_CLASSNAME  "A Music Track"
+#define MUSIC_TRACK_CID  { 0x7fbd81c7, 0x3de7, 0x435d, \
+                         { 0x8e, 0x73, 0x6a, 0xf7, 0xbf, 0x64, 0x9e, 0xec } }                           
+
+class MusicTrack : public IMusicTrack
 {
-  void play();
-  void stop();
-  void pause();
-  IMusicTrack getCurrentTrack();
-  void gotoNextTrack();
-  void gotoPreviousTrack();
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_IMUSICTRACK
+    MusicTrack();
+    void *GetData();
+    virtual ~MusicTrack();    
+    nsresult Init(
+        const char *title, 
+        const char *album,
+        const char *artist,
+        void *data
+    );
+
+private:
+    void *mData;
+    nsCString mTitle;
+    nsCString mAlbum;
+    nsCString mArtist;
 };
+
+#endif

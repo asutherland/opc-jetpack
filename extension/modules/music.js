@@ -101,7 +101,8 @@ MusicModule.prototype = {
   // Returns information on the current track.
   //
   getCurrentTrack: function() {
-    let info = Mu.getCurrentTrack({});
-    return {"title":info[0], "artist":info[1], "album":info[2]};
+    let info = Mu.getCurrentTrack();
+    return {"title":info.title, "artist":info.artist, "album":info.album,
+      "__private":info};
   }
 }
