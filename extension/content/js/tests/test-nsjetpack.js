@@ -144,6 +144,8 @@ var WrapperTests = {
       }
     };
 
+    assertEqual(typeof(wrap(function() {}, {})), "function");
+    
     var object = {a: 5};
     var wrapped = wrap(object, resolver);
 
