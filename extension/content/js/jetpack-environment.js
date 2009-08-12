@@ -121,10 +121,6 @@ var JetpackEnv = {
 JetpackEnv.addGlobals(
   {"console": console,
 
-   "jQuery": jQuery,
-
-   "$": jQuery,
-
    "XMLHttpRequest": jQuery.ajaxSettings.xhr,
 
    "jetpack.track": function track(obj, name) {
@@ -226,6 +222,18 @@ JetpackEnv.addMultiLazyLoader(
     var timers = new Timers(window);
     context.addUnloader(timers);
     return timers;
+  });
+
+// Add sandboxed jQuery.
+JetpackEnv.addMultiLazyLoader(
+  "",
+  ["jQuery", "$"],
+  function addJQuery(context) {
+    var jqsb = JQuerySandbox.create(context.srcUrl);
+    context.addUnloader(jqsb);
+    if (context.SecureMembrane)
+      jqsb = context.SecureMembrane.wrapUntrusted(jqsb);
+    return jqsb;
   });
 
 JetpackEnv.addLazyLoaders({

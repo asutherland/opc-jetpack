@@ -78,6 +78,7 @@ var JetpackRuntime = {
       unsafeSandbox = sandboxFactory.makeSandbox({});
       sandbox = new Object();
       unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
+      this.SecureMembrane = SecureMembrane;
     } else {
       sandboxFactory = new jsm.SandboxFactory({});
       unsafeSandbox = sandbox = sandboxFactory.makeSandbox({});
