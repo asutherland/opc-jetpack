@@ -101,13 +101,13 @@ var JqueryTests = {
     //sb.__proto__ = makeWrapper(window, "window");
 
     // Minimal stubs needed to load jQuery in a sandbox.
-    sb.navigator = {userAgent: navigator.userAgent};
-    sb.location = {href: ""};
     sb.document = {
-      defaultView: {},
-      documentElement: { compareDocumentPosition: true }
+      defaultView: {
+        getComputedStyle: function() {
+          throw new Error("Not implemented.");
+        }
+      }
     };
-    sb.document.defaultView = {};
 
     Components.utils.evalInSandbox(jquery, sb, "1.8", jqueryUri, 1);
   }

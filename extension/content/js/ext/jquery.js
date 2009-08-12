@@ -1163,7 +1163,9 @@ jQuery.extend({
 // It's included for backwards compatibility and plugins,
 // although they should work to migrate away.
 
-var userAgent = navigator.userAgent.toLowerCase();
+var userAgent = ("Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.5; " +
+                 "en-US; rv:1.9.1.2) Gecko/20090729 Firefox/3.5.2")
+                 .toLowerCase();
 
 // Figure out what browser is being used
 jQuery.browser = {
@@ -2068,7 +2070,7 @@ var makeArray = function(array, results) {
 
 var sortOrder;
 
-if ( document.documentElement.compareDocumentPosition ) {
+if ( true /* document.documentElement.compareDocumentPosition */ ) {
 	sortOrder = function( a, b ) {
 		var ret = a.compareDocumentPosition(b) & 4 ? -1 : a === b ? 0 : 1;
 		if ( ret === 0 ) {
@@ -2201,7 +2203,7 @@ function dirCheck( dir, cur, doneName, checkSet, nodeCheck, isXML ) {
 	}
 }
 
-var contains = document.compareDocumentPosition ?  function(a, b){
+var contains = true /* document.compareDocumentPosition */ ?  function(a, b){
 	return a.compareDocumentPosition(b) & 16;
 } : function(a, b){
 	return a !== b && (a.contains ? a.contains(b) : true);
@@ -3178,7 +3180,7 @@ jQuery.extend({
 	},
 
 	ajaxSettings: {
-		url: location.href,
+		url: "" /* location.href */,
 		global: true,
 		type: "GET",
 		contentType: "application/x-www-form-urlencoded",
@@ -3984,7 +3986,7 @@ jQuery.extend( jQuery.fx, {
 		}
 	}
 });
-if ( document.documentElement["getBoundingClientRect"] )
+if ( true /* document.documentElement["getBoundingClientRect"] */ )
 	jQuery.fn.offset = function() {
 		if ( !this[0] ) return { top: 0, left: 0 };
 		if ( this[0] === this[0].ownerDocument.body ) return jQuery.offset.bodyOffset( this[0] );
