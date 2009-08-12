@@ -84,6 +84,31 @@ var JetpackEnv = {
     if (!(namespace in this.importers))
       this.importers[namespace] = [];
     this.importers[namespace].push(importer);
+  },
+  addMultiImporter: function addMultiImporter(namespace, names, factory) {
+    function importMultiple(context) {
+      // When any of the names are accessed, we'll invoke the factory
+      // and import them all.
+
+      function makeLazyLoader(aName) {
+        function lazyLoader() {
+          var object = factory(context);
+          for each (name in names) {
+            delete this[name];
+            this[name] = object[name];
+          }
+          return this[aName];
+        }
+        return lazyLoader;
+      }
+
+      for each (name in names) {
+        this.__defineGetter__(name,
+                              makeLazyLoader(name));
+      }
+    }
+
+    this.addImporter(namespace, importMultiple);
   }
 };
 
@@ -191,33 +216,16 @@ window.addLazyLoaders(
   });
 
 // Add HTML4 timer/interval functions.
-JetpackEnv.addImporter(
-  function importTimers(context) {
-    // When any of the timer/interval functions are accessed, we'll
-    // lazy-load the Timers object that powers them all.
-
-    var functionNames = ["setInterval",
-                         "clearInterval",
-                         "setTimeout",
-                         "clearTimeout"];
-
-    function makeLazyLoader(name) {
-      function lazyLoader() {
-        var timers = new Timers(window);
-        context.addUnloader(timers);
-        for each (functionName in functionNames) {
-          delete this[functionName];
-          this[functionName] = timers[functionName];
-        }
-        return this[name];
-      }
-      return lazyLoader;
-    }
-
-    for each (functionName in functionNames) {
-      this.__defineGetter__(functionName,
-                            makeLazyLoader(functionName));
-    }
+JetpackEnv.addMultiImporter(
+  "",
+  ["setInterval",
+   "clearInterval",
+   "setTimeout",
+   "clearTimeout"],
+  function addTimers(context) {
+    var timers = new Timers(window);
+    context.addUnloader(timers);
+    return timers;
   });
 
 JetpackEnv.addLazyLoaders({
