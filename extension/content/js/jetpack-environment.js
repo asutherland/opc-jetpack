@@ -85,7 +85,7 @@ var JetpackEnv = {
       this.importers[namespace] = [];
     this.importers[namespace].push(importer);
   },
-  addMultiImporter: function addMultiImporter(namespace, names, factory) {
+  addMultiLazyLoader: function addMultiLazyLoader(namespace, names, factory) {
     function importMultiple(context) {
       // When any of the names are accessed, we'll invoke the factory
       // and import them all.
@@ -216,7 +216,7 @@ window.addLazyLoaders(
   });
 
 // Add HTML4 timer/interval functions.
-JetpackEnv.addMultiImporter(
+JetpackEnv.addMultiLazyLoader(
   "",
   ["setInterval",
    "clearInterval",
