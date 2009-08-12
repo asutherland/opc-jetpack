@@ -1,6 +1,12 @@
 var SecureMembraneTests = {
   testSecureMembraneWorks: function(self) {
     if (SecureMembrane.isAvailable) {
+      // Ensure that the type of wrapped functions is 'function'.
+      self.assertEqual(typeof(SecureMembrane.wrapTrusted(function(){})),
+                       "function");
+      self.assertEqual(typeof(SecureMembrane.wrapUntrusted(function(){})),
+                       "function");
+
       // Test that the wrapping of primitive types/built-ins is pass-through.
       self.assertEqual(SecureMembrane.wrapTrusted(null), null);
       self.assertEqual(SecureMembrane.wrapTrusted(5), 5);
