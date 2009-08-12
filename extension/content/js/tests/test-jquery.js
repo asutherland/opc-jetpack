@@ -103,12 +103,32 @@ var JqueryTests = {
     // Minimal stubs needed to load jQuery in a sandbox.
     sb.document = {
       defaultView: {
-        getComputedStyle: function() {
-          throw new Error("Not implemented.");
+        getComputedStyle: function(elem) {
+          return elem.ownerDocument.defaultView.getComputedStyle(elem, null);
         }
       }
     };
 
+    var unloaders = [];
+
+    sb.removeEventListener = function(name, fn) {
+      if (name != "unload")
+        throw new Error("Unsupported event type: " + name);
+      var index = unloaders.indexOf(fn);
+      if (index != -1)
+        unloaders.splice(index, 1);
+      else
+        throw new Error("Event listener not found.");
+    };
+
+    sb.addEventListener = function(name, fn) {
+      if (name != "unload")
+        throw new Error("Unsupported event type: " + name);
+      unloaders.push(fn);
+    };
+
     Components.utils.evalInSandbox(jquery, sb, "1.8", jqueryUri, 1);
+
+    unloaders.forEach(function(unloader) { unloader({type: "unload"}); });
   }
 };
