@@ -184,6 +184,9 @@ window.addLazyLoaders(
    ],
    "js/info.js": [
     "Information"
+   ],
+   "js/jquery-sandbox.js": [
+     "JQuerySandbox"
    ]
   });
 
@@ -278,9 +281,9 @@ JetpackEnv.addLazyLoaders({
        }
      };
    },
-   
+
    "jetpack.info": function(context) {
-     return new Information(); 
+     return new Information();
    }
 });
 
@@ -337,7 +340,7 @@ JetpackEnv.setFutures(
      Cu.import("resource://jetpack/modules/page-modification.js", s);
      return new s.PageMods(context.sandbox.jetpack);
    },
-   
+
    "jetpack.music": function(context) {
      var s = {};
      Cu.import("resource://jetpack/modules/music.js", s);
