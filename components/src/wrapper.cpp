@@ -150,6 +150,9 @@ enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
   case JSENUMERATE_DESTROY:
     JS_RemoveRoot(cx, statep);
     return JS_TRUE;
+  default:
+    JS_ReportError(cx, "Unknown enum_op");
+    return JS_FALSE;
   }
 }
 
@@ -394,6 +397,32 @@ JSBool getWrapper(JSContext *cx, JSObject *obj, uintN argc,
                   jsval *argv, jsval *rval)
 {
   return getWrappedComponent(cx, argc, argv, rval, SLOT_RESOLVER);
+}
+
+JSBool fullyUnwrapObject(JSContext *cx, JSObject *obj, uintN argc,
+                         jsval *argv, jsval *rval)
+{
+  JSObject *wrappee;
+  JSObject *nextWrappee;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "o", &wrappee))
+    return JS_FALSE;
+
+  do {
+    nextWrappee = NULL;
+    JSClass *klass = JS_GetClass(cx, wrappee);
+    if (klass && (klass->flags & JSCLASS_IS_EXTENDED)) {
+      JSExtendedClass *eClass = (JSExtendedClass *) klass;
+      if (eClass->wrappedObject != NULL) {
+        nextWrappee = eClass->wrappedObject(cx, wrappee);
+        if (nextWrappee)
+          wrappee = nextWrappee;
+      }
+    }
+  } while (nextWrappee);
+
+  *rval = OBJECT_TO_JSVAL(wrappee);
+  return JS_TRUE;
 }
 
 JSBool unwrapObject(JSContext *cx, JSObject *obj, uintN argc,

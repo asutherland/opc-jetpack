@@ -144,8 +144,16 @@ var WrapperTests = {
       }
     };
 
-    assertEqual(typeof(wrap(function() {}, {})), "function");
-    
+    function dummy() {}
+
+    assertEqual(typeof(wrap(dummy, {})), "function");
+    assertEqual(typeof(wrap(XPCSafeJSObjectWrapper(dummy), {})),
+                "object");
+    assertEqual(typeof(wrap(fullyUnwrap(XPCSafeJSObjectWrapper(dummy)), {})),
+                "function");
+    assertEqual(typeof(fullyUnwrap(wrap(XPCSafeJSObjectWrapper(dummy), {}))),
+                "function");
+
     var object = {a: 5};
     var wrapped = wrap(object, resolver);
 
