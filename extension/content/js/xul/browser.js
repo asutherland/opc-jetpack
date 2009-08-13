@@ -11,7 +11,8 @@
          window.removeEventListener("load", onLoad, false);
          // Kind of silly that we're setting a flag on the window
          // to tell clients whether it's done loading or not, but
-         // I'm not sure what other way there is... -AV
+         // I'm not sure what other way there is, at least until
+         // document.readyState is available in Gecko 1.9.2.
          window.gIsDoneLoading = true;
        }
      },
