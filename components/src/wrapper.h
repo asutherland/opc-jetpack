@@ -40,8 +40,8 @@
 extern JSExtendedClass sFlexibleWrapper_JSClass;
 extern JSBool getWrapper(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval);
-extern JSBool fullyUnwrapObject(JSContext *cx, JSObject *obj, uintN argc,
-                                jsval *argv, jsval *rval);
+extern JSBool unwrapAnyObject(JSContext *cx, JSObject *obj, uintN argc,
+                              jsval *argv, jsval *rval);
 extern JSBool unwrapObject(JSContext *cx, JSObject *obj, uintN argc,
                            jsval *argv, jsval *rval);
 extern JSBool wrapObject(JSContext *cx, JSObject *obj, uintN argc,

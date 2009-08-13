@@ -399,29 +399,27 @@ JSBool getWrapper(JSContext *cx, JSObject *obj, uintN argc,
   return getWrappedComponent(cx, argc, argv, rval, SLOT_RESOLVER);
 }
 
-JSBool fullyUnwrapObject(JSContext *cx, JSObject *obj, uintN argc,
-                         jsval *argv, jsval *rval)
+JSBool unwrapAnyObject(JSContext *cx, JSObject *obj, uintN argc,
+                       jsval *argv, jsval *rval)
 {
-  JSObject *wrappee;
-  JSObject *nextWrappee;
+  JSObject *wrapped;
+  JSObject *wrappee = NULL;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "o", &wrappee))
+  if (!JS_ConvertArguments(cx, argc, argv, "o", &wrapped))
     return JS_FALSE;
 
-  do {
-    nextWrappee = NULL;
-    JSClass *klass = JS_GetClass(cx, wrappee);
-    if (klass && (klass->flags & JSCLASS_IS_EXTENDED)) {
-      JSExtendedClass *eClass = (JSExtendedClass *) klass;
-      if (eClass->wrappedObject != NULL) {
-        nextWrappee = eClass->wrappedObject(cx, wrappee);
-        if (nextWrappee)
-          wrappee = nextWrappee;
-      }
-    }
-  } while (nextWrappee);
+  JSClass *klass = JS_GetClass(cx, wrapped);
+  if (klass && (klass->flags & JSCLASS_IS_EXTENDED)) {
+    JSExtendedClass *eClass = (JSExtendedClass *) klass;
+    if (eClass->wrappedObject != NULL)
+      wrappee = eClass->wrappedObject(cx, wrapped);
+  }
 
-  *rval = OBJECT_TO_JSVAL(wrappee);
+  if (wrappee)
+    *rval = OBJECT_TO_JSVAL(wrappee);
+  else
+    *rval = JSVAL_NULL;
+
   return JS_TRUE;
 }
 

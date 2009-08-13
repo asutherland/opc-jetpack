@@ -14,7 +14,7 @@ NS_IMPL_ISUPPORTS1(nsJetpack, nsIJetpack)
 static JSFunctionSpec endpointFunctions[] = {
   JS_FS("wrap",          wrapObject,       2, JSPROP_ENUMERATE, 0),
   JS_FS("unwrap",        unwrapObject,     1, JSPROP_ENUMERATE, 0),
-  JS_FS("fullyUnwrap",   fullyUnwrapObject,1, JSPROP_ENUMERATE, 0),
+  JS_FS("unwrapAny",     unwrapAnyObject,  1, JSPROP_ENUMERATE, 0),
   JS_FS("getWrapper",    getWrapper,       1, JSPROP_ENUMERATE, 0),
   JS_FS("profileMemory", profileMemory,    1, JSPROP_ENUMERATE, 0),
   JS_FS("enumerate",     TCB_enumerate,    1, JSPROP_ENUMERATE, 0),
