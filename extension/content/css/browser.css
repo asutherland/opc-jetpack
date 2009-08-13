@@ -4,5 +4,5 @@ hbox#browser {
 }
 
 #slidebar {
-  visibility: hidden;
+  opacity: 0;
 }

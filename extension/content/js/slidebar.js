@@ -181,7 +181,7 @@ let SlideBar = let (T = {
     // visible, so Personas can shine through
     if (T.hasPersonas)
       slideBar.style.marginTop = tabStrip.clientHeight + "px";
-    slideBar.style.visibility = "visible";
+    slideBar.style.opacity = 1;
 
     // == Window ==
     // Extend the browser window with custom SlideBar properties such as its
