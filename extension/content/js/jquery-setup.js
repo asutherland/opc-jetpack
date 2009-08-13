@@ -9,16 +9,7 @@
 // rather than being invisible and locking up the application.
 
 jQuery.ajaxSetup(
-  {xhr: function() {
-     // This is a fix for Ubiquity bug #470.
-     if (Extension.isHidden) {
-       var jsm = {};
-       Components.utils.import("resource://jetpack/ubiquity-modules/utils.js", jsm);
-       var currWindow = jsm.Utils.currentChromeWindow;
-       return new currWindow.XMLHttpRequest();
-     }
-     return new XMLHttpRequest();
-   }
-  });
+  {xhr: function() { return XHR.fromVisibleChromeWindow(); }}
+);
 
 MemoryTracking.track(jQuery, "jQuery");
