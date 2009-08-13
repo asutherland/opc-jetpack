@@ -44,6 +44,7 @@ static JSFunctionSpec TCB_global_functions[] = {
   JS_FS("functionInfo",   TCB_functionInfo,   1, 0, 0),
   JS_FS("enumerate",      TCB_enumerate,      1, 0, 0),
   JS_FS("forceGC",        TCB_forceGC,        0, 0, 0),
+  JS_FS("getClassName",   TCB_getClassName,   1, 0, 0),
   JS_FS_END
 };
 
@@ -94,6 +95,31 @@ JSBool TCB_forceGC(JSContext *cx, JSObject *obj, uintN argc,
                    jsval *argv, jsval *rval)
 {
   JS_GC(cx);
+  return JS_TRUE;
+}
+
+// This native JS function retrieves the JSClass name of an object.
+
+JSBool TCB_getClassName(JSContext *cx, JSObject *obj, uintN argc,
+                        jsval *argv, jsval *rval)
+{
+  JSObject *target;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "o", &target))
+    return JS_FALSE;
+
+  *rval = JSVAL_NULL;
+
+  JSClass *classp = JS_GetClass(cx, target);
+  if (classp && classp->name) {
+    JSString *name = JS_NewStringCopyZ(cx, classp->name);
+    if (name == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+    *rval = STRING_TO_JSVAL(name);
+  }
+
   return JS_TRUE;
 }
 

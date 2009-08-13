@@ -20,6 +20,7 @@ static JSFunctionSpec endpointFunctions[] = {
   JS_FS("enumerate",     TCB_enumerate,    1, JSPROP_ENUMERATE, 0),
   JS_FS("functionInfo",  TCB_functionInfo, 1, JSPROP_ENUMERATE, 0),
   JS_FS("seal",          TCB_seal,         1, JSPROP_ENUMERATE, 0),
+  JS_FS("getClassName",  TCB_getClassName, 1, JSPROP_ENUMERATE, 0),
   JS_FS_END
 };
 

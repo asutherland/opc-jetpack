@@ -60,6 +60,9 @@ extern JSBool TCB_functionInfo(JSContext *cx, JSObject *obj, uintN argc,
 extern JSBool TCB_stack(JSContext *cx, JSObject *obj, uintN argc,
                         jsval *argv, jsval *rval);
 
+extern JSBool TCB_getClassName(JSContext *cx, JSObject *obj, uintN argc,
+                               jsval *argv, jsval *rval);
+
 extern JSTrapStatus TCB_throwHook(JSContext *cx, JSScript *script,
                                   jsbytecode *pc, jsval *rval, void *closure);
 

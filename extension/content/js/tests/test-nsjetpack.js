@@ -155,6 +155,11 @@ var WrapperTests = {
                 "function");
     assertEqual(unwrapAny(dummy), null);
 
+    assertEqual(getClassName({}), "Object");
+    assertEqual(getClassName(wrap(dummy, {})), "FlexibleWrapper");
+    assertEqual(getClassName(XPCSafeJSObjectWrapper({})),
+                "XPCSafeJSObjectWrapper");
+
     var object = {a: 5};
     var wrapped = wrap(object, resolver);
 
