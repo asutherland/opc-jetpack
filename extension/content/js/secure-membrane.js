@@ -80,16 +80,19 @@ var SecureMembrane = {
         // return it.
         return thing;
     }
-    thing = XPCSafeJSObjectWrapper(thing);
+    if (this.binary.getClassName(thing) == "XPCSafeJSObjectWrapper")
+      thing = this.binary.unwrapAny(thing);
     return this.binary.wrap(thing, new this.UntrustedWrapper(thing));
   },
 
   UntrustedWrapper: function UntrustedWrapper(obj) {
     this.obj = obj;
+    this.safeObj = XPCSafeJSObjectWrapper(obj);
   },
 
   TrustedWrapper: function TrustedWrapper(obj, isApply) {
     this.obj = obj;
+    this.safeObj = obj;
     this.isApply = isApply;
   },
 
@@ -150,7 +153,7 @@ SecureMembrane.BaseWrapper = {
       return wrapper;
     var retval = "<error>";
     try {
-      var str = wrappee.toString();
+      var str = this.safeObj.toString();
       if (typeof(str) == "string")
         retval = "[object " + this.name + " " + str + "]";
     } catch (e) {}
@@ -162,7 +165,7 @@ SecureMembrane.UntrustedWrapper.prototype = {
   name: "UntrustedMembrane",
 
   safeGetProperty: function(wrappee, name) {
-    return SecureMembrane.wrapUntrusted(wrappee[name]);
+    return SecureMembrane.wrapUntrusted(this.safeObj[name]);
   },
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
@@ -170,7 +173,7 @@ SecureMembrane.UntrustedWrapper.prototype = {
       if (typeof(wrappee) == "function" && name == "apply")
         // TODO: This is a workaround for #505494.
         return SecureMembrane.apply;
-      return SecureMembrane.wrapUntrusted(wrappee[name]);
+      return SecureMembrane.wrapUntrusted(this.safeObj[name]);
     }
   },
 
@@ -182,8 +185,8 @@ SecureMembrane.UntrustedWrapper.prototype = {
                    });
       // If an exception gets thrown, it'll be XPCSafeJSObjectWrapped,
       // so no biggie.
-      var result = wrappee.apply(SecureMembrane.wrapTrusted(thisObj),
-                                 wrappedArgs);
+      var result = this.safeObj.apply(SecureMembrane.wrapTrusted(thisObj),
+                                      wrappedArgs);
       return SecureMembrane.wrapUntrusted(result);
     } else
       throw "object is not callable";
