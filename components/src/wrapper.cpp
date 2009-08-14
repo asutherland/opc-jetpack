@@ -242,9 +242,12 @@ static JSBool
 checkAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
             jsval *vp)
 {
-  // TODO: This effectively overrides the default JS_CheckAccess() and
-  // always grants access to any property on the object!
-  return JS_GetPropertyById(cx, obj, id, vp);
+  // Forward to the checkObjectAccess hook in the runtime, if any.
+  JSSecurityCallbacks *callbacks = JS_GetSecurityCallbacks(cx);
+  if (callbacks && callbacks->checkObjectAccess)
+    return callbacks->checkObjectAccess(cx, obj, id, mode, vp);
+  JS_ReportError(cx, "Security callbacks not defined");
+  return JS_FALSE;
 }
 
 static JSObject *
@@ -442,9 +445,7 @@ JSBool wrapObject(JSContext *cx, JSObject *obj, uintN argc,
     cx,
     &sFlexibleWrapper_JSClass.base,
     NULL,
-    // TODO: What should we set the parent to? It used to be
-    // JS_GetScopeChain(cx), but this sometimes caused segfaults.
-    NULL
+    wrappee
     );
   if (wrapper == NULL) {
     JS_ReportError(cx, "Creating new wrapper failed.");
