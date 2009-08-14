@@ -442,7 +442,9 @@ JSBool wrapObject(JSContext *cx, JSObject *obj, uintN argc,
     cx,
     &sFlexibleWrapper_JSClass.base,
     NULL,
-    JS_GetScopeChain(cx)
+    // TODO: What should we set the parent to? It used to be
+    // JS_GetScopeChain(cx), but this sometimes caused segfaults.
+    NULL
     );
   if (wrapper == NULL) {
     JS_ReportError(cx, "Creating new wrapper failed.");

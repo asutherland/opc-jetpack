@@ -68,21 +68,10 @@ var JetpackRuntime = {
     var unsafeSandbox;
     var sandbox;
 
-    var useSecureMembrane = Application.prefs.getValue(
-      "extensions.jetpack.useSecureMembrane",
-      false
-      );
-
-    if (useSecureMembrane && SecureMembrane.isAvailable) {
-      sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
-      unsafeSandbox = sandboxFactory.makeSandbox({});
-      sandbox = new Object();
-      unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
-      this.SecureMembrane = SecureMembrane;
-    } else {
-      sandboxFactory = new jsm.SandboxFactory({});
-      unsafeSandbox = sandbox = sandboxFactory.makeSandbox({});
-    }
+    sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
+    unsafeSandbox = sandboxFactory.makeSandbox({});
+    sandbox = new Object();
+    unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
     jsm = null;
 
     sandbox.location = feed.srcUri.spec;
@@ -90,6 +79,7 @@ var JetpackRuntime = {
     var unloaders = [];
     var self = this;
 
+    this.unsafeSandbox = unsafeSandbox;
     this.sandbox = sandbox;
     this.url = feed.uri.spec;
     this.srcUrl = feed.srcUri.spec;

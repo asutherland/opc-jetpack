@@ -26,11 +26,13 @@ var JQuerySandbox = {
     return this.code;
   },
 
-  create: function create(principal) {
+  create: function create(principal, proto) {
     var sb = Components.utils.Sandbox(principal);
 
+    var fakeWindow = new Object();
+
     // Minimal stubs needed to load jQuery in a sandbox.
-    sb.document = {
+    fakeWindow.document = {
       defaultView: {
         getComputedStyle: function(elem) {
           return elem.ownerDocument.defaultView.getComputedStyle(elem, null);
@@ -40,7 +42,7 @@ var JQuerySandbox = {
 
     var unloaders = [];
 
-    sb.removeEventListener = function(name, fn) {
+    fakeWindow.removeEventListener = function(name, fn) {
       if (name != "unload")
         throw new Error("Unsupported event type: " + name);
       var index = unloaders.indexOf(fn);
@@ -50,11 +52,16 @@ var JQuerySandbox = {
         throw new Error("Event listener not found.");
     };
 
-    sb.addEventListener = function(name, fn) {
+    fakeWindow.addEventListener = function(name, fn) {
       if (name != "unload")
         throw new Error("Unsupported event type: " + name);
       unloaders.push(fn);
     };
+
+    if (proto)
+      fakeWindow.__proto__ = proto;
+
+    sb.__proto__ = SecureMembrane.wrapTrusted(fakeWindow);
 
     Cu.evalInSandbox(this.code, sb, "1.8", this.uri.spec, 1);
 

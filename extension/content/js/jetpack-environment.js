@@ -121,8 +121,6 @@ var JetpackEnv = {
 JetpackEnv.addGlobals(
   {"console": console,
 
-   "XMLHttpRequest": jQuery.ajaxSettings.xhr,
-
    "jetpack.track": function track(obj, name) {
      if (typeof(obj) != "object")
        throw new Logging.ErrorAtCaller("Cannot track non-objects.");
@@ -225,18 +223,41 @@ JetpackEnv.addMultiLazyLoader(
   });
 
 // Add sandboxed jQuery.
-JetpackEnv.addMultiLazyLoader(
+JetpackEnv.addImporter(
   "",
-  ["jQuery", "$"],
-  function addJQuery(context) {
-    var jqsb = JQuerySandbox.create(context.srcUrl);
+  function(context) {
+    // TODO: We're actually loading jQuery into the jetpack context at the
+    // initialization of each jetpack this way, rather than lazily if/when
+    // jQuery/$ is requested.
+    var proto = {
+      get XMLHttpRequest() {
+        return context.sandbox.XMLHttpRequest;
+      },
+      get setInterval() {
+        return context.sandbox.setInterval;
+      },
+      get clearInterval() {
+        return context.sandbox.clearInterval;
+      },
+      get setTimeout() {
+        return context.sandbox.setTimeout;
+      }
+    };
+    var jqsb = JQuerySandbox.create(context.srcUrl, proto);
     context.addUnloader(jqsb);
-    if (context.SecureMembrane)
-      jqsb = context.SecureMembrane.wrapUntrusted(jqsb);
-    return jqsb;
+    jqsb.window.jetpackFeature = context.unsafeSandbox;
+    Components.utils.evalInSandbox(("jetpackFeature.$ = $;" +
+                                    "jetpackFeature.jQuery = jQuery;"),
+                                    jqsb.window);
   });
 
 JetpackEnv.addLazyLoaders({
+   "XMLHttpRequest": function(context) {
+     var xhrf = new XHR.Factory();
+     context.addUnloader(xhrf);
+     return xhrf.create;
+   },
+
    "jetpack.lib.twitter": function(context) {
      return twitter();
    },

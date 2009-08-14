@@ -254,6 +254,10 @@ SecureMembrane.TrustedWrapper.prototype = {
     return true;
   },
 
+  construct: function construct(wrappee, wrapper, thisObj, args) {
+    return this.call(wrappee, wrapper, thisObj, args);
+  },
+
   call: function call(wrappee, wrapper, thisObj, args) {
     if (typeof(wrappee) == "function") {
       var wrappedArgs = [];

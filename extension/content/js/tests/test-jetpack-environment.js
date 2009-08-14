@@ -2,7 +2,7 @@ var JetpackEnvironmentTests = {
   _withSandbox: function _withSandbox(func) {
     var fakeFeed = JetpackRuntimeTests._makeFakeFeed("/* do nothing */");
     var context = new JetpackRuntime.Context(fakeFeed);
-    func.call(context.sandbox);
+    func.call(context.sandbox, context);
     context.unload();
   },
 
@@ -41,6 +41,16 @@ var JetpackEnvironmentTests = {
                       indexOf("jetpack.storage.simple") != -1);
         this.jetpack.future.import("storage.simple");
         self.assertEqual(typeof(this.jetpack.storage.simple), "object");
+      });
+  },
+
+  testJqueryXhrWorks: function(self) {
+    this._withSandbox(
+      function(context) {
+        Components.utils.evalInSandbox(
+          "jQuery.get('http://www.mozilla.org/');",
+          context.unsafeSandbox
+        );
       });
   },
 
