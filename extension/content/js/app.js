@@ -599,7 +599,6 @@ $(window).ready(
     if (!Extension.isVisible)
       return;
 
-    App.activateDynamicButtons(document);
     App.initTabs();
 
     window.setInterval(App.tick, 1000);
@@ -627,6 +626,8 @@ $(window).ready(
       $(".developer-warnings").append($("#firebug-caveats"));
     else
       $(".developer-warnings").append($("#firebug-not-found"));
+
+    App.activateDynamicButtons(document);
 
     // Set up the feed management interface.
 
