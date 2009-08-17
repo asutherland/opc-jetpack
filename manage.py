@@ -274,6 +274,7 @@ def xpi(options):
     resolve_options(options)
 
     platforms = os.listdir(os.path.join(options.my_dir, "lib"))
+    platforms.append("all")
 
     for platform in platforms:
         zfname = "%s-%s-%s.xpi" % (options.ext_name.lower(),
@@ -282,9 +283,9 @@ def xpi(options):
         copy_libs(options, platform)
         zf = zipfile.ZipFile(zfname, "w", zipfile.ZIP_DEFLATED)
         for dirpath, dirnames, filenames in os.walk(options.path_to_ext_root):
-            if platform in dirnames:
-                # We're in the extension/platform directory, get rid of files for
-                # other platforms.
+            if platform != "all" and platform in dirnames:
+                # We're in the extension/platform directory, get rid
+                # of files for other platforms.
                 dirnames[:] = [platform]
             for filename in filenames:
                 abspath = os.path.join(dirpath, filename)
@@ -513,9 +514,15 @@ def copy_libs(options, platform = None):
         else:
             # Assume Windows.
             platform = "WINNT_x86-msvc"
-    src_dir = os.path.join(options.my_dir, "lib", platform)
-    dest_dir = os.path.join(options.path_to_ext_root, "lib")
-    clear_dir(dest_dir)
+    if platform == "all":
+        src_dir = os.path.join(options.my_dir, "lib")
+        dest_root_dir = os.path.join(options.path_to_ext_root, "lib")
+        dest_dir = dest_root_dir
+    else:
+        src_dir = os.path.join(options.my_dir, "lib", platform)
+        dest_root_dir = os.path.join(options.path_to_ext_root, "lib")
+        dest_dir = os.path.join(dest_root_dir, platform)
+    clear_dir(dest_root_dir)
     shutil.copytree(src_dir, dest_dir)
 
 @task
@@ -569,7 +576,7 @@ def xpcom(options):
     comp_plat_dir1 = os.path.join(options.my_dir, "lib",
                                   platform, xpcom_info.mozilla_version)
     comp_plat_dir2 = os.path.join(options.path_to_ext_root, "lib",
-                                  xpcom_info.mozilla_version)
+                                  platform, xpcom_info.mozilla_version)
 
     clear_dir(comp_dest_dir)
     clear_dir(comp_xpi_dir)

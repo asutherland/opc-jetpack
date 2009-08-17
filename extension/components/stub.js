@@ -11,9 +11,14 @@ function NSGetModule() {
     registerSelf: function(compMgr, location, loaderStr, type) {
       var appInfo = Cc["@mozilla.org/xre/app-info;1"]
                     .getService(Ci.nsIXULAppInfo);
+      var runtime = Cc["@mozilla.org/xre/app-info;1"]
+                    .getService(Ci.nsIXULRuntime);
+
+      var osDirName = runtime.OS + "_" + runtime.XPCOMABI;
       var platformVersion = appInfo.platformVersion.substring(0, 5);
       var libFile = location.parent.parent;
       libFile.append("lib");
+      libFile.append(osDirName);
       libFile.append(platformVersion);
 
       // Note: we register a directory instead of an individual file because
