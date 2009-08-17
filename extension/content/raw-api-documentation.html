@@ -201,6 +201,7 @@ jetpack.notifications.show(jetpack.tabs.focused.url);
       </div>
       <a name="onReady" class="property" href="#tab-onReady"></a>
       <a name="onFocus" class="property" href="#tab-onFocus"></a>
+      <a name="onClose" class="property" href="#tab-onClose"></a>
     </div>
   </div>
   <div name="console" class="property">
@@ -297,6 +298,7 @@ console.log(location);
     </div>
     <a name="onReady" class="property" href="#tab-onReady"></a>
     <a name="onFocus" class="property" href="#tab-onFocus"></a>
+    <a name="onClose" class="property" href="#tab-onClose"></a>
   </div>
   <div name="live array" class="glossary">
     A <em>live array</em> is an <tt>Array</tt> that represents some
@@ -309,6 +311,29 @@ console.log(location);
     <p>
     While it's technically possible for the array indices of an
     <em>live array</em> to be modified, they shouldn't be.
+  </div>
+  <div name="tab-onClose" class="property">
+    <div class="argument function" name="callback">The callback to
+    call when the event is triggered.</div>
+    A <em>live event binder</em> that is triggered whenever a
+    <tt>Tab</tt> object is closed.
+    <p>
+    This binder method is available on <tt>Tab</tt> objects and the
+    <tt>jetpack.tabs</tt> <em>live array</em>.
+    <p>
+    <em>Event handlers</em> registered with this event binder are
+    currently not passed any arguments. When called, their
+    <tt>this</tt> variable is set to the <tt>Tab</tt> object on
+    which the event was triggered.
+    <p>
+    The following example code uses the <tt>jetpack.tabs.onClose</tt>
+    handler to display a notification message whenever the user
+    closes a tab.
+    <div class="example">
+jetpack.tabs.onClose(function() {
+  jetpack.notifications.show("You closed " + this.url);
+  });
+    </div>
   </div>
   <div name="tab-onFocus" class="property">
     <div class="argument function" name="callback">The callback to
