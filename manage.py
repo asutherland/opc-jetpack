@@ -438,7 +438,7 @@ def render_docs(options):
 @task
 @cmdopts(JSBRIDGE_OPTIONS +
          [("filter=", "f",
-           "Run only test suites containing the given string.")])
+           "Run only tests containing the given string.")])
 def test(options):
     """Run unit and functional tests."""
 

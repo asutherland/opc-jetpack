@@ -141,15 +141,16 @@ var Tests = {
     var tests = [];
 
     for (name in testSuites) {
-      if (filter && name.indexOf(filter) == -1)
-        continue;
       var suite = testSuites[name];
       for (testName in suite)
-        if (testName[0] != '_')
-          tests.push({func: suite[testName],
+        if (testName[0] != '_') {
+          var test = {func: suite[testName],
                       suite: suite,
                       name: name + "." + testName,
-                      memoryErrorMargin: 0});
+                      memoryErrorMargin: 0};
+          if (!filter || test.name.indexOf(filter) != -1)
+            tests.push(test);
+        }
     }
 
     var succeeded = 0;
