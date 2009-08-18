@@ -7,13 +7,19 @@
   <script type="application/javascript;version=1.7"
           src="chrome://jetpack/content/js/jetpack-app-nuances.js"/>
   <menupopup id="taskPopup">
+    <menuitem id="jetpack-safe" insertafter="javascriptConsole"
+              label="about:jetpack (Safe Mode)"
+              oncommand="gJetpack.openAboutPage(true);"/>
     <menuitem id="jetpack" insertafter="javascriptConsole"
               label="about:jetpack" accesskey="t"
-              oncommand="JetpackAppNuances.openTab('about:jetpack', false);"/>
+              oncommand="gJetpack.openAboutPage(false);"/>
   </menupopup>
   <menupopup id="menu_ToolsPopup">
+    <menuitem id="jetpack-safe" insertafter="javascriptConsole"
+              label="about:jetpack (Safe Mode)"
+              oncommand="gJetpack.openAboutPage(true);"/>
     <menuitem id="jetpack" insertafter="javascriptConsole"
               label="about:jetpack" accesskey="t"
-              oncommand="JetpackAppNuances.openTab('about:jetpack', false);"/>
+              oncommand="gJetpack.openAboutPage(false);"/>
   </menupopup>
 </overlay>

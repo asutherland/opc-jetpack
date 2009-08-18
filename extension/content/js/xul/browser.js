@@ -4,6 +4,20 @@
    jsm.JetpackSetup.createServices();
    jsm.JetpackSetup.installToWindow(window);
 
+   window.gJetpack = {
+     openAboutPage: function(enableSafeMode) {
+       if (enableSafeMode) {
+         var Extension = {};
+         Components.utils.import("resource://jetpack/modules/init.js",
+                                 Extension);
+         // Making it look like about:jetpack was just loaded will
+         // force the page into safe mode when it loads.
+         Extension.sessionStorage.lastVisibleLoad = new Date();
+       }
+       JetpackAppNuances.openTab('about:jetpack', false);
+     }
+   };
+
    window.addEventListener(
      "load",
      function onLoad(event) {
