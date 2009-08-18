@@ -1,6 +1,6 @@
 var JetpackEnvironmentTests = {
   _withSandbox: function _withSandbox(func) {
-    var fakeFeed = JetpackRuntimeTests._makeFakeFeed("/* do nothing */");
+    var fakeFeed = JetpackRuntimeTests.makeFakeFeed("/* do nothing */");
     var context = new JetpackRuntime.Context(fakeFeed);
     func.call(context.sandbox, context);
     context.unload();

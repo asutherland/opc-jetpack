@@ -2,7 +2,7 @@
 // the url to trigger the page mod
 function testAdd(options, url) function(runner) {
   // Grab a jetpack context
-  let fakeFeed = JetpackRuntimeTests._makeFakeFeed("");
+  let fakeFeed = JetpackRuntimeTests.makeFakeFeed("");
   let context = new JetpackRuntime.Context(fakeFeed);
   
   // Add the page mod that will close the tab and report success

@@ -1,5 +1,5 @@
 var JetpackRuntimeTests = {
-  _makeFakeFeed: function _makeFakeFeed(contents) {
+  makeFakeFeed: function makeFakeFeed(contents) {
     function fakeUri(url) {
       return {spec: url};
     }
@@ -20,7 +20,7 @@ var JetpackRuntimeTests = {
         wasLogCalled = true;
       }
     };
-    var fakeFeed = this._makeFakeFeed("console.log('hallo');");
+    var fakeFeed = this.makeFakeFeed("console.log('hallo');");
     var context = new JetpackRuntime.Context(
       fakeFeed,
       {globals: {console: fakeConsole},

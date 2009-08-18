@@ -143,7 +143,7 @@ var Tests = {
     for (name in testSuites) {
       var suite = testSuites[name];
       for (testName in suite)
-        if (testName[0] != '_') {
+        if (testName.indexOf('test') == 0) {
           var test = {func: suite[testName],
                       suite: suite,
                       name: name + "." + testName,
