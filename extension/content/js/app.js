@@ -238,19 +238,6 @@ var App = {
     this._jetpackLinks[url] = div;
   },
 
-  get isFirefoxOld() {
-    // For non-Firefox apps, we don't need to display this warning as it is
-    // performed by install.rdf
-    if (Application.name != "Firefox")
-      return false;
-
-    var versionChecker = Cc["@mozilla.org/xpcom/version-comparator;1"]
-                         .getService(Ci.nsIVersionComparator);
-    if (versionChecker.compare(Application.version, "3.1b3") < 0)
-      return true;
-    return false;
-  },
-
   // Open the view-source window. This code was taken from Firebug's source code.
   viewSource: function viewSource(url, lineNumber) {
     window.openDialog("chrome://global/content/viewSource.xul",
@@ -621,9 +608,6 @@ $(window).ready(
 
     if (Extension.isInSafeMode)
       $(".general-warnings").append($("#safe-mode-enabled"));
-
-    if (App.isFirefoxOld)
-      $(".developer-warnings").append($("#old-firefox-version"));
 
     if (window.console.isFirebug)
       $(".developer-warnings").append($("#firebug-caveats"));
