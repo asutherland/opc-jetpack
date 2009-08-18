@@ -619,6 +619,9 @@ $(window).ready(
         Tests.run(null, $("#test-filter").val());
       });
 
+    if (Extension.isInSafeMode)
+      $(".general-warnings").append($("#safe-mode-enabled"));
+
     if (App.isFirefoxOld)
       $(".developer-warnings").append($("#old-firefox-version"));
 

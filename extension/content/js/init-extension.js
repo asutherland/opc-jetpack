@@ -40,6 +40,14 @@ var Extension = {
   visibleMainWindow: null,
   visibleBrowser: null,
 
+  // Whether or not we're in 'safe mode', which is analogous--but not
+  // identical to--Firefox's safe mode.
+  isInSafeMode: false,
+
+  // The maximum amount of time, in milliseconds, that can occur
+  // between two manual reloads of this page to invoke safe mode.
+  SAFE_MODE_INTERVAL_TRIGGER: 2000,
+
   Manager: {},
 
   get OS() {
@@ -98,5 +106,14 @@ var Extension = {
 
      Extension.visibleMainWindow = mainWindow;
      Extension.visibleBrowser = browser;
+
+     // Figure out if we need to load this extension in safe mode.
+     var now = new Date();
+     var lastVisibleLoad = 0;
+     if (Extension.Manager.sessionStorage.lastVisibleLoad)
+       lastVisibleLoad = Extension.Manager.sessionStorage.lastVisibleLoad;
+     Extension.Manager.sessionStorage.lastVisibleLoad = now;
+     if (now - lastVisibleLoad < Extension.SAFE_MODE_INTERVAL_TRIGGER)
+       Extension.isInSafeMode = true;
    }
  })();

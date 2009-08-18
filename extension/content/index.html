@@ -14,6 +14,8 @@
 
 <!-- MASTHEAD -->
 
+<div class="general-warnings"></div>
+
 <img src="gfx/jetpack.png"/><br/>  
 
 <!-- TABS -->
@@ -208,12 +210,23 @@
 <!-- WARNINGS -->
 
 <div class="warnings">
-    <p id="old-firefox-version" class="warning">You appear to be running
-    Firefox 3 or earlier, which means that any logging messages or
-    errors produced by your Jetpacks will reference the wrong line numbers.
-    This makes debugging Jetpacks difficult; please consider using <a
-    href="http://www.mozilla.com/en-US/firefox/all-beta.html">Firefox 3.5
-    Beta</a>.</p>
+    <p id="safe-mode-enabled" class="warning"><b>Jetpack is in safe
+    mode.</b> You've reloaded this page twice over a short period of
+    time, which suggests that you may be having problems with some of
+    your Jetpacks.  All Jetpack features are temporarily disabled
+    while in safe mode, so you can feel free to change anything you
+    need to make Jetpack work again&mdash;this may involve fixing some
+    code in the <span class="tab-link" name="develop">Develop</span>
+    tab, uninstalling features from the <span class="tab-link"
+    name="installed">Installed Features</span> tab, or something else.
+    When you next reload this page, Jetpack will leave safe mode.</p>
+    <p id="old-firefox-version" class="warning">You appear to be
+    running Firefox 3 or earlier, which means that any logging
+    messages or errors produced by your Jetpacks will reference the
+    wrong line numbers.  This makes debugging Jetpacks difficult;
+    please consider using <a
+    href="http://www.mozilla.com/en-US/firefox/all-beta.html">Firefox
+    3.5 Beta</a>.</p>
     <p id="firebug-not-found" class="warning">You either don't have the
     latest version of Firebug installed, or you don't have it enabled for
     this page, so all logging messages will appear in the <span

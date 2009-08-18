@@ -132,13 +132,15 @@ var JetpackRuntime = {
         unloaders.push({unload: function() { delete obj[propName]; }});
       });
 
-    try {
-      var codeSections = [{length: code.length,
-                           filename: feed.srcUri.spec,
-                           lineNumber: 1}];
-      sandboxFactory.evalInSandbox(code, unsafeSandbox, codeSections);
-    } catch (e) {
-      console.exception(e);
+    if (!Extension.isInSafeMode) {
+      try {
+        var codeSections = [{length: code.length,
+                             filename: feed.srcUri.spec,
+                             lineNumber: 1}];
+        sandboxFactory.evalInSandbox(code, unsafeSandbox, codeSections);
+      } catch (e) {
+        console.exception(e);
+      }
     }
 
     sandboxFactory = null;
