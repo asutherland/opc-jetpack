@@ -109,7 +109,7 @@ var Logging = {
         report(e.message, 'exceptionFlag', {filename: e.fileName,
                                             lineNumber: e.lineNumber});
       } else
-        this.report(e, 'errorFlag', 1);
+        report(e, 'errorFlag', 1);
     };
     this.logFromCaller = function logFromCaller(args, className,
                                                 numFrames) {
