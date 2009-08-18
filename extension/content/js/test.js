@@ -1,7 +1,7 @@
 var Tests = {
   _hasImportedTestFiles: false,
 
-  _listDir: function _listDir(dir) {
+  listDir: function listDir(dir) {
     var contents = [];
     var enumer = dir.directoryEntries;
     while (enumer.hasMoreElements())
@@ -17,7 +17,7 @@ var Tests = {
     var dir = jsm.JetpackSetup.getExtensionDirectory();
     var pathParts = ["content", "js", "tests"];
     pathParts.forEach(function(path) { dir.append(path); });
-    var relPaths = this._listDir(dir);
+    var relPaths = this.listDir(dir);
     var absBase = "chrome://jetpack/" + pathParts.join("/") + "/";
     return [(absBase + relPath)
             for each (relPath in relPaths)
