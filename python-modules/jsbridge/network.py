@@ -37,6 +37,7 @@
 
 import asyncore
 import socket
+import select
 import logging
 import uuid
 from time import sleep
@@ -158,8 +159,11 @@ class Bridge(Telnet):
     
     bridge_type = "bridge"
     
+    registered = False
+    
     def __init__(self, *args, **kwargs):
-        Telnet.__init__(self, *args, **kwargs)  
+        Telnet.__init__(self, *args, **kwargs)
+        sleep(.1)
         self.connect(args)
     
     def handle_connect(self):
@@ -180,6 +184,7 @@ class Bridge(Telnet):
     def register(self):
         _uuid = str(uuid.uuid1())
         self.send('bridge.register("'+_uuid+'", "'+self.bridge_type+'")\r\n')
+        self.registered = True
 
     def execFunction(self, func_name, args, interval=.25):
         _uuid = str(uuid.uuid1())
@@ -255,14 +260,21 @@ class BackChannel(Bridge):
                 callback(result)
         for listener in self.global_listeners:
             listener(eventType, result)
+
+thread = None
  
 def create_network(hostname, port):
     
     back_channel = BackChannel(hostname, port)
     bridge = Bridge(hostname, port)
-    
-    thread = Thread(target=asyncore.loop)
-    getattr(thread, 'setDaemon', lambda x : None)(True)
-    thread.start()
+    global thread
+    if not thread or not thread.isAlive():
+        def do():
+            try: asyncore.loop(use_poll=True)
+            except select.error:pass
+            
+        thread = Thread(target=do)
+        getattr(thread, 'setDaemon', lambda x : None)(True)
+        thread.start()
     
     return back_channel, bridge

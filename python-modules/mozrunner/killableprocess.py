@@ -155,11 +155,6 @@ class Popen(subprocess.Popen):
             if errwrite is not None:
                 errwrite.Close()
             time.sleep(.1)
-            p = winprocess.QueryInformationJobObject(self._job, 8)['BasicInfo']['ActiveProcesses']
-            if p is 0:
-                self._job_working = False
-            else:
-                self._job_working = True
 
     def kill(self, group=True):
         """Kill the process. If group=True, all sub-processes will also be killed."""
@@ -213,9 +208,14 @@ class Popen(subprocess.Popen):
             elif sys.platform == 'darwin':
                 def group_wait():
                     try:
-                        while 1:
-                            os.killpg(self.pid, signal.SIG_DFL)
-                            time.sleep(.5)
+                        count = 0
+                        if timeout is not None:
+                            while ((count * 2) <= timeout):
+                                os.killpg(self.pid, signal.SIG_DFL)
+                                time.sleep(.5); count += .5
+                        else:
+                            while 1:
+                                os.killpg(self.pid, signal.SIG_DFL)
                     except exceptions.OSError:
                         return self.returncode
                         

@@ -74,7 +74,7 @@ def findInPath(fileName, path=os.environ['PATH']):
                 return os.path.join(dir, fileName + ".exe")
     return None
 
-stdout = -1
+stdout = sys.stdout
 stderr = sys.stderr
 stdin = sys.stdin
 
@@ -86,7 +86,16 @@ def run_command(cmd, env=None, **kwargs):
     if sys.platform != "win32":
         return killableprocess.Popen(cmd, preexec_fn=lambda : os.setpgid(0, 0), env=env, **killable_kwargs)
     else:
-        return killableprocess.Popen(cmd, **killable_kwargs)
+        return killableprocess.Popen(cmd, env=env, **killable_kwargs)
+
+def getoutput(l):
+    tmp = tempfile.mktemp()
+    x = open(tmp, 'w')
+    subprocess.call(l, stdout=x, stderr=x)
+    x.close(); x = open(tmp, 'r')
+    r = x.read() ; x.close()
+    os.remove(tmp)
+    return r
 
 def get_pids(name, minimun_pid=0):
     """Get all the pids matching name, exclude any pids below minimum_pid."""
@@ -95,10 +104,11 @@ def get_pids(name, minimun_pid=0):
         pids = win32pdhutil.FindPerformanceAttributesByName(name)
 
     else:
-        get_pids_cmd = ['ps', 'ax']
-        h = killableprocess.runCommand(get_pids_cmd, stdout=subprocess.PIPE, universal_newlines=True)
-        h.wait()
-        data = h.stdout.readlines()
+        # get_pids_cmd = ['ps', 'ax']
+        # h = killableprocess.runCommand(get_pids_cmd, stdout=subprocess.PIPE, universal_newlines=True)
+        # h.wait(group=False)
+        # data = h.stdout.readlines()
+        data = getoutput(['ps', 'ax']).splitlines()
         pids = [int(line.split()[0]) for line in data if line.find(name) is not -1]
 
     matching_pids = [m for m in pids if m > minimun_pid]
@@ -122,7 +132,9 @@ def kill_process_by_name(name):
             except OSError: pass
             sleep(.5)
             if len(get_pids(name)) is not 0:
-                os.kill(pid, signal.SIGKILL)
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError: pass
                 sleep(.5)
                 if len(get_pids(name)) is not 0:
                     logger.error('Could not kill process')
