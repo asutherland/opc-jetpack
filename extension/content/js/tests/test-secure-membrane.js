@@ -12,6 +12,12 @@ var SecureMembraneTests = {
       self.assertEqual(SecureMembrane.wrapTrusted(5), 5);
       self.assertEqual(SecureMembrane.wrapTrusted(false), false);
 
+      self.assert("foo" in SecureMembrane.wrapTrusted({foo: 1}));
+      self.assertEqual(SecureMembrane.wrapTrusted({foo: 5}).foo, 5);
+
+      self.assert("foo" in SecureMembrane.wrapUntrusted({foo: 1}));
+      self.assertEqual(SecureMembrane.wrapUntrusted({foo: 5}).foo, 5);
+
       var sandbox = Components.utils.Sandbox("http://www.foo.com");
       var tabHarness = new Tabs();
       var tabs = tabHarness.tabs;

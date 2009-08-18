@@ -159,13 +159,20 @@ SecureMembrane.BaseWrapper = {
     } catch (e) {}
     return retval;
   }
-}
+};
 
 SecureMembrane.UntrustedWrapper.prototype = {
   name: "UntrustedMembrane",
 
   safeGetProperty: function(wrappee, name) {
     return SecureMembrane.wrapUntrusted(this.safeObj[name]);
+  },
+
+  resolve: function(wrappee, wrapper, name) {
+    if (name in wrappee) {
+      wrapper[name] = true;
+      return wrapper;
+    }
   },
 
   getProperty: function(wrappee, wrapper, name, defaultValue) {
@@ -201,6 +208,7 @@ SecureMembrane.TrustedWrapper.prototype = {
   resolve: function(wrappee, wrapper, name) {
     if (name in wrappee) {
       var resolved = this.safeGetProperty(wrappee, name);
+      // TODO: Is this safe?  What if wrapper[name] is a getter?
       wrapper[name] = resolved;
       return wrapper;
     }
