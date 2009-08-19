@@ -61,6 +61,13 @@ var PageModsTests = {
 
     m = new this._mp("http://ddahl.com/*");
     runner.assert(m.doMatch("http://ddahl.com"));
+
+    /* Hit the same URL a few more times to make sure it's not suffering
+     * from bug 98409. (jetpack bug 506449)
+     */
+    for (let i=0; i < 10; i++) {
+        runner.assert(m.doMatch("http://ddahl.com"));
+    }
   },
 
   testInvalidPatterns: function(runner){

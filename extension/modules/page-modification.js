@@ -149,8 +149,7 @@ function MatchPattern(pattern){
   // matches * or text in path
   var validatePath = /^\/.*$/;
   var caseFlag = "i";
-  var globalFlag = "g";
-  var flags = caseFlag + globalFlag;
+  var flags = caseFlag;
 
   try {
     var uri = ioService.newURI(pattern, null, null );
