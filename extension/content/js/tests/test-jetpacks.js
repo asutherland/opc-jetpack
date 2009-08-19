@@ -21,7 +21,7 @@
        var file = dir.clone();
        file.append(filename);
        var uri = ios.newFileURI(file);
-       tests[filename] = function() {
+       tests[filename] = function(self) {
          var feed = {
            uri: uri,
            srcUri: uri,
@@ -29,7 +29,14 @@
              return FileIO.read(file, "utf-8");
            }
          };
-         var context = new JetpackRuntime.Context(feed);
+         var env = {
+           globals: {
+             test: self,
+             __proto__: JetpackEnv.globals
+           },
+           __proto__: JetpackEnv
+         };
+         var context = new JetpackRuntime.Context(feed, env);
          context.unload();
        };
      });

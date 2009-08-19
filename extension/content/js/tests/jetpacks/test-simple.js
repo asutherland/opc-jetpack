@@ -1,2 +1,1 @@
-if (!jetpack.tabs.focused.contentWindowo)
-  throw "contentWindow must be non-null";
+test.assert(jetpack.tabs.focused.contentWindow);

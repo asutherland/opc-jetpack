@@ -53,8 +53,25 @@ var Tests = {
 
   _runTest: function _runTest(test, onFinished) {
     var self = this;
-    function reportSuccess() { onFinished("success"); }
-    function reportFailure() { onFinished("failure"); }
+    var wasErrorLogged = false;
+    var listener = new Logging.ConsoleListener();
+
+    listener.onMessage = function(message) {
+      if (message.isError)
+        wasErrorLogged = true;
+    };
+
+    function endTest(result) {
+      if (wasErrorLogged && result == "success")
+        result = "failure";
+      listener.unload();
+      console.info(test.name,
+                   (result == "success") ? "succeeded" : "failed");
+      onFinished(result);
+    }
+
+    function reportSuccess() { endTest("success"); }
+    function reportFailure() { endTest("failure"); }
 
     var finishedId = null;
     var timeoutId = null;
@@ -104,16 +121,13 @@ var Tests = {
           window.clearTimeout(timeoutId);
           timeoutId = null;
         }
-        console.info(test.name, "succeeded");
         finishedId = window.setTimeout(reportSuccess, 0);
       }
     };
     try {
       test.func.call(test.suite, runner);
-      if (timeoutId === null && finishedId === null) {
-        console.info(test.name, "succeeded");
+      if (timeoutId === null && finishedId === null)
         finishedId = window.setTimeout(reportSuccess, 0);
-      }
     } catch (e) {
       if (!e.alreadyLogged)
         console.exception(e);
