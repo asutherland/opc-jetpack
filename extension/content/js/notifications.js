@@ -3,16 +3,16 @@ function Notifications() {
 
   this.show = function(message) {
     var body = message;
-    var title = "Jetpack Notification";
-    var icon = "chrome://jetpack/content/gfx/jetpack_32x32.png";
+    var title = Application.name + " Notification";
+    var icon = null;
 
     if (typeof(message) == "object") {
       body = message.body;
 
-      if (message.title)
+      if ("title" in message)
         title = message.title;
 
-      if (message.icon)
+      if ("icon" in message)
         icon = message.icon;
     }
 
