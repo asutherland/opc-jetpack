@@ -92,6 +92,32 @@ iTunesPlayer::Play()
 }
 
 NS_IMETHODIMP
+iTunesPlayer::PlayTrack(IMusicTrack *tr)
+{
+    NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+
+    nsCAutoString pid;
+    nsresult ret = tr->GetData(pid);
+    NS_ENSURE_SUCCESS(ret, ret);
+    
+    // This is lame. There doesn't seem to be a way to get an
+    // iTunesTrack object from a persistent ID, so we have to loop
+    // through all current tracks to find the right one.
+    NSString *cid =
+        [NSString stringWithCString:pid.get() encoding:NSUTF8StringEncoding];
+    SBElementArray *tracks = [[iTunes currentPlaylist] tracks];
+    for (iTunesTrack *track in tracks) {
+        if ([[track persistentID] isEqualToString:cid]) {
+            [track playOnce:NO];
+            return NS_OK;
+        }
+    }
+
+    return NS_ERROR_FAILURE;    
+    NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+}
+
+NS_IMETHODIMP
 iTunesPlayer::Pause()
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
@@ -110,6 +136,38 @@ iTunesPlayer::Stop()
     [iTunes stop];
     return NS_OK;
     
+    NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
+}
+
+NS_IMETHODIMP
+iTunesPlayer::Search(const nsACString &what, PRUint32 *count,
+    IMusicTrack ***retval)
+{
+    NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
+    
+    int i = 0;
+    MusicTrack *t;
+    PromiseFlatCString term(what);
+    id tracks = [[iTunes currentPlaylist] searchFor:
+        [NSString stringWithCString:term.get() encoding:NSUTF8StringEncoding]
+        only:iTunesESrAAll
+    ];
+    
+    *count = [tracks count];
+    *retval = static_cast<IMusicTrack**>
+        (nsMemory::Alloc((*count) * sizeof(**retval)));
+    for (iTunesTrack *tr in tracks) {
+        t = new MusicTrack();
+        t->Init(
+            [[tr name] cStringUsingEncoding:NSUTF8StringEncoding],
+            [[tr album] cStringUsingEncoding:NSUTF8StringEncoding],
+            [[tr artist] cStringUsingEncoding:NSUTF8StringEncoding],
+            [[tr persistentID] cStringUsingEncoding:NSUTF8StringEncoding]
+        );
+        (*retval)[i++] = t;
+    }
+    
+    return NS_OK;
     NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
 }
 
@@ -140,14 +198,13 @@ iTunesPlayer::GetCurrentTrack(IMusicTrack **retval)
 {
     NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
 
-    iTunesTrack *ct = [iTunes currentTrack];
-    
     MusicTrack *t = new MusicTrack();
+    iTunesTrack *ct = [iTunes currentTrack];
     t->Init(
         [[ct name] cStringUsingEncoding:NSUTF8StringEncoding],
         [[ct album] cStringUsingEncoding:NSUTF8StringEncoding],
         [[ct artist] cStringUsingEncoding:NSUTF8StringEncoding],
-        (void *)ct
+        [[ct persistentID] cStringUsingEncoding:NSUTF8StringEncoding]
     );
     
     *retval = t;

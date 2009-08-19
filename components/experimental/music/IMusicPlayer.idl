@@ -41,10 +41,13 @@
 [scriptable, uuid(6550cc02-c246-4b88-b7da-6a38632a6487)]
 interface IMusicPlayer : nsISupports
 {
-  void play();
-  void stop();
-  void pause();
-  IMusicTrack getCurrentTrack();
-  void gotoNextTrack();
-  void gotoPreviousTrack();
+	void play();
+	void stop();
+	void pause();
+	void playTrack(in IMusicTrack track);
+	void search(in ACString what, out unsigned long trackCount,
+		[retval, array, size_is(trackCount)] out IMusicTrack tracks);
+	IMusicTrack getCurrentTrack();
+	void gotoNextTrack();
+	void gotoPreviousTrack();
 };

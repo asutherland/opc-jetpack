@@ -41,6 +41,7 @@
 #import <Cocoa/Cocoa.h>
 #import "iTunes.h"
 
+#include "nsCOMPtr.h"
 #include "nsMemory.h"
 #include "IMusicPlayer.h"
 #include "nsObjCExceptions.h"

@@ -38,6 +38,7 @@
 #ifndef MusicTrack_h_
 #define MusicTrack_h_
 
+#include "nsMemory.h"
 #include "IMusicTrack.h"
 #include "nsStringAPI.h"
 
@@ -51,18 +52,18 @@ class MusicTrack : public IMusicTrack
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_IMUSICTRACK
+    
     MusicTrack();
-    void *GetData();
-    virtual ~MusicTrack();    
+    virtual ~MusicTrack();
     nsresult Init(
         const char *title, 
         const char *album,
         const char *artist,
-        void *data
+        const char *data
     );
-
+    
 private:
-    void *mData;
+    nsCString mData;
     nsCString mTitle;
     nsCString mAlbum;
     nsCString mArtist;

@@ -40,7 +40,8 @@
 NS_IMPL_ISUPPORTS1(MusicTrack, IMusicTrack)
 
 MusicTrack::MusicTrack()
-    : mTitle("None")
+    : mData("None")
+    , mTitle("None")
     , mAlbum("None")
     , mArtist("None")
 {
@@ -51,20 +52,21 @@ MusicTrack::~MusicTrack()
 }
 
 nsresult
-MusicTrack::Init(const char *ti, const char *al, const char *ar, void *da)
+MusicTrack::Init(const char *ti, const char *al,
+    const char *ar, const char *da)
 {
+    mData.Assign(da, PR_UINT32_MAX);
     mTitle.Assign(ti, PR_UINT32_MAX);
     mAlbum.Assign(al, PR_UINT32_MAX);
     mArtist.Assign(ar, PR_UINT32_MAX);
-    mData = da;
-    
     return NS_OK;
 }
 
-void *
-MusicTrack::GetData()
+NS_IMETHODIMP
+MusicTrack::GetData(nsACString &value)
 {
-    return mData;
+    value = mData;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
