@@ -111,10 +111,16 @@ StatusBar.prototype = {
           self._injectPanelWindowFunctions(iframe);
 
           // Hack the appearance of the iframe to make it look more like
-          // a statusbarpanel.  Unfortunately, a limitation in Gecko causes
-          // all HTML documents to have a white background, even when their
-          // background is specified as transparent, so we have to jump
-          // through hoops to give them statusbarpanel-colored backgrounds.
+          // a statusbarpanel.
+
+          // Set the font to the one used in statusbarpanels.
+          iframe.contentDocument.documentElement.style.font = "status-bar";
+
+          // Set the background color to the one used in statusbarpanels.
+          // Unfortunately, a limitation in Gecko causes all HTML documents
+          // to have a white background, even when their background is specified
+          // as transparent, so we have to jump through hoops to give them
+          // statusbarpanel-colored backgrounds.
           if (Extension.OS == "Darwin") {
             // For Mac, we accomplish the effect by making the iframe
             // appear like a statusbar (plus a few margin/height tweaks).
@@ -159,6 +165,7 @@ StatusBar.prototype = {
                                  iframe.contentDocument.body);
           }
 
+          // Set various other properties to the values used in statusbarpanels.
           iframe.style.marginLeft = "4px";
           iframe.style.marginRight = "4px";
           iframe.contentDocument.body.style.padding = 0;
