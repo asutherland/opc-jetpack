@@ -250,8 +250,6 @@ def install(options):
     fileobj.write(options.firefox_path_to_ext_root)
     fileobj.close()
 
-    copy_libs(options)
-
     print "Extension '%s' installed to %s profile '%s'." % (options.ext_id,
                                                             options.app,
                                                             options.profile)
@@ -273,14 +271,13 @@ def xpi(options):
 
     resolve_options(options)
 
-    platforms = os.listdir(os.path.join(options.my_dir, "lib"))
+    platforms = os.listdir(os.path.join(options.path_to_ext_root, "lib"))
     platforms.append("all")
 
     for platform in platforms:
         zfname = "%s-%s-%s.xpi" % (options.ext_name.lower(),
                                    options.ext_version,
                                    platform)
-        copy_libs(options, platform)
         zf = zipfile.ZipFile(zfname, "w", zipfile.ZIP_DEFLATED)
         for dirpath, dirnames, filenames in os.walk(options.path_to_ext_root):
             if platform != "all" and platform in dirnames:
@@ -502,29 +499,6 @@ def run_program(args, **kwargs):
         print "Process failed with exit code %d." % retval
         sys.exit(retval)
 
-def copy_libs(options, platform = None):
-    """Copy the platform-specific dynamic library files from our versioned
-    repository into the extension's temporary directory."""
-
-    if platform is None:
-        if sys.platform == "darwin":
-            platform = "Darwin_x86-gcc3"
-        elif sys.platform.startswith("linux"):
-            platform = "Linux_x86-gcc3"
-        else:
-            # Assume Windows.
-            platform = "WINNT_x86-msvc"
-    if platform == "all":
-        src_dir = os.path.join(options.my_dir, "lib")
-        dest_root_dir = os.path.join(options.path_to_ext_root, "lib")
-        dest_dir = dest_root_dir
-    else:
-        src_dir = os.path.join(options.my_dir, "lib", platform)
-        dest_root_dir = os.path.join(options.path_to_ext_root, "lib")
-        dest_dir = os.path.join(dest_root_dir, platform)
-    clear_dir(dest_root_dir)
-    shutil.copytree(src_dir, dest_dir)
-
 @task
 @cmdopts([("srcdir=", "t", "The root of your mozilla-central checkout"),
           ("objdir=", "o", "The root of your objdir")])
@@ -573,10 +547,8 @@ def xpcom(options):
     comp_dest_dir = os.path.join(options.srcdir, rel_dest_dir)
     comp_xpi_dir = os.path.join(options.objdir, "dist", "xpi-stage",
                                 "jetpack", "components")
-    comp_plat_dir1 = os.path.join(options.my_dir, "lib",
-                                  platform, xpcom_info.mozilla_version)
-    comp_plat_dir2 = os.path.join(options.path_to_ext_root, "lib",
-                                  platform, xpcom_info.mozilla_version)
+    comp_plat_dir = os.path.join(options.path_to_ext_root, "lib",
+                                 platform, xpcom_info.mozilla_version)
 
     clear_dir(comp_dest_dir)
     clear_dir(comp_xpi_dir)
@@ -611,16 +583,11 @@ def xpcom(options):
         else:
             libfiles.append(filename)
 
-    def copy_libs(dest_dir):
-        clear_dir(dest_dir)
-        distutils.dir_util.mkpath(dest_dir)
-        for filename in libfiles:
-            shutil.copy(os.path.join(comp_xpi_dir, filename),
-                        dest_dir)
-
-    if not xpcom_info.is_debug:
-        copy_libs(comp_plat_dir1)
-    copy_libs(comp_plat_dir2)
+    clear_dir(comp_plat_dir)
+    distutils.dir_util.mkpath(comp_plat_dir)
+    for filename in libfiles:
+        shutil.copy(os.path.join(comp_xpi_dir, filename),
+                    comp_plat_dir)
 
     for filename in xptfiles:
         shutil.copy(os.path.join(comp_xpi_dir, filename),
