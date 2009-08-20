@@ -44,6 +44,7 @@
 Components.utils.import("resource://jetpack/modules/init.js");
 
 var Re;
+var Cb;
 var EXPORTED_SYMBOLS = ["AudioModule"];
 
 const Cc = Components.classes;
@@ -69,8 +70,6 @@ function AudioModule() {
   try {
     Re = Cc["@labs.mozilla.com/audio/recorder;1"].
          getService(Ci.IAudioRecorder);
-    En = Cc["@labs.mozilla.com/audio/encoder;1"].
-         getService(Ci.IAudioEncoder);
     CT = Cc["@mozilla.org/thread-manager;1"].
          getService().currentThread;
     this.isRecording = 0;
@@ -124,11 +123,17 @@ AudioModule.prototype = {
   // (PCM float sampled at 44000Hz) to the output
   // end of an nsIPipe.
   //
-  recordToPipe: function() {
-    this._pipe = Re.start();
-    this._pipe.asyncWait(new inputStreamListener(), 0, 0, CT);
-    this._path = En.createOgg();
-    this.isRecording = 2;
+  recordToPipe: function(cb) {
+    Cb = cb;
+    try {
+      this._pipe = Re.start();
+      this._pipe.asyncWait(new inputStreamListener(), 0, 0, CT);
+      this.isRecording = 2;
+    } catch (e) {
+      return false;
+    }
+    
+    return true;
   },
   
   // === {{{AudioModule.stopRecording()}}} ===
@@ -155,7 +160,7 @@ AudioModule.prototype = {
         return dst.path;
       case 2:
         Re.stop();
-        dump("Wrote to " + this._path + "\n");
+        this.isRecording = 0;
         break;
     }
   },
@@ -228,7 +233,7 @@ inputStreamListener.prototype = {
     // 4 bytes * 2 channels = 8 byte frame
     let diff = this._data.length % 8;
     let clen = this._data.length - diff;
-    En.appendFrames(this._data.slice(0, clen), clen);
+    Cb(this._data.slice(0, clen), clen);
     this._data = this._data.slice(clen, diff);
     input.asyncWait(this, 0, 0, CT);
   },
