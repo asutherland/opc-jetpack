@@ -164,7 +164,7 @@ iTunesPlayer::Search(const nsACString &what, PRUint32 *count,
             [[tr artist] cStringUsingEncoding:NSUTF8StringEncoding],
             [[tr persistentID] cStringUsingEncoding:NSUTF8StringEncoding]
         );
-        (*retval)[i++] = t;
+        NS_ADDREF((*retval)[i++] = t);
     }
     
     return NS_OK;
@@ -207,7 +207,7 @@ iTunesPlayer::GetCurrentTrack(IMusicTrack **retval)
         [[ct persistentID] cStringUsingEncoding:NSUTF8StringEncoding]
     );
     
-    *retval = t;
+    NS_ADDREF(*retval = t);
     return NS_OK;
     
     NS_OBJC_END_TRY_ABORT_BLOCK_NSRESULT;
