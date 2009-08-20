@@ -64,6 +64,15 @@ MusicModule.prototype = {
     Mu.play();
   },
   
+  // === {{{MusicModule.playTrack()}}} ===
+  //
+  // Play a specific track. Can be a result from
+  // Music.search()
+  //
+  playTrack: function(track) {
+    Mu.playTrack(track)
+  },
+  
   // === {{{MusicModule.stop()}}} ===
   //
   // Stop current track.
@@ -96,13 +105,19 @@ MusicModule.prototype = {
     Mu.gotoPreviousTrack();
   },
   
+  // === {{{MusicModule.search()}}} ===
+  //
+  // Search the music library for a track.
+  //
+  search: function(term) {
+    return Mu.search(term, {});
+  },
+  
   // === {{{MusicModule.getCurrentTrack}}} ===
   //
   // Returns information on the current track.
   //
   getCurrentTrack: function() {
-    let info = Mu.getCurrentTrack();
-    return {"title":info.title, "artist":info.artist, "album":info.album,
-      "__private":info};
+    return Mu.getCurrentTrack();
   }
 }
