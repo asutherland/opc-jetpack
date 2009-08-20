@@ -128,7 +128,7 @@ var Tests = {
         report("success");
       },
       onTeardown: function onTeardown(callback) {
-        teardownFuncs.push(callback);
+        teardownFuncs.splice(0, 0, callback);
       }
     };
     try {
