@@ -94,10 +94,6 @@ StatusBar.prototype = {
       embedIframe();
 
     function embedIframe() {
-      // The width we get here is an integer number of pixels, so we have to
-      // convert it to a CSS value before setting style.width to it.
-      iframe.style.width = width + "px";
-
       iframe.setAttribute("height", statusBar.boxObject.height);
       iframe.setAttribute("src", url);
       iframe.style.overflow = "hidden";
@@ -109,6 +105,11 @@ StatusBar.prototype = {
 
           iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
           self._injectPanelWindowFunctions(iframe);
+
+          // Shrink the width of the document to the size of the content
+          // it contains so we can automatically size the iframe to the size
+          // of the content.
+          iframe.contentDocument.documentElement.style.display = "table";
 
           // Hack the appearance of the iframe to make it look more like
           // a statusbarpanel.
@@ -123,10 +124,11 @@ StatusBar.prototype = {
           // statusbarpanel-colored backgrounds.
           if (Extension.OS == "Darwin") {
             // For Mac, we accomplish the effect by making the iframe
-            // appear like a statusbar (plus a few margin/height tweaks).
+            // appear like a statusbar (plus a few positioning tweaks).
             iframe.contentDocument.documentElement.style.MozAppearance =
               "statusbar";
             iframe.contentDocument.documentElement.style.marginTop = "-1px";
+            iframe.contentDocument.documentElement.style.paddingBottom = "1px";
             iframe.contentDocument.documentElement.style.height = "100%";
           }
           else if (Extension.OS == "WINNT") {
@@ -171,24 +173,59 @@ StatusBar.prototype = {
           iframe.contentDocument.body.style.padding = 0;
           iframe.contentDocument.body.style.margin = 0;
 
-          // Listen for DOM mutation events on the document's style attribute
-          // and update the iframe's width when its document's width changes.
-          iframe.contentDocument.addEventListener(
-            "DOMAttrModified",
-            function(evt) {
-              if (evt.target != iframe.contentDocument.documentElement ||
-                  evt.attrName != "style")
-                return;
-
-              // Update the iframe's width to match the width of its document.
-              // TODO: diff evt.oldValue and evt.newValue to determine whether
-              // or not the width CSS property changed, since we should only
-              // update the iframe's width if it's the property that changed.
+          // There are two ways in which statusbarpanel widths get set.
+          // By default, Jetpack automatically sets the width of the panel
+          // to the width of the containing document.  If a feature specifies
+          // an initial width, however, Jetpack sets the width of its panel
+          // to that width and then updates it only when the feature sets
+          // the width of its document explicitly.
+          if (width == null) {
+            var setIframeWidth = function() {
               iframe.style.width =
-                iframe.contentDocument.documentElement.style.width;
-            },
-            false
-          );
+                iframe.contentDocument.documentElement.offsetWidth + "px";
+            }
+
+            // Set the initial width of the iframe based on the width of its
+            // document.
+            setIframeWidth();
+
+            // Listen for DOM mutation events on the document and update
+            // the iframe's width when its document's width changes.
+            iframe.contentDocument.addEventListener("DOMSubtreeModified",
+                                                    setIframeWidth,
+                                                    false);
+          }
+          else {
+            // Set the initial width of the iframe based on the width specified
+            // by the feature.  The specified width we get here is an integer
+            // number of pixels, so we have to convert it to a CSS value before
+            // setting style.width to it.
+            iframe.style.width = width + "px";
+
+            // Listen for DOM mutation events on the document's style attribute
+            // and update the iframe's width when its document's width changes.
+            iframe.contentDocument.addEventListener(
+              "DOMAttrModified",
+              function(evt) {
+                if (evt.target != iframe.contentDocument.documentElement ||
+                    evt.attrName != "style")
+                  return;
+
+                // Update the iframe's width to match the width of its document.
+                // TODO: diff evt.oldValue and evt.newValue to determine whether
+                // or not the width CSS property changed, since we should only
+                // update the iframe's width if it's the property that changed.
+                // TODO: parse the value of the document's width property
+                // and only update the iframe's width if the document's width
+                // is an specific width.
+                // XXX if it's a relative width (auto, inherit), should we
+                // switch to auto-width mode?
+                iframe.style.width =
+                  iframe.contentDocument.documentElement.style.width;
+              },
+              false
+            );
+          }
         },
         true
       );
@@ -198,8 +235,6 @@ StatusBar.prototype = {
 
     return iframe;
   },
-
-  DEFAULT_PANEL_WIDTH: 200,
 
   append: function append(options) {
     var self = this;
@@ -212,7 +247,7 @@ StatusBar.prototype = {
     } else
       url = "about:blank";
 
-    var width = options.width ? options.width : self.DEFAULT_PANEL_WIDTH;
+    var width = options.width ? options.width : null;
 
     // Add a deprecation/not-implemented warning to be helpful.
     if (options.onLoad)
