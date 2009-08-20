@@ -55,6 +55,9 @@ var Tests = {
     var self = this;
     var wasErrorLogged = false;
     var listener = new Logging.ConsoleListener();
+    var teardownFuncs = [];
+    var finishedId = null;
+    var timeoutId = null;
 
     listener.onMessage = function(message) {
       if (message.isError)
@@ -70,11 +73,11 @@ var Tests = {
       onFinished(result);
     }
 
-    function reportSuccess() { endTest("success"); }
-    function reportFailure() { endTest("failure"); }
+    function report(result) {
+      teardownFuncs.forEach(function(callback) { callback(); });
+      finishedId = window.setTimeout(function() { endTest(result); }, 0);
+    }
 
-    var finishedId = null;
-    var timeoutId = null;
     var runner = {
       assertRaises: function assertRaises(cb, exception, message) {
         var wasExceptionThrown = false;
@@ -110,8 +113,9 @@ var Tests = {
       setTimeout: function setTimeout(ms, message) {
         timeoutId = window.setTimeout(
           function() {
-            console.error(test.name, "timed out at", ms, "ms");
-            finishedId = window.setTimeout(reportFailure, 0);
+            console.error(test.name, "timed out at", ms, "ms",
+                          "(" + message + ")");
+            report("failure");
           },
           ms
         );
@@ -121,18 +125,21 @@ var Tests = {
           window.clearTimeout(timeoutId);
           timeoutId = null;
         }
-        finishedId = window.setTimeout(reportSuccess, 0);
+        report("success");
+      },
+      onTeardown: function onTeardown(callback) {
+        teardownFuncs.push(callback);
       }
     };
     try {
       test.func.call(test.suite, runner);
       if (timeoutId === null && finishedId === null)
-        finishedId = window.setTimeout(reportSuccess, 0);
+        report("success");
     } catch (e) {
       if (!e.alreadyLogged)
         console.exception(e);
       if (timeoutId === null && finishedId === null)
-        finishedId = window.setTimeout(reportFailure, 0);
+        report("failure");
     }
   },
 

@@ -37,7 +37,7 @@
            __proto__: JetpackEnv
          };
          var context = new JetpackRuntime.Context(feed, env);
-         context.unload();
+         self.onTeardown(function() { context.unload(); });
        };
      });
 
