@@ -105,6 +105,13 @@ function analyzeResult(result) {
   for each (info in graph) {
     if ("shape" in info) {
       var shapeName = data.shapes[info.shape];
+      var curr = info;
+      while ("prototype" in curr && graph[curr.prototype]) {
+        var prote = graph[curr.prototype];
+        if ("shape" in prote)
+          shapeName += "," + data.shapes[prote.shape];
+        curr = prote;
+      }
       if (!(shapeName in shapes))
         shapes[shapeName] = 0;
       shapes[shapeName]++;
