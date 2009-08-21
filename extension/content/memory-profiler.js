@@ -15,6 +15,9 @@
      function(name) { interestingTypes[name] = true; }
    );
 
+   var shapes = {};
+   var maxShapeId = 0;
+
    var table = getObjectTable();
    for (id in table) {
      var nativeClass = table[id];
@@ -23,6 +26,19 @@
          (nativeClass.indexOf('DOM') == 0) ||
          (nativeClass.indexOf('XPC_WN_') == 0)) {
        var info = getObjectInfo(parseInt(id));
+       if (nativeClass == "Object") {
+         var props = getObjectProperties(parseInt(id));
+         props = [name for (name in props)];
+         // TODO: If there's a comma in the property name,
+         // we can get weird results here, though it's
+         // unlikely.
+         props = props.join(",");
+         if (!(props in shapes)) {
+           shapes[props] = maxShapeId;
+           maxShapeId++;
+         }
+         info['shape'] = shapes[props];
+       }
        graph[id] = info;
      } else {
        if (!(nativeClass in rejectedTypes))
@@ -30,9 +46,14 @@
      }
    }
 
+   var shapesArray = [];
+   for (name in shapes)
+     shapesArray[shapes[name]] = name;
+
    var rejectedList = [];
    for (name in rejectedTypes)
      rejectedList.push(name);
    return JSON.stringify({graph: graph,
+                          shapes: shapesArray,
                           rejectedTypes: rejectedList});
  })();

@@ -1,15 +1,27 @@
 <html>
 <body>
 <div id="output"></div>
-<table id="table" border="1" style="display: none;">
-  <tr>
-    <td>function name (click to view source)</td>
-    <td>instances</td>
-    <td>total referents</td>
-    <td>is global?</td>
-    <td>times in prototype chains</td>
-  </tr>
-</table>
+<div style="display: none;">
+  <h1>Object Information</h1>
+  <table id="objtable" border="1">
+    <tr>
+      <td>shape (i.e., object property names)</td>
+      <td>count</td>
+    </tr>
+  </table>
+</div>
+<div style="display: none;">
+  <h1>Function Information</h1>
+  <table id="functable" border="1">
+    <tr>
+      <td>function name (click to view source)</td>
+      <td>instances</td>
+      <td>total referents</td>
+      <td>is global?</td>
+      <td>times in prototype chains</td>
+    </tr>
+  </table>
+</div>
 <script src="js/ext/jquery.js"></script>
 <script src="js/ext/io.js"></script>
 <script>
@@ -37,6 +49,29 @@ function analyzeResult(result) {
   var worker = new Worker('memory-profiler.worker.js');
   worker.onmessage = function(event) {
     var data = JSON.parse(event.data);
+
+    var objInfos = [{name: name, count: data.shapes[name]}
+                    for (name in data.shapes)
+                    if (data.shapes[name] > 1)];
+    objInfos.sort(function(b, a) {
+      return a.count - b.count;
+    });
+    objInfos.forEach(function(info) {
+      var row = $("<tr></tr>");
+      var name = $("<td></td>");
+      if (info.name.length > 80)
+        info.name = info.name.slice(0, 80) + "...";
+      info.name = info.name.replace(/,/g, "/");
+      name.text(info.name);
+      name.css({fontFamily: "monospace"});
+      row.append(name);
+      var count = $("<td></td>");
+      count.text(info.count);
+      row.append(count);
+      $("#objtable").append(row);
+    });
+    $("#objtable").parent().fadeIn();
+
     var funcInfos = [info for each (info in data.functions)];
     funcInfos.sort(function(b, a) {
       return a.rating - b.rating;
@@ -64,9 +99,10 @@ function analyzeResult(result) {
       addCell(info.isGlobal);
       addCell(info.protoCount);
 
-      $("#table").append(row);
-      $("#table").fadeIn();
+      $("#functable").append(row);
     });
+    $("#functable").parent().fadeIn();
+
     log("Raw window data: " + JSON.stringify(data.windows));
     if (data.rejectedTypes.length)
       log("Rejected types: " + data.rejectedTypes.join(", "));

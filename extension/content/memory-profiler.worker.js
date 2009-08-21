@@ -5,6 +5,7 @@ function onmessage(event) {
 function analyzeResult(result) {
   var data = JSON.parse(result);
   var graph = data.graph;
+  var shapes = {};
 
   // Convert keys in the graph from strings to ints.
   // TODO: Can we get rid of this ridiculousness?
@@ -65,9 +66,8 @@ function analyzeResult(result) {
       info.referents.forEach(
         function(refInfo) {
           if (refInfo.nativeClass == 'Object' &&
-              refInfo.prototype == info.id) {
+              refInfo.prototype == info.id)
             protoCount += 1 + trackProtoCount(refInfo);
-          }
         });
       info.protoCount = protoCount;
     }
@@ -101,7 +101,19 @@ function analyzeResult(result) {
                               info.funcInfo.referents);
     });
 
+  // Generate object shape information about objects we care about.
+  for (id in graph) {
+    var info = graph[id];
+    if (info.nativeClass == "Object" && info.parent in windows) {
+      var shapeName = data.shapes[info.shape];
+      if (!(shapeName in shapes))
+        shapes[shapeName] = 0;
+      shapes[shapeName]++;
+    }
+  }
+
   return JSON.stringify({functions: functions,
                          windows: windows,
-                         rejectedTypes: data.rejectedTypes});
+                         rejectedTypes: data.rejectedTypes,
+                         shapes: shapes});
 }
