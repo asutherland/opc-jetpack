@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
-<?xml-stylesheet href="chrome://jetpack/content/css/browser.css" type="text/css"?>
-<?xml-stylesheet href="chrome://jetpack/skin/browser.css" type="text/css"?>
+<?xml-stylesheet href="chrome://jetpack/content/css/browser-slidebar.css"
+                 type="text/css"?>
+<?xml-stylesheet href="chrome://jetpack/skin/browser.css"
+                 type="text/css"?>
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/javascript;version=1.7"
           src="chrome://jetpack/content/js/xul/browser.js"/>
