@@ -11,10 +11,6 @@ FBL.ns(
       return;
 
     with (FBL) {
-      var jsm = {};
-      Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
-                              jsm);
-
       var JETPACK_URL = "about:jetpack";
 
       var JetpackTabWatcher = {
@@ -56,12 +52,6 @@ FBL.ns(
             if (win.wrappedJSObject.Logging)
               win.wrappedJSObject.Logging._onFirebugConsoleInjected();
           }
-        },
-        log: function(context, object, className, sourceLink) {
-          sourceLink.href = jsm.SandboxFactory.unmungeUrl(sourceLink.href);
-        },
-        logFormatted: function(context, objects, className, sourceLink) {
-          sourceLink.href = jsm.SandboxFactory.unmungeUrl(sourceLink.href);
         }
       };
 

@@ -59,20 +59,14 @@ var JetpackRuntime = {
     var importers = environment.importers;
     var globals = environment.globals;
 
-    var jsm = {};
-    Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js",
-                            jsm);
     var code = feed.getCode();
-
     var sandboxFactory;
     var unsafeSandbox;
     var sandbox;
 
-    sandboxFactory = new jsm.SandboxFactory({}, feed.srcUri.spec, true);
-    unsafeSandbox = sandboxFactory.makeSandbox({});
+    unsafeSandbox = Components.utils.Sandbox(feed.srcUri.spec);
     sandbox = new Object();
     unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
-    jsm = null;
 
     sandbox.location = feed.srcUri.spec;
 
@@ -134,16 +128,12 @@ var JetpackRuntime = {
 
     if (!Extension.isInSafeMode) {
       try {
-        var codeSections = [{length: code.length,
-                             filename: feed.srcUri.spec,
-                             lineNumber: 1}];
-        sandboxFactory.evalInSandbox(code, unsafeSandbox, codeSections);
+        Components.utils.evalInSandbox(code, unsafeSandbox, "1.8",
+                                       feed.srcUri.spec, 1);
       } catch (e) {
         console.exception(e);
       }
     }
-
-    sandboxFactory = null;
 
     Extension.addUnloadMethod(
       this,

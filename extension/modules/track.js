@@ -1,5 +1,3 @@
-Components.utils.import("resource://jetpack/ubiquity-modules/sandboxfactory.js");
-
 var EXPORTED_SYMBOLS = ["MemoryTracking"];
 
 var MemoryTracking = {
@@ -22,7 +20,7 @@ var MemoryTracking = {
     this._trackedObjects[bin].push(
       {weakref: weakref,
        created: new Date(),
-       fileName: SandboxFactory.unmungeUrl(frame.filename),
+       fileName: frame.filename,
        lineNumber: frame.lineNumber});
   },
   compact: function compact() {
