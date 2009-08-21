@@ -51,8 +51,7 @@ function analyzeResult(result) {
     var data = JSON.parse(event.data);
 
     var objInfos = [{name: name, count: data.shapes[name]}
-                    for (name in data.shapes)
-                    if (data.shapes[name] > 1)];
+                    for (name in data.shapes)];
     objInfos.sort(function(b, a) {
       return a.count - b.count;
     });
