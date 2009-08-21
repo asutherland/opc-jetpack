@@ -102,9 +102,8 @@ function analyzeResult(result) {
     });
 
   // Generate object shape information about objects we care about.
-  for (id in graph) {
-    var info = graph[id];
-    if (info.nativeClass == "Object" && info.parent in windows) {
+  for each (info in graph) {
+    if ("shape" in info) {
       var shapeName = data.shapes[info.shape];
       if (!(shapeName in shapes))
         shapes[shapeName] = 0;

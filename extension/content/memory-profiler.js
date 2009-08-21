@@ -17,6 +17,7 @@
 
    var shapes = {};
    var maxShapeId = 0;
+   var windows = {};
 
    var table = getObjectTable();
    for (id in table) {
@@ -26,23 +27,32 @@
          (nativeClass.indexOf('DOM') == 0) ||
          (nativeClass.indexOf('XPC_WN_') == 0)) {
        var info = getObjectInfo(parseInt(id));
-       if (nativeClass == "Object") {
-         var props = getObjectProperties(parseInt(id));
-         props = [name for (name in props)];
-         // TODO: If there's a comma in the property name,
-         // we can get weird results here, though it's
-         // unlikely.
-         props = props.join(",");
-         if (!(props in shapes)) {
-           shapes[props] = maxShapeId;
-           maxShapeId++;
-         }
-         info['shape'] = shapes[props];
-       }
+       if (nativeClass == "Function" &&
+           info && info.filename &&
+           info.filename.indexOf("http") == 0 &&
+           !(info.parent in windows))
+         windows[info.parent] = true;
        graph[id] = info;
      } else {
        if (!(nativeClass in rejectedTypes))
          rejectedTypes[nativeClass] = true;
+     }
+   }
+
+   for (id in graph) {
+     var info = graph[id];
+     if (info.parent in windows && info.nativeClass == "Object") {
+       var props = getObjectProperties(parseInt(id));
+       props = [name for (name in props)];
+       // TODO: If there's a comma in the property name,
+       // we can get weird results here, though it's
+       // unlikely.
+       props = props.join(",");
+       if (!(props in shapes)) {
+         shapes[props] = maxShapeId;
+         maxShapeId++;
+       }
+       info['shape'] = shapes[props];
      }
    }
 
