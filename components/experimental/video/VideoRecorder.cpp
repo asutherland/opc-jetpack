@@ -67,12 +67,12 @@ VideoRecorder::Init()
     struct vidcap_src_info *sources;
     struct vidcap_sapi_info sapi_info;
     
-    if (!(vc = vidcap_initialize())) {
+    if (!(state = vidcap_initialize())) {
         fprintf(stderr, "Could not initialize vidcap, aborting!\n");
         return NS_ERROR_FAILURE;
     }
     
-    if (!(sapi = vidcap_sapi_acquire(vc, 0))) {
+    if (!(sapi = vidcap_sapi_acquire(state, 0))) {
 		fprintf(stderr, "Failed to acquire default sapi\n");
 		return NS_ERROR_FAILURE;
 	}
@@ -109,6 +109,8 @@ VideoRecorder::Init()
         return NS_ERROR_FAILURE;
     }
     
+    ogg_state = (ogg_stream_state *)PR_Calloc(1, sizeof(ogg_stream_state));
+    size = WIDTH * HEIGHT * 3 / 2;
     PR_Free(sources);
     return NS_OK;
 }
@@ -116,7 +118,8 @@ VideoRecorder::Init()
 VideoRecorder::~VideoRecorder()
 {
     vidcap_sapi_release(sapi);
-    vidcap_destroy(vc);
+    vidcap_destroy(state);
+    PR_Free(ogg_state);
     gVideoRecordingService = nsnull;
 }
 
@@ -176,39 +179,74 @@ EscapeBackslash(nsACString& str)
 }
 
 int
-VideoRecorder::RecordToFileCallback(vidcap_src *src, void *user_data,
-    struct vidcap_capture_info *cap_info)
+VideoRecorder::RecordToFileCallback(vidcap_src *src, void *data,
+    struct vidcap_capture_info *video)
 {
-    FILE *out = static_cast<VideoRecorder*>(user_data)->outfile;
-    fwrite(cap_info->video_data, sizeof(char),
-            cap_info->video_data_size, out);
+    ogg_page og;
+    ogg_packet op;
+    th_ycbcr_buffer ycbcr;
+    unsigned char *yuv = (unsigned char *)video->video_data;
+    VideoRecorder *vr = static_cast<VideoRecorder*>(data);
+    
+    int frames = video->video_data_size / vr->size;
+    for (int i = 0; i < frames; i++) {
+        ycbcr[0].width = WIDTH;
+        ycbcr[0].stride = WIDTH;
+        ycbcr[0].height = HEIGHT;
+
+        ycbcr[1].width = (WIDTH >> 1);
+        ycbcr[1].height = (HEIGHT >> 1);
+        ycbcr[1].stride = ycbcr[1].width;
+
+        ycbcr[2].width = ycbcr[1].width;
+        ycbcr[2].height = ycbcr[1].height;
+        ycbcr[2].stride = ycbcr[1].stride;
+
+        ycbcr[0].data = yuv;
+        ycbcr[1].data = yuv + WIDTH * HEIGHT;
+        ycbcr[2].data = ycbcr[1].data + WIDTH * HEIGHT / 4;
+
+        if (th_encode_ycbcr_in(vr->encoder, ycbcr) != 0) {
+            fprintf(stderr, "Could not encode frame!\n");
+            return -1;
+        }
+        if (!th_encode_packetout(vr->encoder, 0, &op)) {
+            fprintf(stderr, "Could not read packet!\n");
+            return -1;
+        }
+
+        ogg_stream_packetin(vr->ogg_state, &op);
+        while (ogg_stream_pageout(vr->ogg_state, &og)) {
+            fwrite(og.header, og.header_len, 1, vr->outfile);
+            fwrite(og.body, og.body_len, 1, vr->outfile);
+        }
+        yuv += vr->size;
+    }
     return 0;
 }
 
-
 /*
- * Start recording to file
+ * Setup Ogg/Theora file
  */
-NS_IMETHODIMP
-VideoRecorder::StartRecordToFile(nsACString& file)
+nsresult
+VideoRecorder::SetupOggTheora(nsACString& file)
 {
+    int ret;
+    th_info ti;
     nsresult rv;
+    char buf[13];
+    th_comment tc;
+    ogg_page page;
+    ogg_packet packet;
+    nsCAutoString path;
     nsCOMPtr<nsIFile> o;
     
-    if (recording) {
-        fprintf(stderr, "Recording in progress!\n");
-        return NS_ERROR_FAILURE;
-    }
-
-    /* Allocate RAW file */
-    char buf[13];
-    nsCAutoString path;
-
+    /* Assign temporary name */
     rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(o));
     if (NS_FAILED(rv)) return rv;
-
+    
     MakeRandomString(buf, 8);
-    memcpy(buf + 8, ".raw", 5);
+    memcpy(buf + 8, ".ogg", 5);
     rv = o->AppendNative(nsDependentCString(buf, 12));
     if (NS_FAILED(rv)) return rv;
     rv = o->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
@@ -220,20 +258,101 @@ VideoRecorder::StartRecordToFile(nsACString& file)
 
     /* Open file */
     if (!(outfile = fopen(path.get(), "w+"))) {
-        fprintf(stderr, "Could not open RAW file\n");
+        fprintf(stderr, "Could not open OGG file\n");
         return NS_ERROR_FAILURE;
     }
-
     EscapeBackslash(path);
 	file.Assign(path.get(), strlen(path.get()));
+    
+    if (ogg_stream_init(ogg_state, rand())) {
+        fprintf(stderr, "Failed ogg_stream_init!\n");
+        return NS_ERROR_FAILURE;
+    }
+    
+    th_info_init(&ti);
+    /* Must be multiples of 16 */
+    ti.frame_width = ((WIDTH + 15) >> 4) << 4;
+    ti.frame_height = ((HEIGHT + 15) >> 4) << 4;
+    ti.pic_width = WIDTH;
+    ti.pic_height = HEIGHT;
+    ti.pic_x = 0;
+    ti.pic_y = 0;
+    ti.fps_numerator = FPS_N;
+    ti.fps_denominator = FPS_D;
+    ti.aspect_numerator = 0;
+    ti.aspect_denominator = 0;
+    ti.colorspace = TH_CS_UNSPECIFIED;
+    ti.pixel_fmt = TH_PF_420;
+    ti.target_bitrate = 0;
+    ti.quality = 48;
+    
+    encoder = th_encode_alloc(&ti);
+    th_info_clear(&ti);
+    
+    /* Header init */
+    th_comment_init(&tc);
+    if (th_encode_flushheader(encoder, &tc, &packet) <= 0) {
+        fprintf(stderr,"Internal Theora library error.\n");
+        return NS_ERROR_FAILURE;
+    }
+    th_comment_clear(&tc);
+    
+    ogg_stream_packetin(ogg_state, &packet);
+    if (ogg_stream_pageout(ogg_state, &page) != 1) {
+        fprintf(stderr,"Internal Ogg library error.\n");
+        return NS_ERROR_FAILURE;
+    }
+    fwrite(page.header, 1, page.header_len, outfile);
+    fwrite(page.body, 1, page.body_len, outfile);
+    
+    /* Create remaining headers */
+    for (;;) {
+        ret = th_encode_flushheader(encoder, &tc, &packet);
+        if (ret < 0){
+            fprintf(stderr,"Internal Theora library error.\n");
+            return NS_ERROR_FAILURE;
+        } else if (!ret) break;
+        ogg_stream_packetin(ogg_state, &packet);
+    }
+    
+    /* Flush the rest of our headers. This ensures the actual data in each 
+       stream will start on a new page, as per spec. */
+    for (;;) {
+        ret = ogg_stream_flush(ogg_state, &page);
+        if (ret < 0){
+            fprintf(stderr,"Internal Ogg library error.\n");
+            return NS_ERROR_FAILURE;
+        }
+        if (ret == 0) break;
+        fwrite(page.header, 1, page.header_len, outfile);
+        fwrite(page.body, 1, page.body_len, outfile);
+    }
+    
+    return NS_OK;
+}
 
+/*
+ * Start recording to file
+ */
+NS_IMETHODIMP
+VideoRecorder::StartRecordToFile(nsACString& file)
+{
+    nsresult rv;
+    if (recording) {
+        fprintf(stderr, "Recording in progress!\n");
+        return NS_ERROR_FAILURE;
+    }
+    
+    rv = SetupOggTheora(file);
+    if (NS_FAILED(rv)) return rv;
+    
     /* Start recording */
     struct vidcap_fmt_info fmt_info;
-    fmt_info.width = 640;
-    fmt_info.height = 480;
+    fmt_info.width = WIDTH;
+    fmt_info.height = HEIGHT;
     fmt_info.fourcc = VIDCAP_FOURCC_I420;
-    fmt_info.fps_numerator = 15;
-    fmt_info.fps_denominator = 1;
+    fmt_info.fps_numerator = FPS_N;
+    fmt_info.fps_denominator = FPS_D;
     
     if (vidcap_format_bind(source, &fmt_info)) {
 		fprintf(stderr, "Failed vidcap_format_bind()\n");
@@ -244,7 +363,7 @@ VideoRecorder::StartRecordToFile(nsACString& file)
 		fprintf(stderr, "Failed vidcap_src_capture_start()\n");
 		return NS_ERROR_FAILURE;
 	}
-	
+
 	recording = 1;
     return NS_OK;
 }
@@ -255,18 +374,26 @@ VideoRecorder::StartRecordToFile(nsACString& file)
 NS_IMETHODIMP
 VideoRecorder::Stop()
 {
+    ogg_page page;
+    
     if (!recording) {
         fprintf(stderr, "No recording in progress!\n");
         return NS_ERROR_FAILURE;    
     }
-    
     if (vidcap_src_capture_stop(source)) {
 		fprintf(stderr, "Failed vidcap_src_capture_stop()\n");
 		return NS_ERROR_FAILURE;
 	}
     vidcap_src_release(source);
     
+    th_encode_free(encoder);
+    if (ogg_stream_flush(ogg_state, &page)) {
+        fwrite(page.header, page.header_len, 1, outfile);
+        fwrite(page.body, page.body_len, 1, outfile);
+    }
     fclose(outfile);
+    
+    ogg_stream_clear(ogg_state);
     recording = 0;
     return NS_OK;
 }

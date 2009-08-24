@@ -39,11 +39,12 @@
 #define VideoRecorder_h_
 
 #include "IVideoRecorder.h"
-#include "vidcap.h"
+#include <time.h>
+#include <ogg/ogg.h>
+#include <vidcap/vidcap.h>
+#include <theora/theoraenc.h>
 
 #include "prmem.h"
-#include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 #include "nsStringAPI.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
@@ -53,6 +54,12 @@
 #define VIDEO_RECORDER_CLASSNAME  "Video Recording Capability"
 #define VIDEO_RECORDER_CID { 0xb3ee26b3, 0xe935, 0x4c56, \
                            { 0x83, 0xa1, 0x5e, 0x88, 0x55, 0xd7, 0x11, 0x4b }}
+
+
+#define WIDTH 640
+#define HEIGHT 480
+#define FPS_N 15
+#define FPS_D 1
 
 class VideoRecorder : public IVideoRecorder
 {
@@ -66,16 +73,21 @@ public:
     VideoRecorder(){}
 
 private:
-    FILE *outfile;
+    int size;
     int recording;
-    vidcap_state *vc;
-	vidcap_sapi *sapi;
+    FILE *outfile;
+    
+    vidcap_sapi *sapi;
     vidcap_src *source;
+    vidcap_state *state;
+    th_enc_ctx *encoder;
+    ogg_stream_state *ogg_state;
     static VideoRecorder *gVideoRecordingService;
     
 protected:
+    nsresult SetupOggTheora(nsACString& file);
     static int RecordToFileCallback(vidcap_src *src,
-	    void *user_data, struct vidcap_capture_info *cap_info);
+	    void *data, struct vidcap_capture_info *video);
 };
 
 #endif

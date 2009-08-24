@@ -60,7 +60,9 @@ headers = -I. \
           -I$(sdkdir)/include/xpcom \
           -I$(sdkdir)/include/string \
           -I$(sdkdir)/include/nspr \
-          -I$(sdkdir)/sdk/include
+          -I$(sdkdir)/sdk/include \
+          -I/usr/local/vidcap/include \
+          -I/usr/local/theora/include
 
 # libraries
 libdirs := $(sdkdir)/lib $(sdkdir)/bin
@@ -84,7 +86,10 @@ ifeq ($(os), Darwin)
               -Wl,-dead_strip \
               -Wl,-exported_symbol \
               -Wl,_NSGetModule \
-              /usr/local/libvidcap/lib/libvidcap.a \
+              /usr/local/vidcap/lib/libvidcap.a \
+              /usr/local/theora/lib/libogg.a \
+              /usr/local/theora/lib/libtheora.a \
+              /usr/local/theora/lib/libtheoraenc.a \
 							-framework Carbon \
 							-framework QuartzCore \
 							-framework QuickTime \
