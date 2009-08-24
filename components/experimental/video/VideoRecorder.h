@@ -82,6 +82,7 @@ private:
     vidcap_state *state;
     th_enc_ctx *encoder;
     ogg_stream_state *ogg_state;
+    struct vidcap_src_info *sources;
     static VideoRecorder *gVideoRecordingService;
     
 protected:

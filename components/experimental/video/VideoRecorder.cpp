@@ -64,7 +64,6 @@ VideoRecorder::Init()
 {
     recording = 0;
     int num_devices = 0;
-    struct vidcap_src_info *sources;
     struct vidcap_sapi_info sapi_info;
     
     if (!(state = vidcap_initialize())) {
@@ -102,16 +101,9 @@ VideoRecorder::Init()
 		fprintf(stderr, "Failed vidcap_src_list_get()\n");
 		return NS_ERROR_FAILURE;
 	}
-	
-    if (!(source = vidcap_src_acquire(sapi, &sources[0]))) {
-        PR_Free(sources);
-        fprintf(stderr, "Failed vidcap_src_acquire()\n");
-        return NS_ERROR_FAILURE;
-    }
     
     ogg_state = (ogg_stream_state *)PR_Calloc(1, sizeof(ogg_stream_state));
     size = WIDTH * HEIGHT * 3 / 2;
-    PR_Free(sources);
     return NS_OK;
 }
 
@@ -119,6 +111,7 @@ VideoRecorder::~VideoRecorder()
 {
     vidcap_sapi_release(sapi);
     vidcap_destroy(state);
+    PR_Free(sources);
     PR_Free(ogg_state);
     gVideoRecordingService = nsnull;
 }
@@ -277,7 +270,9 @@ VideoRecorder::SetupOggTheora(nsACString& file)
     ti.pic_height = HEIGHT;
     ti.pic_x = 0;
     ti.pic_y = 0;
-    ti.fps_numerator = FPS_N;
+    
+    // Too fast? Why?
+    ti.fps_numerator = FPS_N - 5;
     ti.fps_denominator = FPS_D;
     ti.aspect_numerator = 0;
     ti.aspect_denominator = 0;
@@ -345,6 +340,12 @@ VideoRecorder::StartRecordToFile(nsACString& file)
     
     rv = SetupOggTheora(file);
     if (NS_FAILED(rv)) return rv;
+    
+    /* Acquire camera */
+    if (!(source = vidcap_src_acquire(sapi, &sources[0]))) {
+        fprintf(stderr, "Failed vidcap_src_acquire()\n");
+        return NS_ERROR_FAILURE;
+    }
     
     /* Start recording */
     struct vidcap_fmt_info fmt_info;
