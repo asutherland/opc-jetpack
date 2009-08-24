@@ -39,7 +39,7 @@
 // This is a simple class that can be used to provide an Observer pattern
 // to any functionality that needs it.
 
-let EXPORTED_SYMBOLS = ['EventHub'];
+let EXPORTED_SYMBOLS = ['EventHub', 'Error'];
 
 // == The EventHub Class ==
 //

@@ -85,6 +85,7 @@ var Tests = {
           cb();
         } catch (e if e instanceof exception) {
           wasExceptionThrown = true;
+          this.lastException = e;
         }
         if (!wasExceptionThrown) {
           if (!message)
