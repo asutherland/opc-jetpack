@@ -1,4 +1,10 @@
 var AnnotationMemoryTests = {
+  // This can be used by other tests to create a "fake" annotation memory
+  // interface for testing.
+  makeTestMemory: function(test) {
+    return new this.AnnotationService(this.getTempConnection(test));
+  },
+
   get AnnotationService() {
     var jsm = {};
     var url = "resource://jetpack/ubiquity-modules/annotation_memory.js";
@@ -87,7 +93,7 @@ var AnnotationMemoryTests = {
   },
 
   testGetPagesWithAnnotation: function(self) {
-    var annSvc = new this.AnnotationService(this.getTempConnection(self));
+    var annSvc = this.makeTestMemory(self);
 
     var url = this.Utils.url("http://www.foo.com");
     self.assertEqual(annSvc.getPagesWithAnnotation("blah").length, 0);
@@ -98,7 +104,7 @@ var AnnotationMemoryTests = {
   },
 
   testPageHasAnnotation: function(self) {
-    var annSvc = new this.AnnotationService(this.getTempConnection(self));
+    var annSvc = this.makeTestMemory(self);
 
     var url = this.Utils.url("http://www.foo.com");
     annSvc.setPageAnnotation(url, "blah", "foo");
@@ -106,7 +112,7 @@ var AnnotationMemoryTests = {
   },
 
   testGetPageAnnotation: function(self) {
-    var annSvc = new this.AnnotationService(this.getTempConnection(self));
+    var annSvc = this.makeTestMemory(self);
 
     var url = this.Utils.url("http://www.foo.com");
 
@@ -115,7 +121,7 @@ var AnnotationMemoryTests = {
   },
 
   testRemovePageAnnotation: function(self) {
-    var annSvc = new this.AnnotationService(this.getTempConnection(self));
+    var annSvc = this.makeTestMemory(self);
 
     var url = this.Utils.url("http://www.foo.com");
     annSvc.setPageAnnotation(url, "blah", "foo");
@@ -140,7 +146,7 @@ var AnnotationMemoryTests = {
       }
     };
 
-    var annSvc = new this.AnnotationService(this.getTempConnection(self));
+    var annSvc = this.makeTestMemory(self);
     var url = this.Utils.url("http://www.foo.com");
     annSvc.addObserver(ob);
 
