@@ -36,7 +36,6 @@
 
 EXPORTED_SYMBOLS = ["JetpackSetup"];
 
-Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
 Components.utils.import("resource://jetpack/ubiquity-modules/feedmanager.js");
 Components.utils.import("resource://jetpack/ubiquity-modules/annotation_memory.js");
 

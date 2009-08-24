@@ -36,8 +36,6 @@
 
 let EXPORTED_SYMBOLS = ["FeedPlugin", "FeedManager"];
 
-Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
-
 var UrlUtils = {};
 Components.utils.import("resource://jetpack/modules/url_utils.js",
                         UrlUtils);
@@ -50,6 +48,20 @@ const TYPE = "jetpack";
 const TRUSTED_DOMAINS_PREF = "extensions.jetpack.trustedDomains";
 
 var FeedManager = null;
+
+function openUrlInBrowser(url) {
+  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+           .getService(Ci.nsIWindowMediator);
+
+  // TODO: We'll want to dynamically get the window type here
+  // depending on the application.
+  var currWindow = wm.getMostRecentWindow("navigator:browser");
+
+  // TODO: Really we should be using jetpack-app-nuances here.
+  var tabbrowser = currWindow.getBrowser();
+  var tab = tabbrowser.addTab(url);
+  tabbrowser.selectedTab = tab;
+}
 
 function FeedPlugin(feedManager) {
   if (!FeedManager)
@@ -87,7 +99,7 @@ function FeedPlugin(feedManager) {
       if (mimetype == "application/x-javascript-untrusted")
         return false;
 
-      var url = Utils.url(commandsUrl);
+      var url = UrlUtils.url(commandsUrl);
 
       if (url.scheme == "chrome")
         return true;
@@ -114,7 +126,7 @@ function FeedPlugin(feedManager) {
                                        canAutoUpdate: true,
                                        sourceCode: data,
                                        type: TYPE});
-        Utils.openUrlInBrowser(confirmUrl);
+        openUrlInBrowser(confirmUrl);
       }
 
       if (UrlUtils.isRemote(commandsUrl)) {
@@ -132,7 +144,7 @@ function FeedPlugin(feedManager) {
       } else
         onSuccess("");
     } else
-      Utils.openUrlInBrowser(confirmUrl);
+      openUrlInBrowser(confirmUrl);
   };
 
   this.makeFeed = function DFP_makeFeed(baseFeedInfo, hub) {

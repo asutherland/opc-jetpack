@@ -45,7 +45,8 @@
 
 let EXPORTED_SYMBOLS = ["FeedManager"];
 
-Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
+var UrlUtils = {};
+Components.utils.import("resource://jetpack/modules/url_utils.js", UrlUtils);
 Components.utils.import("resource://jetpack/ubiquity-modules/eventhub.js");
 
 const FEED_SRC_ANNO = "ubiquity/source";
@@ -146,7 +147,7 @@ FMgrProto.getSubscribedFeeds = function FMgr_getSubscribedFeeds() {
 
 FMgrProto.getFeedForUrl = function FMgr_getFeedForUrl(url) {
   // TODO: This function is implemented terribly inefficiently.
-  var uri = Utils.url(url);
+  var uri = UrlUtils.url(url);
   var feedLists = [this.getSubscribedFeeds(),
                    this.getUnsubscribedFeeds()];
 
@@ -193,7 +194,7 @@ FMgrProto.addSubscribedFeed = function FMgr_addSubscribedFeed(baseInfo) {
 
   // Now add the feed.
   let annSvc = this._annSvc;
-  let uri = Utils.url(info.url);
+  let uri = UrlUtils.url(info.url);
   let expiration;
 
   if (info.isBuiltIn)
@@ -231,7 +232,7 @@ FMgrProto.addSubscribedFeed = function FMgr_addSubscribedFeed(baseInfo) {
 
 FMgrProto.isSubscribedFeed = function FMgr_isSubscribedFeed(uri) {
   let annSvc = this._annSvc;
-  uri = Utils.url(uri);
+  uri = UrlUtils.url(uri);
   return annSvc.pageHasAnnotation(uri, FEED_SUBSCRIBED_ANNO);
 };
 
@@ -242,7 +243,7 @@ FMgrProto.isSubscribedFeed = function FMgr_isSubscribedFeed(uri) {
 
 FMgrProto.isUnsubscribedFeed = function FMgr_isSubscribedFeed(uri) {
   let annSvc = this._annSvc;
-  uri = Utils.url(uri);
+  uri = UrlUtils.url(uri);
   return annSvc.pageHasAnnotation(uri, FEED_UNSUBSCRIBED_ANNO);
 };
 
@@ -310,7 +311,10 @@ FMgrProto.showNotification = function showNotification(plugin, targetDoc, comman
   // through all the open windows and all the <browsers> in each.
   var wm = Cc["@mozilla.org/appshell/window-mediator;1"].
            getService(Ci.nsIWindowMediator);
-  var enumerator = wm.getEnumerator(Utils.appWindowType);
+
+  // TODO: Really we should be using jetpack-app-nuances here.
+  var enumerator = wm.getEnumerator("navigator:browser");
+
   var tabbrowser = null;
   var foundBrowser = null;
 
@@ -501,7 +505,7 @@ FMgrProto.__makeFeed = function FMgr___makeFeed(uri) {
   // Read-only.
 
   var val = annSvc.getPageAnnotation(uri, FEED_SRC_URL_ANNO);
-  feedInfo.srcUri = Utils.url(val, "data:text/plain,");
+  feedInfo.srcUri = UrlUtils.url(val, "data:text/plain,");
 
   // === {{{Feed.canAutoUpdate}}} ===
   //
@@ -562,7 +566,7 @@ FMgrProto.__makeFeed = function FMgr___makeFeed(uri) {
       else {
         let uri = ("data:application/x-javascript," +
                    escape(feedInfo.getCode()));
-        return Utils.url(uri);
+        return UrlUtils.url(uri);
       }
     }
   );

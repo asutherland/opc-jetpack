@@ -15,14 +15,14 @@ var AnnotationMemoryTests = {
     return this.AnnotationService;
   },
 
-  get Utils() {
-    var jsm = {};
-    var url = "resource://jetpack/ubiquity-modules/utils.js";
-    Components.utils.import(url, jsm);
+  get UrlUtils() {
+    var UrlUtils = {};
+    var url = "resource://jetpack/modules/url_utils.js";
+    Components.utils.import(url, UrlUtils);
 
-    delete this.Utils;
-    this.Utils = jsm.Utils;
-    return this.Utils;
+    delete this.UrlUtils;
+    this.UrlUtils = UrlUtils;
+    return this.UrlUtils;
   },
 
   getTempDbFile: function() {
@@ -67,7 +67,7 @@ var AnnotationMemoryTests = {
       annSvc = new AnnotationService(connection);
     }
 
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
     annSvc.setPageAnnotation(url, "perm", "foo");
     self.assertEqual(annSvc.getPagesWithAnnotation("perm").length, 1);
 
@@ -95,7 +95,7 @@ var AnnotationMemoryTests = {
   testGetPagesWithAnnotation: function(self) {
     var annSvc = this.makeTestMemory(self);
 
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
     self.assertEqual(annSvc.getPagesWithAnnotation("blah").length, 0);
     annSvc.setPageAnnotation(url, "blah", "foo");
     var results = annSvc.getPagesWithAnnotation("blah");
@@ -106,7 +106,7 @@ var AnnotationMemoryTests = {
   testPageHasAnnotation: function(self) {
     var annSvc = this.makeTestMemory(self);
 
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
     annSvc.setPageAnnotation(url, "blah", "foo");
     self.assertEqual(annSvc.pageHasAnnotation(url, "blah"), true);
   },
@@ -114,7 +114,7 @@ var AnnotationMemoryTests = {
   testGetPageAnnotation: function(self) {
     var annSvc = this.makeTestMemory(self);
 
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
 
     annSvc.setPageAnnotation(url, "blah", "foo");
     self.assertEqual(annSvc.getPageAnnotation(url, "blah"), "foo");
@@ -123,7 +123,7 @@ var AnnotationMemoryTests = {
   testRemovePageAnnotation: function(self) {
     var annSvc = this.makeTestMemory(self);
 
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
     annSvc.setPageAnnotation(url, "blah", "foo");
     annSvc.removePageAnnotation(url, "blah");
     self.assertEqual(annSvc.getPagesWithAnnotation("blah").length, 0);
@@ -147,7 +147,7 @@ var AnnotationMemoryTests = {
     };
 
     var annSvc = this.makeTestMemory(self);
-    var url = this.Utils.url("http://www.foo.com");
+    var url = this.UrlUtils.url("http://www.foo.com");
     annSvc.addObserver(ob);
 
     annSvc.setPageAnnotation(url, "blah", "foo");

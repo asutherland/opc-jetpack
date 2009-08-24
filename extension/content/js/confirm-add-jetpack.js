@@ -36,7 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("resource://jetpack/ubiquity-modules/utils.js");
 Components.utils.import("resource://jetpack/modules/setup.js");
 
 var UrlUtils = {};
@@ -144,7 +143,7 @@ function onReady() {
     }
   }
 
-  var urlScheme = Utils.url(gCommandFeedInfo.sourceUrl).scheme;
+  var urlScheme = UrlUtils.url(gCommandFeedInfo.sourceUrl).scheme;
   var safeSchemes = ["https", "chrome", "file", "resource"];
   if (safeSchemes.indexOf(urlScheme) == -1)
     $("#mitm-warning").show();
