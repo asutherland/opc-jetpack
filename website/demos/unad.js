@@ -1,3 +1,6 @@
+jetpack.future.import("storage.simple");
+var storage = jetpack.storage.simple;
+
 Blocklist = function(url) {
   this._getRules(url);
 };
@@ -68,7 +71,7 @@ function removeAds(doc) {
 }
 
 var widgets = [];
-var state = "off";
+var state = storage.state || "off";
 
 function toggleState() {
   if( state == "off" ){
@@ -78,6 +81,9 @@ function toggleState() {
     jetpack.tabs.onReady.unbind(removeAds);
     state = "off";
   }
+
+  // Persist the state.
+  storage.state = state;
   
   // This is a temporary way of keeping all browser window states
   // in sync. We are working on a better API for this.  
@@ -97,6 +103,5 @@ jetpack.statusBar.append({
   },
   onUnload: function(widget) {
     widgets.splice(widgets.indexOf(widget), 1);
-  },
-  width: 42
+  }
 });
