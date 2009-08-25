@@ -382,6 +382,12 @@ JetpackEnv.setFutures(
      var s = {};
      Cu.import("resource://jetpack/modules/music.js", s);
      return new s.MusicModule();
+   },
+   
+   "jetpack.video": function(context) {
+     var s = {};
+     Cu.import("resource://jetpack/modules/video.js", s);
+     return new s.VideoModule();
    }
   });
 
