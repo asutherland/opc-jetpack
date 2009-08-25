@@ -47,12 +47,7 @@ var XHR = {
   fromVisibleChromeWindow: function XHRfromVisibleChromeWindow() {
     var xhr;
     if (Extension.isHidden) {
-      var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
-               .getService(Ci.nsIWindowMediator);
-
-      // TODO: Really we should be using jetpack-app-nuances here.
-      var currWindow = wm.getMostRecentWindow("navigator:browser");
-
+      var currWindow = XULApp.mostRecentAppWindow;
       xhr = new currWindow.XMLHttpRequest();
     }
     xhr = new XMLHttpRequest();

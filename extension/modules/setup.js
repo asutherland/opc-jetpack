@@ -45,15 +45,10 @@ Components.utils.import("resource://jetpack/modules/init.js", Extension);
 var Jetpack = {};
 Components.utils.import("resource://jetpack/modules/jetpack_feed_plugin.js",
                         Jetpack);
+Components.utils.import("resource://jetpack/modules/xulapp.js");
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
-
-let Application = Cc["@mozilla.org/fuel/application;1"] ?
-                  Cc["@mozilla.org/fuel/application;1"]
-                    .getService(Ci.fuelIApplication) :
-                  Cc["@mozilla.org/steel/application;1"]
-                    .getService(Ci.steelIApplication);
 
 let observerSvc = Cc["@mozilla.org/observer-service;1"]
                   .getService(Ci.nsIObserverService);
@@ -123,21 +118,24 @@ let JetpackSetup = {
   },
 
   get version() {
-    return Application.extensions.get("jetpack@labs.mozilla.com").version;
+    return XULApp.Application.extensions.get("jetpack@labs.mozilla.com")
+           .version;
   },
 
   createServices: function createServices() {
     if (!gServices) {
       // Compare the version in our preferences from our version in the
       // install.rdf.
-      var currVersion = Application.prefs.getValue(VERSION_PREF, "firstrun");
+      var currVersion = XULApp.Application.prefs.getValue(VERSION_PREF,
+                                                          "firstrun");
       if (currVersion != this.version) {
-        Application.prefs.setValue(VERSION_PREF, this.version);
+        XULApp.Application.prefs.setValue(VERSION_PREF, this.version);
         this.isNewlyInstalledOrUpgraded = true;
       }
 
       // Allow JS chrome errors to show up in the error console.
-      Application.prefs.setValue("javascript.options.showInConsole", true);
+      XULApp.Application.prefs.setValue("javascript.options.showInConsole",
+                                        true);
 
       var annDbFile = AnnotationService.getProfileFile(ANN_DB_FILENAME);
       var annDbConn = AnnotationService.openDatabase(annDbFile);
@@ -152,7 +150,7 @@ let JetpackSetup = {
 
       // We might need to do some bootstrapping on first run
       if (currVersion == "firstrun" &&
-          Application.name != "Thunderbird")
+          XULApp.Application.name != "Thunderbird")
         this._bootstrap();
 
       this.__setupFinalizer();
@@ -168,7 +166,7 @@ let JetpackSetup = {
     if (this.isNewlyInstalledOrUpgraded &&
         !this._wasWelcomePageShownAtStartup) {
       this._wasWelcomePageShownAtStartup = true;
-      if (Application.name == "Thunderbird") {
+      if (XULApp.Application.name == "Thunderbird") {
         // If we're Thunderbird, do things slightly differently...
         window.addEventListener(
           "load",

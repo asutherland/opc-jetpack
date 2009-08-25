@@ -14,7 +14,9 @@
          // force the page into safe mode when it loads.
          Extension.sessionStorage.lastVisibleLoad = new Date();
        }
-       JetpackAppNuances.openTab('about:jetpack', false);
+       var jsm = {};
+       Components.utils.import("resource://jetpack/modules/xulapp.js", jsm);
+       jsm.XULApp.openTab('about:jetpack', false);
      }
    };
 

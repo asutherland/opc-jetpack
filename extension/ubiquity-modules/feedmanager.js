@@ -45,9 +45,13 @@
 
 let EXPORTED_SYMBOLS = ["FeedManager"];
 
+var Cc = Components.classes;
+var Ci = Components.interfaces;
+
 var UrlUtils = {};
 Components.utils.import("resource://jetpack/modules/url_utils.js", UrlUtils);
 Components.utils.import("resource://jetpack/ubiquity-modules/eventhub.js");
+Components.utils.import("resource://jetpack/modules/xulapp.js");
 
 const FEED_SRC_ANNO = "ubiquity/source";
 const FEED_TYPE_ANNO = "ubiquity/type";
@@ -302,19 +306,18 @@ FMgrProto.installToWindow = function FMgr_installToWindow(window) {
 };
 
 // TODO: Add Documentation for this
-FMgrProto.showNotification = function showNotification(plugin, targetDoc, commandsUrl, mimetype, name, notify_message) {
-
-  var Cc = Components.classes;
-  var Ci = Components.interfaces;
-
+FMgrProto.showNotification = function showNotification(plugin,
+                                                       targetDoc,
+                                                       commandsUrl,
+                                                       mimetype,
+                                                       name,
+                                                       notify_message)
+{
   // Find the <browser> which contains notifyWindow, by looking
   // through all the open windows and all the <browsers> in each.
   var wm = Cc["@mozilla.org/appshell/window-mediator;1"].
            getService(Ci.nsIWindowMediator);
-
-  // TODO: Really we should be using jetpack-app-nuances here.
-  var enumerator = wm.getEnumerator("navigator:browser");
-
+  var enumerator = wm.getEnumerator(XULApp.appWindowType);
   var tabbrowser = null;
   var foundBrowser = null;
 

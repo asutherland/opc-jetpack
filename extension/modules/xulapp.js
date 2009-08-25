@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Andrew Sutherland <asutherland@asutherland.org>
+ *   Atul Varma <avarma@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,15 +35,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var JetpackAppNuances;
+let EXPORTED_SYMBOLS = ["XULApp"];
+
+const Ci = Components.interfaces;
+const Cc = Components.classes;
+
+let Application = Cc["@mozilla.org/fuel/application;1"] ?
+                  Cc["@mozilla.org/fuel/application;1"]
+                  .getService(Ci.fuelIApplication) :
+                  Cc["@mozilla.org/steel/application;1"]
+                  .getService(Ci.steelIApplication);
+
+var XULAppProto = {
+  get mostRecentAppWindow() {
+    var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+             .getService(Ci.nsIWindowMediator);
+    return wm.getMostRecentWindow(this.appWindowType);
+  }
+};
 
 if (Application.name == "Firefox") {
-  JetpackAppNuances = {
+  XULApp = {
     appWindowType: "navigator:browser",
     tabStripForWindow: function(aWindow) {
       return aWindow.document.getElementById("content").mStrip;
     },
     openTab: function(aUrl, aInBackground) {
+      var window = this.mostRecentAppWindow;
       var tabbrowser = window.getBrowser();
       var tab = tabbrowser.addTab(aUrl);
       if (!aInBackground)
@@ -52,14 +71,14 @@ if (Application.name == "Firefox") {
       return aMainWindow.getBrowserFromContentWindow(aWindow);
     }
   };
-}
-else if (Application.name == "Thunderbird") {
-  JetpackAppNuances = {
+} else if (Application.name == "Thunderbird") {
+  XULApp = {
     appWindowType: "mail:3pane",
     tabStripForWindow: function (aWindow) {
       return aWindow.document.getElementById("tabmail").tabStrip;
     },
     openTab: function(aUrl, aInBackground) {
+      var document = this.mostRecentAppWindow.document;
       document.getElementById('tabmail').openTab(
         'contentTab',
         {contentPage: aUrl,
@@ -85,3 +104,6 @@ else if (Application.name == "Thunderbird") {
     }
   };
 }
+
+XULApp.Application = Application;
+XULApp.__proto__ = XULAppProto;

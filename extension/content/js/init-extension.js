@@ -29,6 +29,11 @@ const Ci = Components.interfaces;
 // be easily accounted for via weak references.
 Components.utils.import("resource://jetpack/modules/track.js");
 
+// Expose XUL app specifics to this page so that objects can do
+// things that vary from one app to another (e.g., from Firefox to
+// Thunderbird).
+Components.utils.import("resource://jetpack/modules/xulapp.js");
+
 var Extension = {
   // TODO: Eventually we may want to be able to put extensions in iframes
   // that are in visible windows, which these flags aren't compatible
@@ -101,8 +106,7 @@ var Extension = {
                       .rootTreeItem
                       .QueryInterface(Ci.nsIInterfaceRequestor)
                       .getInterface(Ci.nsIDOMWindow);
-     var browser = JetpackAppNuances.getBrowserFromContentWindow(mainWindow,
-                                                                 window);
+     var browser = XULApp.getBrowserFromContentWindow(mainWindow, window);
 
      Extension.visibleMainWindow = mainWindow;
      Extension.visibleBrowser = browser;

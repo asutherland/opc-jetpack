@@ -39,6 +39,7 @@ let EXPORTED_SYMBOLS = ["FeedPlugin", "FeedManager"];
 var UrlUtils = {};
 Components.utils.import("resource://jetpack/modules/url_utils.js",
                         UrlUtils);
+Components.utils.import("resource://jetpack/modules/xulapp.js");
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
@@ -49,20 +50,6 @@ const TRUSTED_DOMAINS_PREF = "extensions.jetpack.trustedDomains";
 
 var FeedManager = null;
 
-function openUrlInBrowser(url) {
-  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
-           .getService(Ci.nsIWindowMediator);
-
-  // TODO: We'll want to dynamically get the window type here
-  // depending on the application.
-  var currWindow = wm.getMostRecentWindow("navigator:browser");
-
-  // TODO: Really we should be using jetpack-app-nuances here.
-  var tabbrowser = currWindow.getBrowser();
-  var tab = tabbrowser.addTab(url);
-  tabbrowser.selectedTab = tab;
-}
-
 function FeedPlugin(feedManager) {
   if (!FeedManager)
     FeedManager = feedManager;
@@ -70,12 +57,6 @@ function FeedPlugin(feedManager) {
     Components.utils.reportError("FeedManager already defined.");
 
   this.type = TYPE;
-
-  let Application = Cc["@mozilla.org/fuel/application;1"] ?
-                    Cc["@mozilla.org/fuel/application;1"]
-                      .getService(Ci.fuelIApplication) :
-                    Cc["@mozilla.org/steel/application;1"]
-                      .getService(Ci.steelIApplication);
 
   this.onSubscribeClick = function DFP_onSubscribeClick(targetDoc,
                                                         commandsUrl,
@@ -107,7 +88,8 @@ function FeedPlugin(feedManager) {
       if (url.scheme != "https")
         return false;
 
-      var domains = Application.prefs.getValue(TRUSTED_DOMAINS_PREF, "");
+      var domains = XULApp.Application.prefs.getValue(TRUSTED_DOMAINS_PREF,
+                                                      "");
       domains = domains.split(",");
 
       for (var i = 0; i < domains.length; i++) {
@@ -126,7 +108,7 @@ function FeedPlugin(feedManager) {
                                        canAutoUpdate: true,
                                        sourceCode: data,
                                        type: TYPE});
-        openUrlInBrowser(confirmUrl);
+        XULApp.openTab(confirmUrl);
       }
 
       if (UrlUtils.isRemote(commandsUrl)) {
@@ -144,7 +126,7 @@ function FeedPlugin(feedManager) {
       } else
         onSuccess("");
     } else
-      openUrlInBrowser(confirmUrl);
+      XULApp.openTab(confirmUrl);
   };
 
   this.makeFeed = function DFP_makeFeed(baseFeedInfo, hub) {
