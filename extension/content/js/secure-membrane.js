@@ -231,7 +231,8 @@ SecureMembrane.TrustedWrapper.prototype = {
       // TODO: This is a workaround for #505494.
       return SecureMembrane.wrapTrusted(wrappee, true);
     }
-    if (name in wrappee)
+    if ((name in wrappee) ||
+        (name == "wrappedJSObject" && wrappee.wrappedJSObject))
       return this.safeGetProperty(wrappee, name);
     return undefined;
   },
