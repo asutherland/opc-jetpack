@@ -16,10 +16,10 @@ var legend = null;
 
 function updateGraph(){
   stash.history.push( jetpack.tabs.length );
-  
+
   if( stash.history.length > 400 )
     stash.history = stash.history.slice( 1 );
-  
+
   data.text( stash.history.join(",") );
   legend.text( stash.history[ stash.history.length-1 ] );
 }
@@ -34,6 +34,6 @@ jetpack.statusBar.append({
   onReady: function(widget){
     data = $("#data", widget);
     legend = $("#legend", widget);
-    updateTabCount();    
+    updateGraph();
   }
 })
