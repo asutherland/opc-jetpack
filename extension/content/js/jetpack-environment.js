@@ -46,7 +46,9 @@ var JetpackEnv = {
             console.logFromCaller([source, "is deprecated, please use",
                                    dest, "instead."], "warn");
             delete self[name];
-            self[name] = Cu.evalInSandbox(dest, context.sandbox);
+            var value = context.sandbox;
+            parts.forEach(function(name) { value = value[name]; });
+            self[name] = value;
             return self[name];
           });
       });
@@ -383,7 +385,7 @@ JetpackEnv.setFutures(
      Cu.import("resource://jetpack/modules/music.js", s);
      return new s.MusicModule();
    },
-   
+
    "jetpack.video": function(context) {
      var s = {};
      Cu.import("resource://jetpack/modules/video.js", s);
