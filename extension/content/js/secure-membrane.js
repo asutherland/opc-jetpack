@@ -155,7 +155,7 @@ SecureMembrane.BaseWrapper = {
     try {
       var str = this.safeObj.toString();
       if (typeof(str) == "string")
-        retval = "[object " + this.name + " " + str + "]";
+        retval = str;
     } catch (e) {}
     return retval;
   }

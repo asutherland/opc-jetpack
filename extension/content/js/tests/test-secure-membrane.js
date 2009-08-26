@@ -43,7 +43,7 @@ var SecureMembraneTests = {
 
     // Test coercion to string.
     self.assertEqual(tryCode("'' + tabs"),
-                     "[object SecureMembrane [Tabs]]");
+                     "[Tabs]");
 
     // Test dangerous properties.
     self.assertEqual(tryCode("tabs.nonexistent"), undefined);
