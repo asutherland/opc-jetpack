@@ -58,8 +58,12 @@ headers = -I. \
           -I$(sdkdir)/include \
           -I$(sdkdir)/include/system_wrappers \
           -I$(sdkdir)/include/xpcom \
+					-I$(sdkdir)/include/gfx \
           -I$(sdkdir)/include/string \
+					-I$(sdkdir)/include/content \
+					-I$(sdkdir)/include/dom \
           -I$(sdkdir)/include/nspr \
+					-I$(sdkdir)/include/thebes \
           -I$(sdkdir)/sdk/include \
           -I/usr/local/vidcap/include \
           -I/usr/local/theora/include
@@ -67,7 +71,7 @@ headers = -I. \
 # libraries
 libdirs := $(sdkdir)/lib $(sdkdir)/bin
 libs := xpcomglue_s xpcom nspr4 \
-        plds4 plc4
+        thebes plds4 plc4
 
 # compiler and Linker Flags
 ifeq ($(os), Darwin)

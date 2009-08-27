@@ -178,6 +178,7 @@ VideoRecorder::RecordToFileCallback(vidcap_src *src, void *data,
     ogg_page og;
     ogg_packet op;
     th_ycbcr_buffer ycbcr;
+    
     unsigned char *yuv = (unsigned char *)video->video_data;
     VideoRecorder *vr = static_cast<VideoRecorder*>(data);
     
@@ -213,6 +214,36 @@ VideoRecorder::RecordToFileCallback(vidcap_src *src, void *data,
             fwrite(og.header, og.header_len, 1, vr->outfile);
             fwrite(og.body, og.body_len, 1, vr->outfile);
         }
+        
+        if (vr->mCtx && vr->mThebes) {
+            unsigned char *rgb = (unsigned char *)
+                PR_Calloc(1, WIDTH * HEIGHT * 4);
+            vidcap_i420_to_rgb32(
+                WIDTH, HEIGHT,
+                (const char *)yuv, (char *)rgb
+            );
+            nsRefPtr<gfxImageSurface> img = new gfxImageSurface(
+                rgb, gfxIntSize(WIDTH, HEIGHT),
+                WIDTH * 4, gfxASurface::ImageFormatARGB32
+            );
+            if (!img || img->CairoStatus()) {
+                fprintf(stderr, "Could not setup gfxSurface!\n");
+            } else {
+                gfxContextPathAutoSaveRestore pathSR(vr->mThebes);
+                gfxContextAutoSaveRestore autoSR(vr->mThebes);
+                // ignore clipping region, as per spec
+                vr->mThebes->ResetClip();
+                vr->mThebes->IdentityMatrix();
+                vr->mThebes->Translate(gfxPoint(0, 0));
+                vr->mThebes->NewPath();
+                vr->mThebes->Rectangle(gfxRect(0, 0, WIDTH, HEIGHT));
+                vr->mThebes->SetSource(img, gfxPoint(0, 0));
+                vr->mThebes->SetOperator(gfxContext::OPERATOR_SOURCE);
+                vr->mThebes->Fill();
+            }
+            PR_Free((void *)rgb);
+        }
+        
         yuv += vr->size;
     }
     return 0;
@@ -330,7 +361,10 @@ VideoRecorder::SetupOggTheora(nsACString& file)
  * Start recording to file
  */
 NS_IMETHODIMP
-VideoRecorder::StartRecordToFile(nsACString& file)
+VideoRecorder::StartRecordToFile(
+    nsIDOMCanvasRenderingContext2D *ctx,
+    nsACString &file
+)
 {
     nsresult rv;
     if (recording) {
@@ -340,11 +374,22 @@ VideoRecorder::StartRecordToFile(nsACString& file)
     
     rv = SetupOggTheora(file);
     if (NS_FAILED(rv)) return rv;
-    
+
     /* Acquire camera */
     if (!(source = vidcap_src_acquire(sapi, &sources[0]))) {
         fprintf(stderr, "Failed vidcap_src_acquire()\n");
         return NS_ERROR_FAILURE;
+    }
+    
+    /* Acquire surface for callback */
+    if (ctx) {
+        gfxASurface **surface =
+            (gfxASurface **)PR_Malloc(sizeof(gfxASurface *));
+        mCtx = do_QueryInterface(ctx);
+        mCtx->GetThebesSurface(surface);
+        if (*surface != nsnull)
+            mThebes = new gfxContext(*surface);
+        PR_Free(surface);
     }
     
     /* Start recording */
@@ -393,8 +438,8 @@ VideoRecorder::Stop()
         fwrite(page.body, page.body_len, 1, outfile);
     }
     fclose(outfile);
-    
     ogg_stream_clear(ogg_state);
+    
     recording = 0;
     return NS_OK;
 }

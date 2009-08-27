@@ -36,10 +36,11 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
+#include "nsIDOMCanvasRenderingContext2D.idl"
 
 [scriptable, uuid(a369b4f1-40b7-4019-b5e8-4ac8575f0f24)]
 interface IVideoRecorder : nsISupports
 {
-	ACString startRecordToFile();
+	ACString startRecordToFile(in nsIDOMCanvasRenderingContext2D ctx);
   void stop();
 };
