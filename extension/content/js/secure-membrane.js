@@ -294,3 +294,7 @@ SecureMembrane.TrustedWrapper.prototype = {
 
   __proto__: SecureMembrane.BaseWrapper
 };
+
+(function() {
+   Logging.IGNORE_FRAMES[Components.stack.filename] = true;
+ })();

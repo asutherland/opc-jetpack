@@ -35,20 +35,8 @@ var Tests = {
     }
   },
 
-  _TestFailedAndExceptionLogged: function _TestFailedAndExceptionLogged() {
-    this.message = "Test failed and exception logged.";
-    this.alreadyLogged = true;
-    this.__proto__ = new Error();
-  },
-
   _exceptionAtCaller: function _exceptionAtCaller(message) {
-    var frame = Components.stack.caller.caller;
-    var e = new Error();
-    e.fileName = frame.filename;
-    e.lineNumber = frame.lineNumber;
-    e.message = message;
-    console.exception(e);
-    throw new this._TestFailedAndExceptionLogged();
+    throw new Logging.ErrorAtCaller(message, 1);
   },
 
   _runTest: function _runTest(test, onFinished) {
@@ -137,8 +125,7 @@ var Tests = {
       if (timeoutId === null && finishedId === null)
         report("success");
     } catch (e) {
-      if (!e.alreadyLogged)
-        console.exception(e);
+      console.exception(e);
       if (timeoutId === null && finishedId === null)
         report("failure");
     }

@@ -1,5 +1,31 @@
 var Logging = {
+  // Keys in this object should be URLs that we want to
+  // exclude as potential sources of logging messages. The
+  // values of the keys are irrelevant--we're just putting
+  // them in an object so that lookup is fast.
+  IGNORE_FRAMES: {},
+
   console: null,
+
+  getCallerFrame: function(stackFrameNumber) {
+    var stackFrame = Components.stack.caller.caller;
+
+    while (stackFrame.filename in this.IGNORE_FRAMES ||
+           !stackFrame.filename)
+      stackFrame = stackFrame.caller;
+
+    if (stackFrameNumber === undefined)
+      stackFrameNumber = 0;
+
+    for (var i = 0; i < stackFrameNumber; i++) {
+      stackFrame = stackFrame.caller;
+      while (stackFrame.filename in this.IGNORE_FRAMES ||
+             !stackFrame.filename)
+        stackFrame = stackFrame.caller;
+    }
+
+    return stackFrame;
+  },
 
   ConsoleListener: function ConsoleListener() {
     MemoryTracking.track(this);
@@ -70,13 +96,12 @@ var Logging = {
     }
 
     function report(aMessage, flag, stackFrameNumber) {
-      var stackFrame = Components.stack.caller;
+      var stackFrame;
 
       if (typeof(stackFrameNumber) != "number")
         stackFrame = stackFrameNumber;
       else
-        for (var i = 0; i < stackFrameNumber; i++)
-          stackFrame = stackFrame.caller;
+        stackFrame = Logging.getCallerFrame(stackFrameNumber + 1);
 
       var consoleService = Cc["@mozilla.org/consoleservice;1"]
                            .getService(Ci.nsIConsoleService);
@@ -124,12 +149,12 @@ var Logging = {
       }
 
       if (numFrames === undefined)
-        numFrames = 2;
+        numFrames = 0;
 
       if (!flag)
         logStringMessage.apply(this, args);
       else
-        report(stringifyArgs(args), flag, numFrames);
+        report(stringifyArgs(args), flag, numFrames + 1);
     };
   },
 
@@ -147,7 +172,7 @@ var Logging = {
 
     function wrapFirebugLogger(className) {
       function wrappedFirebugLogger() {
-        var frame = Components.stack.caller;
+        var frame = Logging.getCallerFrame();
         Firebug.Console.logFormatted(arguments, context, className, false,
                                      FBL.getFrameSourceLink(frame));
       }
@@ -162,11 +187,9 @@ var Logging = {
 
     self.logFromCaller = function logFromCaller(args, className,
                                                 numFrames) {
-      var frame = Components.stack.caller.caller;
-
-      if (numFrames !== undefined)
-        for (var i = 0; i < numFrames; i++)
-          frame = frame.caller;
+      if (numFrames === undefined)
+        numFrames = 0;
+      var frame = Logging.getCallerFrame(numFrames + 1);
 
       Firebug.Console.logFormatted(args, context, className, false,
                                    FBL.getFrameSourceLink(frame));
@@ -249,11 +272,9 @@ var Logging = {
   },
 
   ErrorAtCaller: function ErrorAtCaller(message, numFrames) {
-    var frame = Components.stack.caller.caller;
-
-    if (numFrames !== undefined)
-      for (var i = 0; i < numFrames; i++)
-        frame = frame.caller;
+    if (numFrames === undefined)
+      numFrames = 0;
+    var frame = Logging.getCallerFrame(numFrames + 1);
 
     this.fileName = frame.filename;
     this.lineNumber = frame.lineNumber;
