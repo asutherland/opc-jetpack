@@ -8,7 +8,8 @@
 
 // We keep the history in session storage so that the sparkline
 // is maintained even during development.
-var stash = jetpack.sessionStorage;
+
+var stash = jetpack.storage.live;
 if( !stash.history ) stash.history = [jetpack.tabs.length]
 
 var data = null;
@@ -21,7 +22,7 @@ function updateGraph(){
     stash.history = stash.history.slice( 1 );
 
   data.text( stash.history.join(",") );
-  legend.text( stash.history[ stash.history.length-1 ] );
+  legend.text( stash.history[ stash.history.length-1 ] ); 
 }
 
 jetpack.tabs.onOpen( updateGraph );
