@@ -47,7 +47,8 @@ var JetpackEnv = {
                                    dest, "instead."], "warn");
             delete self[name];
             var value = context.sandbox;
-            parts.forEach(function(name) { value = value[name]; });
+            var destParts = dest.split(".");
+            destParts.forEach(function(name) { value = value[name]; });
             self[name] = value;
             return self[name];
           });
