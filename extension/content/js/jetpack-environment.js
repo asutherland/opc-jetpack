@@ -195,9 +195,6 @@ window.addLazyLoaders(
    "js/status-bar-panel.js": [
      "StatusBar"
    ],
-   "js/securable-modules.js": [
-     "SecurableModuleLoader"
-   ],
    "js/timers.js": [
      "Timers"
    ],
@@ -342,11 +339,6 @@ JetpackEnv.setFutures(
 
    "jetpack.clipboard": function(context) {
      return new Clipboard();
-   },
-
-   "jetpack.securableModules": function(context) {
-     var loader = new SecurableModuleLoader(context.urlFactory);
-     return {require: loader.require};
    },
 
    "jetpack.selection": function(context) {
