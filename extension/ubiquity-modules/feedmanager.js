@@ -345,19 +345,40 @@ FMgrProto.showNotification = function showNotification(plugin,
        "click the button to the right.");
     }
 
-    var buttons = [
-      {accessKey: null,
-       callback: onSubscribeClick,
-       label: "Install...",
-       popup: null}
-    ];
-    box.appendNotification(
-      notify_message,
-      BOX_NAME,
-      "chrome://jetpack/content/gfx/jetpack_32x32.png",
-      box.PRIORITY_INFO_MEDIUM,
-      buttons
-    );
+    // Wait for the document to finish loading to look at anchors
+    targetDoc.addEventListener("DOMContentLoaded", function load() {
+      targetDoc.removeEventListener("DOMContentLoaded", load, false);
+
+      // Try finding an anchor that points to a jetpack install and use that
+      let replacedLink = false;
+      Array.forEach(targetDoc.getElementsByTagName("a"), function(anchor) {
+        // Only trigger on certain anchors
+        if (anchor.href != "https://jetpack.mozillalabs.com/install.html")
+          return;
+
+        // Trigger the feature install and cancel the original link
+        anchor.addEventListener("click", function(event) {
+          event.preventDefault();
+          onSubscribeClick();
+        }, false);
+
+        replacedLink = true;
+      });
+
+      // No need to show the notification bar if an install link was updated
+      if (replacedLink)
+        return;
+
+      let notifyIcon = "chrome://jetpack/content/gfx/jetpack_32x32.png";
+      let buttons = [{
+        accessKey: null,
+        callback: onSubscribeClick,
+        label: "Install...",
+        popup: null
+      }];
+      box.appendNotification(notify_message, BOX_NAME, notifyIcon,
+        box.PRIORITY_INFO_MEDIUM, buttons);
+    }, false);
   } else {
     Components.utils.reportError("Couldn't find tab for document");
   }
