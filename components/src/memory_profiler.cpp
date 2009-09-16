@@ -4,13 +4,6 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
-// TODO: This isn't actually safe, it just prints a warning message
-// whenever an integer is too big to fit into a jsval and returns
-// 0. Ideally this should be fixed to create a jsdouble * with the
-// integer's value.
-#define SAFE_INT_TO_JSVAL(i) (INT_FITS_IN_JSVAL(i) ? INT_TO_JSVAL(i) : \
-                              dealWithBigInt(i))
-
 typedef struct {
   JSDHashEntryStub base;
   unsigned int id;
@@ -53,11 +46,6 @@ typedef struct _ChildTracingState {
 } ChildTracingState;
 
 static ChildTracingState childTracingState;
-
-static jsval dealWithBigInt(unsigned int i) {
-  printf("WARNING: Large int %u cannot fit in jsval.\n", i);
-  return JSVAL_ZERO;
-}
 
 // JSTraceCallback to build a hashtable of children.
 static void childCountBuilder(JSTracer *trc, void *thing, uint32 kind)
@@ -108,6 +96,34 @@ static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
   }
 }
 
+// Given a small positive integer ID, return the JSObject * mapping to
+// it, or NULL if no such object exists.
+static JSObject *lookupObjectForId(uint32 id)
+{
+  if (id > 0 && id < tracingState.currId)
+    return tracingState.ids[id];
+  return NULL;
+}
+
+// Given a JSObject *, return the small positive integer ID mapping to
+// it, or 0 if no such object exists.
+static uint32 lookupIdForThing(void *thing)
+{
+  Profiler_HashEntry *entry;
+  entry = (Profiler_HashEntry *)
+    JS_DHashTableOperate(&tracingState.visited,
+                         thing,
+                         JS_DHASH_LOOKUP);
+  
+  if (entry == NULL)
+    return 0;
+
+  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry))
+    return entry->id;
+  else
+    return 0;
+}
+
 static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
                               JSObject *target, JSContext *targetCx)
 {
@@ -137,7 +153,7 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
   int currChild = 0;
   for (int i = 0; i < childTracingState.num; i++) {
     if (kinds[i] == JSTRACE_OBJECT) {
-      childrenVals[currChild] = SAFE_INT_TO_JSVAL((unsigned int) things[i]);
+      childrenVals[currChild] = INT_TO_JSVAL(lookupIdForThing(things[i]));
       currChild += 1;
     }
   }
@@ -267,7 +283,7 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
 
   if (JSVAL_IS_OBJECT(value)) {
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
-    value = SAFE_INT_TO_JSVAL((unsigned int) valueObj);
+    value = INT_TO_JSVAL(lookupIdForThing(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
     JSString *valueStr = JS_NewUCStringCopyZ(
       cx,
@@ -367,7 +383,7 @@ static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
 {
   if (obj != NULL)
     if (!JS_DefineProperty(cx, info, objName,
-                           SAFE_INT_TO_JSVAL((unsigned int) obj),
+                           INT_TO_JSVAL(lookupIdForThing(obj)),
                            NULL, NULL, JSPROP_ENUMERATE))
       return JS_FALSE;
   return JS_TRUE;
@@ -415,7 +431,7 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
     return JS_TRUE;
 
   JSObject *obj = JSVAL_TO_OBJECT(val);
-  *id = (unsigned int) obj;
+  *id = lookupIdForThing(obj);
 
   return JS_TRUE;
 }
@@ -436,17 +452,9 @@ static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
     if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
       return JS_FALSE;
 
-  Profiler_HashEntry *entry = (Profiler_HashEntry *)
-    JS_DHashTableOperate(&tracingState.visited,
-                         (void *) id,
-                         JS_DHASH_LOOKUP);
-  if (entry == NULL) {
-    JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
-  }
-
-  if (JS_DHASH_ENTRY_IS_BUSY((JSDHashEntryHdr *)entry))
-    *rval = OBJECT_TO_JSVAL((JSObject *) id);
+  JSObject *obj = lookupObjectForId(id);
+  if (obj)
+    *rval = OBJECT_TO_JSVAL(obj);
   else
     *rval = JSVAL_NULL;
 
@@ -539,12 +547,6 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
-typedef struct _EnumerateState {
-  JSContext *cx;
-  JSObject *table;
-  JSBool result;
-} EnumerateState;
-
 static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
                                        JSDHashEntryHdr *hdr,
                                        uint32 number,
@@ -555,44 +557,9 @@ static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
   return JS_DHASH_NEXT;
 }
 
-static JSDHashOperator hashEnumerator(JSDHashTable *table,
-                                      JSDHashEntryHdr *hdr,
-                                      uint32 number,
-                                      void *arg)
-{
-  EnumerateState *state = (EnumerateState *) arg;
-  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
-
-  jsval value = JSVAL_NULL;
-  JSObject *target = (JSObject *) entry->base.key;
-  JSContext *targetCx = tracingState.tracer.context;
-  JSClass *classp = JS_GET_CLASS(targetCx, target);
-
-  if (classp) {
-    JSString *name = JS_NewStringCopyZ(state->cx, classp->name);
-    if (name == NULL) {
-      JS_ReportOutOfMemory(state->cx);
-      state->result = JS_FALSE;
-      return JS_DHASH_STOP;
-    }
-    value = STRING_TO_JSVAL(name);
-  }
-
-  if (!JS_DefineElement(state->cx, state->table, (jsint) entry->base.key,
-                        value, NULL, NULL,
-                        JSPROP_ENUMERATE | JSPROP_INDEX)) {
-    state->result = JS_FALSE;
-    JS_ReportError(state->cx, "JS_DefineElement() failed");
-    return JS_DHASH_STOP;
-  }
-
-  return JS_DHASH_NEXT;
-}
-
 static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
                           jsval *argv, jsval *rval)
 {
-  EnumerateState state;
   JSObject *table = JS_NewObject(cx, NULL, NULL, NULL);
 
   if (table == NULL)
@@ -600,16 +567,28 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
 
   *rval = OBJECT_TO_JSVAL(table);
 
-  state.cx = cx;
-  state.table = table;
-  state.result = JS_TRUE;
+  for (int i = 1; i < tracingState.currId; i++) {
+    JSObject *target = tracingState.ids[i];
+    jsval value = JSVAL_NULL;
+    JSContext *targetCx = tracingState.tracer.context;
+    JSClass *classp = JS_GET_CLASS(targetCx, target);
 
-  JS_DHashTableEnumerate(&tracingState.visited,
-                         hashEnumerator,
-                         &state);
+    if (classp) {
+      JSString *name = JS_NewStringCopyZ(cx, classp->name);
+      if (name == NULL) {
+        JS_ReportOutOfMemory(cx);
+        return JS_FALSE;
+      }
+      value = STRING_TO_JSVAL(name);
+    }
 
-  if (!state.result)
-    return JS_FALSE;
+    if (!JS_DefineElement(cx, table, i,
+                          value, NULL, NULL,
+                          JSPROP_ENUMERATE | JSPROP_INDEX)) {
+      JS_ReportError(cx, "JS_DefineElement() failed");
+      return JS_FALSE;
+    }
+  }
 
   return JS_TRUE;
 }
@@ -631,7 +610,7 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
       if (!JS_DefineProperty(cx, info, "id",
-                             SAFE_INT_TO_JSVAL((unsigned int) target),
+                             INT_TO_JSVAL(lookupIdForThing(target)),
                              NULL, NULL,
                              JSPROP_ENUMERATE))
         return JS_FALSE;
@@ -723,12 +702,15 @@ static intN rootMapFun(void *rp, const char *name, void *data)
   // them.
 
   RootMapStruct *roots = (RootMapStruct *) data;
-  jsval id = SAFE_INT_TO_JSVAL(*((unsigned int *)rp));
-  if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
-    roots->rval = JS_FALSE;
-    return JS_MAP_GCROOT_STOP;
+  uint32 objId = lookupIdForThing(*((void **)rp));
+  if (objId) {
+    jsval id = INT_TO_JSVAL(objId);
+    if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
+      roots->rval = JS_FALSE;
+      return JS_MAP_GCROOT_STOP;
+    }
+    roots->length++;
   }
-  roots->length++;
   return JS_MAP_GCROOT_NEXT;
 }
 
