@@ -11,9 +11,21 @@
 #define SAFE_INT_TO_JSVAL(i) (INT_FITS_IN_JSVAL(i) ? INT_TO_JSVAL(i) : \
                               dealWithBigInt(i))
 
+typedef struct {
+  JSDHashEntryStub base;
+  unsigned int id;
+} Profiler_HashEntry;
+
 // Private structure to track the state of tracing the JS heap.
 
 typedef struct _TracingState {
+  // C array that maps from object IDs to JSObject *'s in the runtime
+  // that we're tracing.
+  JSObject **ids;
+
+  // The latest object ID that we've assigned.
+  unsigned int currId;
+
   // Keeps track of what objects we've visited so far.
   JSDHashTable visited;
 
@@ -65,24 +77,27 @@ static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
 // JSTraceCallback to build a hashtable of existing object references.
 static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
 {
-  JSDHashEntryStub *entry;
+  Profiler_HashEntry *entry;
 
   switch (kind) {
   case JSTRACE_OBJECT:
-    entry = (JSDHashEntryStub *)
+    entry = (Profiler_HashEntry *)
       JS_DHashTableOperate(&tracingState.visited,
                            thing,
                            JS_DHASH_LOOKUP);
     if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
-      entry = (JSDHashEntryStub *) JS_DHashTableOperate(&tracingState.visited,
-                                                        thing,
-                                                        JS_DHASH_ADD);
+      entry = (Profiler_HashEntry *) JS_DHashTableOperate(
+        &tracingState.visited,
+        thing,
+        JS_DHASH_ADD
+        );
       if (entry == NULL) {
         JS_ReportOutOfMemory(trc->context);
         tracingState.result = JS_FALSE;
         return;
       }
-      entry->key = thing;
+      entry->base.key = thing;
+      entry->id = tracingState.currId++;
       JS_TraceChildren(trc, thing, kind);
     }
     break;
@@ -421,7 +436,7 @@ static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
     if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
       return JS_FALSE;
 
-  JSDHashEntryStub *entry = (JSDHashEntryStub *)
+  Profiler_HashEntry *entry = (Profiler_HashEntry *)
     JS_DHashTableOperate(&tracingState.visited,
                          (void *) id,
                          JS_DHASH_LOOKUP);
@@ -530,16 +545,26 @@ typedef struct _EnumerateState {
   JSBool result;
 } EnumerateState;
 
+static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
+                                       JSDHashEntryHdr *hdr,
+                                       uint32 number,
+                                       void *arg)
+{
+  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
+  tracingState.ids[entry->id] = (JSObject *) entry->base.key;
+  return JS_DHASH_NEXT;
+}
+
 static JSDHashOperator hashEnumerator(JSDHashTable *table,
                                       JSDHashEntryHdr *hdr,
                                       uint32 number,
                                       void *arg)
 {
   EnumerateState *state = (EnumerateState *) arg;
-  JSDHashEntryStub *entry = (JSDHashEntryStub *) hdr;
+  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
 
   jsval value = JSVAL_NULL;
-  JSObject *target = (JSObject *) entry->key;
+  JSObject *target = (JSObject *) entry->base.key;
   JSContext *targetCx = tracingState.tracer.context;
   JSClass *classp = JS_GET_CLASS(targetCx, target);
 
@@ -553,7 +578,7 @@ static JSDHashOperator hashEnumerator(JSDHashTable *table,
     value = STRING_TO_JSVAL(name);
   }
 
-  if (!JS_DefineElement(state->cx, state->table, (jsint) entry->key,
+  if (!JS_DefineElement(state->cx, state->table, (jsint) entry->base.key,
                         value, NULL, NULL,
                         JSPROP_ENUMERATE | JSPROP_INDEX)) {
     state->result = JS_FALSE;
@@ -757,7 +782,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
 
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
-                         NULL, sizeof(JSDHashEntryStub),
+                         NULL, sizeof(Profiler_HashEntry),
                          JS_DHASH_DEFAULT_CAPACITY(100))) {
     JS_ReportOutOfMemory(cx);
     return JS_FALSE;
@@ -765,6 +790,8 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   // TODO: We might want to JS_GC() before starting the trace.
 
+  tracingState.currId = 1;
+  tracingState.ids = NULL;
   tracingState.runtime = JS_GetRuntime(cx);
   tracingState.result = JS_TRUE;
   tracingState.namedObjects = namedObjects;
@@ -774,6 +801,18 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   if (!tracingState.result)
     return JS_FALSE;
+
+  tracingState.ids = (JSObject **)PR_Malloc(
+    (tracingState.currId) * sizeof(JSObject *)
+    );
+  if (tracingState.ids == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+  tracingState.ids[0] = NULL;
+  JS_DHashTableEnumerate(&tracingState.visited,
+                         mapIdsToObjects,
+                         NULL);
 
   // TODO: We might want to lock the JS runtime of the caller here
   // to ensure that the object graph doesn't change while we're
@@ -833,6 +872,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   }
 
   /* Cleanup. */
+  PR_Free(tracingState.ids);
   JS_DHashTableFinish(&tracingState.visited);
   JS_EndRequest(serverCx);
   JS_DestroyContext(serverCx);
