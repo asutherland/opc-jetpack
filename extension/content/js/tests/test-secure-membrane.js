@@ -22,6 +22,14 @@ var SecureMembraneTests = {
     self.assertEqual(SecureMembrane.wrapUntrusted({foo: 5}).foo, 5);
   },
 
+  testSecureMembraneIterator: function(self) {
+    // Test that wrapped objects can be iterated over.
+    var o1 = SecureMembrane.wrapTrusted({foo: 1});
+    var o2 = SecureMembrane.wrapUntrusted({foo: 1});
+    for (var [key, val] in Iterator(o1));
+    for (var [key, val] in Iterator(o2));
+  },
+
   testSecureMembraneWorks: function(self) {
     var sandbox = Components.utils.Sandbox("http://www.foo.com");
     var tabHarness = new Tabs();

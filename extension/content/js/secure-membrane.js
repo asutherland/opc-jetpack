@@ -141,7 +141,7 @@ SecureMembrane.BaseWrapper = {
       var self = this;
       function keyValueIterator() {
         for (name in wrappee)
-          yield [name, this.safeGetProperty(wrappee, name)];
+          yield [name, self.safeGetProperty(wrappee, name)];
       }
       return keyValueIterator();
     }
