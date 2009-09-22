@@ -94,5 +94,14 @@ var SecureMembraneTests = {
     self.assertEqual(wrappedFoo(5), 10);
     self.assertEqual(wrappedFoo.apply(this, [5]), 10);
     self.assertEqual(wrappedFoo.call(this, 5), 10);
+  },
+
+  testSecureMembraneQueryInterface: function(self) {
+    let dummyXpcomObj = Cc["@mozilla.org/appshell/window-mediator;1"].
+                        getService(Ci.nsIWindowMediator);
+    var trusted = SecureMembrane.wrapTrusted(dummyXpcomObj);
+    var untrusted = SecureMembrane.wrapUntrusted(dummyXpcomObj);
+    trusted.QueryInterface(Ci.nsISupports);
+    untrusted.QueryInterface(Ci.nsISupports);
   }
 };
