@@ -63,7 +63,7 @@ let _Selection = let (T = {
 
     // Allow listening for the user to select content
     exportObj.onSelection = function(callback) {
-      T.addListener(context, callback);
+      T.addListener(context, function() callback());
     };
 
     // Allow listeners to stop listening
