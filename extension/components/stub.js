@@ -1,6 +1,7 @@
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
+const Cr = Components.results;
 
 // The bulk of this function was taken from:
 //
@@ -21,13 +22,21 @@ function NSGetModule() {
       libFile.append(osDirName);
       libFile.append(platformVersion);
 
-      // Note: we register a directory instead of an individual file because
-      // Gecko will only load components with a specific file name pattern. We
-      // don't want this file to have to know about that. Luckily, if you
-      // register a directory, Gecko will look inside the directory for files
-      // to load.
-      compMgr = compMgr.QueryInterface(Ci.nsIComponentRegistrar);
-      compMgr.autoRegister(libFile);
+      if (!(libFile.exists() && libFile.isDirectory())) {
+        Components.utils.reportError(
+          ("Sorry, a required binary component for Jetpack isn't " +
+           "currently available for your operating system (" + osDirName +
+           ") and platform (Gecko " + platformVersion + ").")
+        );
+      } else {
+        // Note: we register a directory instead of an individual file
+        // because Gecko will only load components with a specific
+        // file name pattern. We don't want this file to have to know
+        // about that. Luckily, if you register a directory, Gecko
+        // will look inside the directory for files to load.
+        compMgr = compMgr.QueryInterface(Ci.nsIComponentRegistrar);
+        compMgr.autoRegister(libFile);
+      }
     }
   };
 }
