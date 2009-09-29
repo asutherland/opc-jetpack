@@ -349,9 +349,7 @@ JetpackEnv.setFutures(
      var s = {};
      Cu.import("resource://jetpack/modules/simple-storage.js", s);
 
-     // TODO: context.srcUrl or context.url?  We hash this as the
-     // feature's ID, so it should be unique to this feature. -adw
-     var ss = new s.simpleStorage.SimpleStorage(context.srcUrl);
+     var ss = new s.simpleStorage.SimpleStorage(context.id);
      s.simpleStorage.register(ss);
      context.addUnloader({ unload: function () s.simpleStorage.unregister(ss)});
      return ss;

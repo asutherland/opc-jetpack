@@ -40,7 +40,12 @@ var SimpleStorageTests = {
 
   _ss: (function () {
     Components.utils.import("resource://jetpack/modules/simple-storage.js");
-    var ss = new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
+    // The hex string is the SHA1 of the "http://example.com/my_jetpack" source
+    // URL example, since SimpleStorage takes a feature ID, and feature IDs are
+    // currently SHA1 hashes of their source URLs.  We could actually use any
+    // value, but we might as well test it with the kind of value it expects.
+    var ss = new simpleStorage.
+             SimpleStorage("b9cf68241646a52c29bef63ac402c372a29b78f5");
     ss._suppressDeprecationWarnings(true);
     return ss;
   })(),
@@ -537,8 +542,8 @@ var SimpleStorageTests = {
 
   testInitMultipleTimes: function (runner) {
     for (var i = 0; i < 10; i++) {
-      this._ss =
-        new simpleStorage.SimpleStorage("http://example.com/my_jetpack");
+      this._ss = new simpleStorage.
+                 SimpleStorage("b9cf68241646a52c29bef63ac402c372a29b78f5");
       this._ss._suppressDeprecationWarnings(true);
     }
   },
@@ -751,5 +756,13 @@ var SimpleStorageTests = {
 
   testSyncEmptyObject: function (runner) {
     this._testSyncStoreAndLoad(runner, {});
+  },
+
+  testSyncDifferentStoreName: function (runner) {
+    // If I create a store under a different store name and set a property
+    // in it, the property shouldn't be defined in the existing store.
+    var ss = new simpleStorage.SimpleStorage("fake-ID", "settings");
+    ss.foo = "bar";
+    runner.assertEqual(typeof this._ss.foo, "undefined");
   }
 };

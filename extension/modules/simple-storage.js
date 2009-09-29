@@ -75,7 +75,16 @@
 // {{{ProfD/jetpack/featureId/storage/simple.json}}}
 //
 // where {{{ProfD}}} is the user's Firefox profile directory and {{{featureId}}}
-// is the "ID" of the feature.  To generate a feature's ID, we hash its URL.
+// is the ID of the feature.
+//
+// Jetpack modules that use SimpleStorage to store their own feature-specific
+// data and don't want to overwrite data that the feature is storing (or have
+// their data overwritten by it) can specify a different store name to the
+// SimpleStorage constructor, whereupon this module will use a separate private
+// backing JSON store at a path like the one above, except that the filename
+// will be the provided store name followed by ".json".  For example,
+// the settings module uses SimpleStorage to create a store with the filename
+// "settings.json" by passing "settings" as the constructor's second argument.
 
 var EXPORTED_SYMBOLS = ["simpleStorage"];
 
@@ -123,18 +132,21 @@ var simpleStorage = {
 //
 // Each Jetpack feature is tied to an instance of simple storage, and that's
 // reflected in the code.  Create a new {{{SimpleStorage}}} object with this
-// constructor, passing in the feature's URL.
+// constructor, passing in the feature's URL and the name of the store
+// to create.
 
-function SimpleStorage(aFeatureUrl) {
+function SimpleStorage(aFeatureId, aStoreName) {
   MemoryTracking.track(this);
 
   ensureGecko191();
-  if (typeof(aFeatureUrl) !== "string" || !aFeatureUrl)
-    throw new Error("Feature URL must be a nonempty string.");
+  if (typeof(aFeatureId) !== "string" || !aFeatureId)
+    throw new Error("Feature ID must be a nonempty string.");
 
-  var featureId = featureUrlToId(aFeatureUrl);
-  var impl = new SimpleStorageImpl(featureId);
-  var deprecatedImpl = new SimpleStorageDeprecatedImpl(featureId);
+  if (typeof(aStoreName) !== "string" || !aStoreName)
+    aStoreName = "simple";
+
+  var impl = new SimpleStorageImpl(aFeatureId, aStoreName);
+  var deprecatedImpl = new SimpleStorageDeprecatedImpl(aFeatureId);
 
   // This object delegates to the API implementations by forwarding method calls
   // to them.  That allows us to not have to worry (too much, see below) about
@@ -193,9 +205,9 @@ SimpleStorage.prototype = {
 
 // API implementation /////////////////////////////////////////////////////////
 
-function SimpleStorageImpl(aFeatureId) {
+function SimpleStorageImpl(aFeatureId, aStoreName) {
   MemoryTracking.track(this);
-  var jsonFile = getJsonFile(aFeatureId);
+  var jsonFile = getJsonFile(aFeatureId, aStoreName);
 
   // === {{{SimpleStorage.deleteBackingFile()}}} ===
   //
@@ -247,14 +259,6 @@ function SimpleStorageImpl(aFeatureId) {
 // Prepends "jetpack.storage.simple:" to aMsg.
 function SimpleStorageError(aMsg) {
   this.__proto__ = new Error("jetpack.storage.simple: " + aMsg);
-}
-
-// Maps the given string of bytes to its hexidecimal representation.  Returns a
-// string.
-function bytesToHexString(aByteStr) {
-  return Array.map(
-    aByteStr, function (c) ("0" + c.charCodeAt(0).toString(16)).slice(-2)
-  ).join("");
 }
 
 // Adds all the key-value pairs of aSourceObj to aDestObj.
@@ -322,21 +326,17 @@ function ensureGecko191() {
     throw new Error("jetpack.storage.simple requires Gecko 1.9.1 or later.");
 }
 
-// Hashes the given feature URL.  Hey, an ID.
-function featureUrlToId(aFeatureUrl) {
-  return hashString(aFeatureUrl);
-}
 
 // Returns an nsIFile suitable for the feature with the given ID.  This function
 // does *not* create the file.
-function getJsonFile(aFeatureId) {
+function getJsonFile(aFeatureId, aStoreName) {
   var dir = Cc["@mozilla.org/file/directory_service;1"].
             getService(Ci.nsIProperties);
   var file = dir.get("ProfD", Ci.nsIFile);
   file.append("jetpack");
   file.append(aFeatureId);
   file.append("storage");
-  file.append("simple.json");
+  file.append(aStoreName + ".json");
   return file;
 }
 
@@ -355,18 +355,6 @@ function getSyncTimerPeriod() {
     period = 300000;
   }
   return period;
-}
-
-// Returns a hex string hash of the given string.
-function hashString(aStr) {
-  var stream = Cc["@mozilla.org/io/string-input-stream;1"].
-               createInstance(Ci.nsIStringInputStream);
-  stream.setData(aStr, aStr.length);
-  var cryp = Cc["@mozilla.org/security/hash;1"].
-             createInstance(Ci.nsICryptoHash);
-  cryp.init(cryp.SHA1);
-  cryp.updateFromStream(stream, aStr.length);
-  return bytesToHexString(cryp.finish(false));
 }
 
 // Decodes the JSON stored in aJsonFile and adds the key-value pairs to
