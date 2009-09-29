@@ -355,6 +355,16 @@ JetpackEnv.setFutures(
      return ss;
    },
 
+   "jetpack.storage.settings": function (context) {
+     var s = {};
+     Cu.import("resource://jetpack/modules/simple-storage.js", s);
+
+     var ss = new s.simpleStorage.SimpleStorage(context.id, "settings");
+     s.simpleStorage.register(ss);
+     context.addUnloader({ unload: function () s.simpleStorage.unregister(ss)});
+     return ss;
+   },
+
    "jetpack.slideBar": function(context) {
      return SlideBar.makeExported(context);
    },

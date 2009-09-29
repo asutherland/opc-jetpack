@@ -186,6 +186,9 @@ function SimpleStorage(aFeatureId, aStoreName) {
 }
 
 SimpleStorage.prototype = {
+  // Just so we show up as some class when introspected.
+  constructor: function SimpleStorage() {},
+
   // Unfortunately, since we add __noSuchMethod__ directly on this object, it's
   // yielded during iteration.  Define a custom iterator to hide it.  It's
   // hidden only during iteration, though.
