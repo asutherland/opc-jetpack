@@ -125,10 +125,18 @@ function doProfiling() {
   var result = endpoint.profileMemory(code, filename, 1);
   var totalTime = (new Date()) - start;
   log("time spent in memory profiling: " + totalTime + " ms");
-  log("analyzing data now, please wait.");
-  window.setTimeout(function() {
-    analyzeResult(result);
-  }, 0);
+
+  result = JSON.parse(result);
+  if (result.success) {
+    log("analyzing data now, please wait.");
+    window.setTimeout(function() {
+      analyzeResult(JSON.stringify(result.data));
+    }, 0);
+  } else {
+    log("An error occurred while profiling.");
+    log(result.traceback);
+    log(result.error);
+  }
 }
 
 $(window).ready(function() {
