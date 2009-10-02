@@ -37,6 +37,7 @@
 #include "tcb.h"
 
 static JSFunctionSpec TCB_global_functions[] = {
+  JS_FS("setGCZeal",      TCB_setGCZeal,      1, 0, 0),
   JS_FS("seal",           TCB_seal,           1, 0, 0),
   JS_FS("print",          TCB_print,          1, 0, 0),
   JS_FS("stack",          TCB_stack,          0, 0, 0),
@@ -55,6 +56,30 @@ JSClass TCB_global_class = {
   JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub,
   JSCLASS_NO_OPTIONAL_MEMBERS
 };
+
+// This native JS function sets how frequently garbage collection
+// will occur, 0 being "normal" and 2 being "really really often".
+// If GC zeal-setting isn't enabled in the current build, this
+// function does nothing.
+
+extern JSBool TCB_setGCZeal(JSContext *cx, JSObject *obj, uintN argc,
+                            jsval *argv, jsval *rval)
+{
+  int32 zeal;
+  if (!JS_ConvertArguments(cx, argc, argv, "i", &zeal))
+    return JS_FALSE;
+
+  if (zeal < 0 || zeal > 2) {
+    JS_ReportError(cx, "zeal level out of range");
+    return JS_FALSE;
+  }
+
+#ifdef JS_GC_ZEAL
+  JS_SetGCZeal(cx, zeal);
+#endif
+
+  return JS_TRUE;
+}
 
 // This native JS function "seals" the given object, preventing it
 // from being modified. This function may or may not be identical to
@@ -360,10 +385,6 @@ void TCB_handleError(JSContext *cx, JSObject *global)
 
 JSBool TCB_init(JSContext *cx, jsval *rval)
 {
-#ifdef DEBUG
-  JS_SetGCZeal(cx, 2);
-#endif
-
   JSRuntime *rt = JS_GetRuntime(cx);
 
   // Create the TCB's global object.

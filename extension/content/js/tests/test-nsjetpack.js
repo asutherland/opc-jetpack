@@ -491,7 +491,7 @@ var WrapperTests = {
 
     // MEMORY PROFILING TESTS
 
-    function runMemoryProfilingTest(func, namedObjects) {
+    function runMemoryProfilingTest(func, namedObjects, argument) {
       function injectErrorReportingIntoContext(global) {
         // This function is called by the profiling runtime whenever an
         // uncaught exception occurs.
@@ -522,17 +522,21 @@ var WrapperTests = {
       // Remove newlines from error reporting code so that the function
       // code we put after it retains its original line numbering.
       code = "(" + code.replace(/\n/g, ";") + ")(this);";
+      code += "setGCZeal(2);";
       code += "(" + func.toString() + ")();";
 
       var funcInfo = functionInfo(func);
 
       return profileMemory(code, funcInfo.filename, funcInfo.lineNumber,
-                           namedObjects);
+                           namedObjects, argument);
     }
 
     // This function's source code is injected into the separate JS
     // runtime of the memory profiler.
-    function memoryProfilingTests(global) {
+    function visitObjects(global) {
+      // Change this to '2' to have this test take insanely long on
+      // debug builds.
+      setGCZeal(0);
       var visited = {};
       var visitedCount = 0;
       var namedObjects = getNamedObjects();
@@ -576,12 +580,12 @@ var WrapperTests = {
     }
 
     assert(
-      functionInfo(memoryProfilingTests).filename.indexOf("test-nsjetpa") > 0,
+      functionInfo(visitObjects).filename.indexOf("test-nsjetpa") > 0,
       "functionInfo() must contain accurate filename component."
     );
 
     assert(
-      functionInfo(memoryProfilingTests).lineNumber > 0,
+      functionInfo(visitObjects).lineNumber > 0,
       "functionInfo() must contain accurate line number component."
     );
 
@@ -644,10 +648,18 @@ var WrapperTests = {
       return windows;
     }
 
+    assertEqual(runMemoryProfilingTest(function() { return argument; },
+                                       {}, "blah"), "blah");
+
+    // TODO: This one is kind of weird, but mostly we're just doing it
+    // to make sure we don't segfault.
+    assertEqual(runMemoryProfilingTest(function() { return argument; },
+                                       {}), "undefined");
+
     assertEqual(runMemoryProfilingTest(function() { return 1; }), 1);
     assertEqual(runMemoryProfilingTest(function() { return 'foo'; }), 'foo');
 
-    runMemoryProfilingTest(memoryProfilingTests, getBrowserWindows());
+    runMemoryProfilingTest(visitObjects, getBrowserWindows());
 
     output("Done profiling memory.");
 

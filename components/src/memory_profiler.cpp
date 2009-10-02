@@ -758,9 +758,10 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   const char *filename;
   uint32 lineNumber = 1;
   JSObject *namedObjects = NULL;
+  JSString *argument = NULL;
 
-  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uo", &code, &filename,
-                           &lineNumber, &namedObjects))
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
+                           &lineNumber, &namedObjects, &argument))
     return JS_FALSE;
 
   if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
@@ -823,6 +824,26 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   JSObject *serverGlobal = JSVAL_TO_OBJECT(serverRval);
 
   if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
+    return JS_FALSE;
+
+  jsval argumentVal = JSVAL_NULL;
+
+  if (argument) {
+    JSString *serverArgumentStr = JS_NewUCStringCopyZ(
+      serverCx,
+      JS_GetStringChars(argument)
+      );
+
+    if (serverArgumentStr == NULL) {
+      JS_ReportOutOfMemory(serverCx);
+      return JS_FALSE;
+    }
+
+    argumentVal = STRING_TO_JSVAL(serverArgumentStr);
+  }
+
+  if (!JS_DefineProperty(serverCx, serverGlobal, "argument",
+                         argumentVal, NULL, NULL, JSPROP_ENUMERATE))
     return JS_FALSE;
 
   JSBool wasSuccessful = JS_TRUE;

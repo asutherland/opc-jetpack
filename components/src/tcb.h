@@ -39,6 +39,9 @@
 
 extern JSClass TCB_global_class;
 
+extern JSBool TCB_setGCZeal(JSContext *cx, JSObject *obj, uintN argc,
+                            jsval *argv, jsval *rval);
+
 extern JSBool TCB_seal(JSContext *cx, JSObject *obj, uintN argc,
                        jsval *argv, jsval *rval);
 
