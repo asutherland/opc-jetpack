@@ -13,7 +13,7 @@ function getBinaryComponent() {
 }
 
 function log(message, isInstant) {
-  var elem = $("<pre></pre>");
+  var elem = $("<p></p>");
   if (!isInstant)
     elem.hide();
   elem.text(message);
@@ -21,6 +21,8 @@ function log(message, isInstant) {
   if (!isInstant)
     elem.slideDown();
 }
+
+var MAX_SHAPE_NAME_LEN = 80;
 
 function analyzeResult(result) {
   var worker = new Worker('memory-profiler.worker.js');
@@ -32,81 +34,74 @@ function analyzeResult(result) {
     objInfos.sort(function(b, a) {
       return a.count - b.count;
     });
-    objInfos.forEach(function(info) {
-      var row = $("<tr></tr>");
-      var name = $("<td></td>");
-      if (info.name.length > 80)
-        info.name = info.name.slice(0, 80) + "...";
-      info.name = info.name.replace(/,/g, "/");
-      name.text(info.name);
-      name.css({fontFamily: "monospace"});
-      row.append(name);
-      var count = $("<td></td>");
-      count.text(info.count);
-      row.append(count);
-      $("#objtable").append(row);
-    });
+    objInfos.forEach(
+      function(info) {
+        var row = $("<tr></tr>");
+        var name = $("<td></td>");
+        if (info.name.length > MAX_SHAPE_NAME_LEN)
+          info.name = info.name.slice(0, MAX_SHAPE_NAME_LEN) + "\u2026";
+        info.name = info.name.replace(/,/g, "/");
+        if (!info.name)
+          info.name = "(no properties)";
+        else
+          if (info.name.charAt(info.name.length-1) == "/")
+            info.name = info.name.slice(0, info.name.length-1);
+        name.text(info.name);
+        name.addClass("object-name");
+        row.append(name);
+        var count = $("<td></td>");
+        count.text(info.count);
+        row.append(count);
+        $("#objtable").append(row);
+      });
     $("#objtable").parent().fadeIn();
 
     var funcInfos = [info for each (info in data.functions)];
     funcInfos.sort(function(b, a) {
       return a.rating - b.rating;
     });
-    funcInfos.forEach(function(info) {
-      var row = $("<tr></tr>");
-      var name = $("<td></td>");
-      name.text(info.name + "()");
-      name.css({cursor: "pointer", fontFamily: "monospace"});
-      name.get(0).info = info;
-      name.click(function() {
-        window.openDialog("chrome://global/content/viewSource.xul",
-                          "_blank", "all,dialog=no",
-                          this.info.filename, null, null, this.info.lineStart);
+    funcInfos.forEach(
+      function(info) {
+        var row = $("<tr></tr>");
+        var name = $("<td></td>");
+        name.text(info.name + "()");
+        name.addClass("object-name");
+        name.addClass("clickable");
+        name.get(0).info = info;
+        name.click(
+          function() {
+            window.openDialog(
+              "chrome://global/content/viewSource.xul",
+              "_blank", "all,dialog=no",
+              this.info.filename, null, null, this.info.lineStart
+            );
+          });
+        row.append(name);
+
+        function addCell(content) {
+          var cell = $("<td></td>");
+          row.append(cell.text(content));
+        }
+
+        addCell(info.instances);
+        addCell(info.referents);
+        addCell(info.isGlobal);
+        addCell(info.protoCount);
+
+        $("#functable").append(row);
       });
-      row.append(name);
-
-      function addCell(content) {
-        var cell = $("<td></td>");
-        row.append(cell.text(content));
-      }
-
-      addCell(info.instances);
-      addCell(info.referents);
-      addCell(info.isGlobal);
-      addCell(info.protoCount);
-
-      $("#functable").append(row);
-    });
     $("#functable").parent().fadeIn();
 
-    log("Raw window data: " + JSON.stringify(data.windows));
-    if (data.rejectedTypes.length)
-      log("Rejected types: " + data.rejectedTypes.join(", "));
-    log("Done.");
+    //log("Raw window data: " + JSON.stringify(data.windows));
+    if (data.rejectedTypes.length) {
+      //log("Rejected types: " + data.rejectedTypes.join(", "));
+    }
+    log("Done. To profile again, please reload this page.");
   };
   worker.onerror = function(error) {
     log("An error occurred: " + error.message);
   };
   worker.postMessage(result);
-}
-
-function getBrowserWindows() {
-  var windows = [];
-  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
-    .getService(Ci.nsIWindowMediator);
-  var enumerator = wm.getEnumerator("navigator:browser");
-  while(enumerator.hasMoreElements()) {
-    var win = enumerator.getNext();
-    if (win.gBrowser) {
-      var browser = win.gBrowser;
-      for (var i = 0; i < browser.browsers.length; i++) {
-        var page = browser.browsers[i];
-        windows.push({browser: page,
-                      href: page.contentWindow.location.href});
-      }
-    }
-  }
-  return windows;
 }
 
 function htmlCollectionToArray(coll) {
@@ -132,7 +127,7 @@ function recursivelyGetIframes(document) {
   return iframes;
 }
 
-function doProfiling() {
+function doProfiling(browserInfo) {
   Cu.import("resource://jetpack/modules/setup.js");
   var file = JetpackSetup.getExtensionDirectory();
   file.append('content');
@@ -140,27 +135,11 @@ function doProfiling() {
   var code = FileIO.read(file, 'utf-8');
   var filename = FileIO.path(file);
 
-  var windows = getBrowserWindows();
   var windowsToProfile = [];
-  var toProfile;
-  for (var i = 0; i < windows.length; i++) {
-    var win = windows[i];
-    if ((win.href.indexOf("http") == 0) ||
-        (win.href.indexOf("file:") == 0)) {
-      var iframes = recursivelyGetIframes(win.browser.contentDocument);
-      windowsToProfile = [win.browser.contentWindow.wrappedJSObject];
-      windowsToProfile = windowsToProfile.concat(iframes);
-      toProfile = win;
-      break;
-    }
-  }
-
-  if (!toProfile) {
-    log("please open a tab with an http, https, or file URL to profile.");
-    return;
-  }
-  log("profiling the tab at " + toProfile.href +
-      " but ignoring any embedded iframes.");
+  var browser = browserInfo.browser;
+  var iframes = recursivelyGetIframes(browser.contentDocument);
+  windowsToProfile = [browser.contentWindow.wrappedJSObject];
+  windowsToProfile = windowsToProfile.concat(iframes);
 
   var start = new Date();
   var binary = getBinaryComponent();
@@ -172,12 +151,12 @@ function doProfiling() {
   var result = binary.profileMemory(code, filename, 1,
                                     windowsToProfile);
   var totalTime = (new Date()) - start;
-  log("time spent in memory profiling: " + totalTime + " ms");
+  //log(totalTime + " ms were spent in memory profiling.");
 
   result = JSON.parse(result);
   if (result.success) {
-    log("analyzing data now, please wait.");
-    log("named objects: " + JSON.stringify(result.data.namedObjects));
+    log("Analyzing profiling data now, please wait.");
+    //log("named objects: " + JSON.stringify(result.data.namedObjects));
     window.setTimeout(function() {
       analyzeResult(JSON.stringify(result.data));
     }, 0);
@@ -188,8 +167,50 @@ function doProfiling() {
   }
 }
 
-$(window).ready(function() {
-  Components.utils.forceGC();
-  log("profiling now, please wait.", true);
-  window.setTimeout(doProfiling, 0);
-});
+function makeProfilerFor(browserInfo) {
+  return function() {
+    Components.utils.forceGC();
+    $("#form").remove();
+    log("Profiling \u201c" + browserInfo.name + "\u201d. Please wait.", true);
+    window.setTimeout(function() { doProfiling(browserInfo); }, 0);
+  };
+}
+
+var MAX_TAB_NAME_LEN = 60;
+
+function getBrowserInfos() {
+  var windows = [];
+  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+    .getService(Ci.nsIWindowMediator);
+  var enumerator = wm.getEnumerator("navigator:browser");
+  while(enumerator.hasMoreElements()) {
+    var win = enumerator.getNext();
+    if (win.gBrowser) {
+      var browser = win.gBrowser;
+      for (var i = 0; i < browser.browsers.length; i++) {
+        var page = browser.browsers[i];
+        var name = page.contentTitle || page.currentURI.spec;
+        if (name.length > MAX_TAB_NAME_LEN)
+          name = name.slice(0, MAX_TAB_NAME_LEN) + "\u2026";
+        windows.push({browser: page,
+                      name: name,
+                      href: page.contentWindow.location.href});
+      }
+    }
+  }
+  return windows;
+}
+
+function onReady() {
+  var browsers = getBrowserInfos();
+  browsers.forEach(
+    function(info) {
+      var item = $("<li></li>");
+      item.text(info.name);
+      item.click(makeProfilerFor(info));
+      item.addClass("clickable");
+      $("#tab-list").append(item);
+    });
+}
+
+$(window).ready(onReady);
