@@ -31,8 +31,7 @@ function analyzeResult(result) {
     var info = graph[id];
 
     // Add function info.
-    if (info.filename &&
-        info.filename.indexOf("http") == "0") {
+    if (info.filename) {
       var name = info.name;
       if (!name)
         name = "anonymous";
