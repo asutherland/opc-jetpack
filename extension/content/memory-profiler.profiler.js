@@ -20,10 +20,17 @@ function doProfiling() {
   var maxShapeId = 0;
   var windows = {};
 
-  for each (id in namedObjects) {
-    var wrappedId = getObjectInfo(id).wrappedObject;
-    var innerId = getObjectInfo(wrappedId).innerObject;
-    windows[innerId] = true;
+  for (name in namedObjects) {
+    var id = namedObjects[name];
+    var info = getObjectInfo(id);
+    while (info.wrappedObject) {
+      id = info.wrappedObject;
+      info = getObjectInfo(info.wrappedObject);
+    }
+    if (info.innerObject)
+      id = info.innerObject;
+    namedObjects[name] = id;
+    windows[id] = true;
   }
 
   var table = getObjectTable();
@@ -66,7 +73,8 @@ function doProfiling() {
   var rejectedList = [];
   for (name in rejectedTypes)
     rejectedList.push(name);
-  return {graph: graph,
+  return {namedObjects: namedObjects,
+          graph: graph,
           shapes: shapesArray,
           rejectedTypes: rejectedList};
 }

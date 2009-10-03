@@ -83,10 +83,10 @@ function analyzeResult(result) {
     if (data.rejectedTypes.length)
       log("Rejected types: " + data.rejectedTypes.join(", "));
     log("Done.");
-  }
+  };
   worker.onerror = function(error) {
     log("An error occurred: " + error.message);
-  }
+  };
   worker.postMessage(result);
 }
 
@@ -102,12 +102,34 @@ function getBrowserWindows() {
       for (var i = 0; i < browser.browsers.length; i++) {
         var page = browser.browsers[i];
         windows.push({browser: page,
-                      href: page.contentWindow.location.href,
-                      raw: page.contentWindow.wrappedJSObject});
+                      href: page.contentWindow.location.href});
       }
     }
   }
   return windows;
+}
+
+function htmlCollectionToArray(coll) {
+  var array = [];
+  for (var i = 0; i < coll.length; i++)
+    array.push(coll[i]);
+  return array;
+}
+
+function getIframes(document) {
+  return htmlCollectionToArray(document.getElementsByTagName("iframe"));
+}
+
+function recursivelyGetIframes(document) {
+  var iframes = [];
+  var subframes = getIframes(document);
+  subframes.forEach(
+    function(iframe) {
+      iframes.push(iframe.contentWindow.wrappedJSObject);
+      var children = recursivelyGetIframes(iframe.contentDocument);
+      iframes = iframes.concat(children);
+    });
+  return iframes;
 }
 
 function doProfiling() {
@@ -119,14 +141,22 @@ function doProfiling() {
   var filename = FileIO.path(file);
 
   var windows = getBrowserWindows();
+  var windowsToProfile = [];
   var toProfile;
   for (var i = 0; i < windows.length; i++) {
     var win = windows[i];
-    if (win.href.indexOf("http") == 0)
+    if ((win.href.indexOf("http") == 0) ||
+        (win.href.indexOf("file:") == 0)) {
+      var iframes = recursivelyGetIframes(win.browser.contentDocument);
+      windowsToProfile = [win.browser.contentWindow.wrappedJSObject];
+      windowsToProfile = windowsToProfile.concat(iframes);
       toProfile = win;
+      break;
+    }
   }
+
   if (!toProfile) {
-    log("please open a tab with an http or https URL to profile.");
+    log("please open a tab with an http, https, or file URL to profile.");
     return;
   }
   log("profiling the tab at " + toProfile.href +
@@ -140,13 +170,14 @@ function doProfiling() {
     return;
   }
   var result = binary.profileMemory(code, filename, 1,
-                                    {toProfile: toProfile.raw});
+                                    windowsToProfile);
   var totalTime = (new Date()) - start;
   log("time spent in memory profiling: " + totalTime + " ms");
 
   result = JSON.parse(result);
   if (result.success) {
     log("analyzing data now, please wait.");
+    log("named objects: " + JSON.stringify(result.data.namedObjects));
     window.setTimeout(function() {
       analyzeResult(JSON.stringify(result.data));
     }, 0);
