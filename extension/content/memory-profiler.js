@@ -2,11 +2,15 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
-(function importEndpoint(exports) {
-   var factory = Cc["@labs.mozilla.com/jetpackdi;1"]
+function getBinaryComponent() {
+  try {
+    var factory = Cc["@labs.mozilla.com/jetpackdi;1"]
                  .createInstance(Ci.nsIJetpack);
-   exports.endpoint = factory.get();
- })(this);
+    return factory.get();
+  } catch (e) {
+    return null;
+  }
+}
 
 function log(message, isInstant) {
   var elem = $("<pre></pre>");
@@ -129,8 +133,14 @@ function doProfiling() {
       " but ignoring any embedded iframes.");
 
   var start = new Date();
-  var result = endpoint.profileMemory(code, filename, 1,
-                                      {toProfile: toProfile.raw});
+  var binary = getBinaryComponent();
+  if (!binary) {
+    log("Required binary component not found! One may not be available " +
+        "for your OS and Firefox version.");
+    return;
+  }
+  var result = binary.profileMemory(code, filename, 1,
+                                    {toProfile: toProfile.raw});
   var totalTime = (new Date()) - start;
   log("time spent in memory profiling: " + totalTime + " ms");
 
