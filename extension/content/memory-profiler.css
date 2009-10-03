@@ -24,6 +24,7 @@ button {
     background: black;
     border: 1px dotted gray;
     font-family: Palatino, Georgia, serif;
+    cursor: pointer;
 }
 
 button:hover {
