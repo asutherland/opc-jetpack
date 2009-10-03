@@ -25,7 +25,6 @@ function analyzeResult(result) {
   for (id in graph)
     graph[id].referents = [];
   var functions = {};
-  var windows = {};
   var graphFuncs = [];
   for (id in graph) {
     var info = graph[id];
@@ -86,8 +85,6 @@ function analyzeResult(result) {
           switch (refInfo.nativeClass) {
           case 'Window':
             info.funcInfo.isGlobal = true;
-            if (!(refInfo.id in windows))
-              windows[refInfo.id] = makeWindowInfo(refInfo);
             break;
           case 'Object':
             info.funcInfo.protoCount += trackProtoCount(refInfo);
@@ -115,6 +112,12 @@ function analyzeResult(result) {
         shapes[shapeName] = 0;
       shapes[shapeName]++;
     }
+  }
+
+  var windows = {};
+  for (name in data.namedObjects) {
+    var id = data.namedObjects[name];
+    windows[id] = makeWindowInfo(graph[id]);
   }
 
   return JSON.stringify({functions: functions,
