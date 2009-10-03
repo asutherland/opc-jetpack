@@ -137,7 +137,7 @@ function doProfiling() {
   Cu.import("resource://jetpack/modules/setup.js");
   var file = JetpackSetup.getExtensionDirectory();
   file.append('content');
-  file.append('memory-profiler.js');
+  file.append('memory-profiler.profiler.js');
   var code = FileIO.read(file, 'utf-8');
   var filename = FileIO.path(file);
 
