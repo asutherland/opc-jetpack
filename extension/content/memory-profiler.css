@@ -28,7 +28,7 @@ button {
 }
 
 button:hover {
-    background: gray;
+    background: #111111;
 }
 
 button:focus {
@@ -97,6 +97,10 @@ td {
 
 .clickable {
     cursor: pointer;    
+}
+
+.clickable:hover {
+    text-decoration: underline;
 }
 
 .report {
