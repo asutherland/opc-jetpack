@@ -1,4 +1,5 @@
 function doProfiling() {
+  var namedObjects = getNamedObjects();
   var graph = {};
   var rejectedTypes = {};
   var INTERESTING_TYPES = [
@@ -19,6 +20,12 @@ function doProfiling() {
   var maxShapeId = 0;
   var windows = {};
 
+  for each (id in namedObjects) {
+    var wrappedId = getObjectInfo(id).wrappedObject;
+    var innerId = getObjectInfo(wrappedId).innerObject;
+    windows[innerId] = true;
+  }
+
   var table = getObjectTable();
   for (id in table) {
     var nativeClass = table[id];
@@ -27,12 +34,8 @@ function doProfiling() {
         (nativeClass.indexOf('DOM') == 0) ||
         (nativeClass.indexOf('XPC_WN_') == 0)) {
       var info = getObjectInfo(parseInt(id));
-      if (nativeClass == "Function" &&
-          info && info.filename &&
-          info.filename.indexOf("http") == 0 &&
-          !(info.parent in windows))
-        windows[info.parent] = true;
-      graph[id] = info;
+      if ((info.parent in windows) || (info.id in windows))
+        graph[id] = info;
     } else {
       if (!(nativeClass in rejectedTypes))
         rejectedTypes[nativeClass] = true;

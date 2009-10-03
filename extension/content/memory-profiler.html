@@ -113,6 +113,26 @@ function analyzeResult(result) {
   worker.postMessage(result);
 }
 
+function getBrowserWindows() {
+  var windows = [];
+  var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+    .getService(Ci.nsIWindowMediator);
+  var enumerator = wm.getEnumerator("navigator:browser");
+  while(enumerator.hasMoreElements()) {
+    var win = enumerator.getNext();
+    if (win.gBrowser) {
+      var browser = win.gBrowser;
+      for (var i = 0; i < browser.browsers.length; i++) {
+        var page = browser.browsers[i];
+        windows.push({browser: page,
+                      href: page.contentWindow.location.href,
+                      raw: page.contentWindow.wrappedJSObject});
+      }
+    }
+  }
+  return windows;
+}
+
 function doProfiling() {
   Cu.import("resource://jetpack/modules/setup.js");
   var file = JetpackSetup.getExtensionDirectory();
@@ -120,9 +140,24 @@ function doProfiling() {
   file.append('memory-profiler.js');
   var code = FileIO.read(file, 'utf-8');
   var filename = FileIO.path(file);
-  window.foo = function blarg() {};
+
+  var windows = getBrowserWindows();
+  var toProfile;
+  for (var i = 0; i < windows.length; i++) {
+    var win = windows[i];
+    if (win.href.indexOf("http") == 0)
+      toProfile = win;
+  }
+  if (!toProfile) {
+    log("please open a tab with an http or https URL to profile.");
+    return;
+  }
+  log("profiling the tab at " + toProfile.href +
+      " but ignoring any embedded iframes.");
+
   var start = new Date();
-  var result = endpoint.profileMemory(code, filename, 1);
+  var result = endpoint.profileMemory(code, filename, 1,
+                                      {toProfile: toProfile.raw});
   var totalTime = (new Date()) - start;
   log("time spent in memory profiling: " + totalTime + " ms");
 
