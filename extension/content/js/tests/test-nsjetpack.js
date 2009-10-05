@@ -649,6 +649,13 @@ var WrapperTests = {
       return windows;
     }
 
+    if (endpoint.makeCOW) {
+      output("Running COW tests.");
+      var cow = makeCOW(function blarp() {});
+      assertEqual(getClassName(cow), "ChromeObjectWrapper");
+    } else
+      output("Skipping COW tests.");
+
     assertEqual(runMemoryProfilingTest(function() { return argument; },
                                        {}, "blah"), "blah");
 

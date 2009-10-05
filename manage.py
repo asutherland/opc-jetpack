@@ -572,8 +572,15 @@ def xpcom(options):
                  unix_rel_dest_dir],
                 cwd=options.objdir)
 
+    env = {}
+    env.update(os.environ)
+
+    if xpcom_info.mozilla_version == "1.9.3":
+        env['DEFINES'] = "-DUSE_COWS"
+
     run_program(["make"],
-                cwd=os.path.join(options.objdir, rel_dest_dir))
+                cwd=os.path.join(options.objdir, rel_dest_dir),
+                env=env)
 
     xptfiles = []
     libfiles = []
