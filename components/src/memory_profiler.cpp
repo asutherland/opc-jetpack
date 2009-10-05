@@ -593,6 +593,29 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
+static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
+                           jsval *argv, jsval *rval)
+{
+  jsval targetVal;
+
+  if (!getJSObject(cx, argc, argv, &targetVal))
+    return JS_FALSE;
+
+  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+    JSObject *target = JSVAL_TO_OBJECT(targetVal);
+    JSContext *targetCx = tracingState.tracer.context;
+
+    JSObject *parent = JS_GetParent(targetCx, target);
+    if (parent) {
+      *rval = INT_TO_JSVAL(lookupIdForThing(parent));
+      return JS_TRUE;
+    }
+  }
+
+  *rval = JSVAL_NULL;
+  return JS_TRUE;
+}
+
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
@@ -740,6 +763,7 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
 static JSFunctionSpec server_global_functions[] = {
   JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
+  JS_FS("getObjectParent",      getObjParent,       1, 0, 0),
   JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
   JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
   JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),

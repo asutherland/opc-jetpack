@@ -552,6 +552,7 @@ var WrapperTests = {
         if (!(id in visited)) {
           visited[id] = true;
           visitedCount++;
+          var parent = getObjectParent(id);
           var info = getObjectInfo(id);
           if (info) {
             leftToVisit = leftToVisit.concat(info.children);
