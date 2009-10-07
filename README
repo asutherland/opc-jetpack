@@ -20,6 +20,26 @@ your Thunderbird profile called 'work', run:
 
   python manage.py install --app=thunderbird --profile=work
 
+Building Binary Components
+--------------------------
+
+Pre-compiled binary components needed by Jetpack are kept in the
+repository, so it's likely that you don't need to compile anything to
+start using it. However, if a version of the components don't exist
+for your OS and/or Gecko platform, you'll need to build them yourself.
+
+First, build a version of Firefox or Thunderbird:
+
+  https://developer.mozilla.org/En/Developer_Guide/Build_Instructions
+
+Assuming your source directory is in "../mozilla" and your objdir is
+in "../mozobj" relative to Jetpack's manage.py, run:
+
+  python manage.py xpcom --srcdir=../mozilla --objdir=../mozobj
+
+This will compile the components, run their tests, and install
+them in the proper location.
+
 Using Jetpack
 -------------
 
