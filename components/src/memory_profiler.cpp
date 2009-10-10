@@ -47,6 +47,144 @@ typedef struct _ChildTracingState {
 
 static ChildTracingState childTracingState;
 
+typedef struct {
+  JSDHashEntryStub base;
+  JSString *string;
+  int index;
+} String_HashEntry;
+
+// A class to 'mirror' strings in the target runtime as external strings
+// in the profiling runtime. This allows us both to conserve memory and
+// save time by not needlessly copying strings, and it also allows us
+// to figure out how much space is being taken up by strings.
+class AutoExtStringManager {
+  // Memory profiling context.
+  JSRuntime *rt;
+
+  // Memory profiling runtime.
+  JSContext *cx;
+
+  // A hash table mapping strings in the external (target) runtime to
+  // their 'mirrors' in the profiling runtime.
+  JSDHashTable strings;
+
+  // A rooted JavaScript Array that contains all the mirrored strings
+  // in the profiling runtime, so we don't need to deal with GC'ing
+  // them until we shut down the profiling runtime.
+  JSObject *strArray;
+
+  // Length of the mirrored string array.
+  int strArrayLen;
+
+  // Type index for our custom external string type.
+  intN type;
+
+  // The finalizer for our custom external string type.
+  static void finalizeExtString(JSContext *cx, JSString *str) {
+    // We've set things up so that this won't get called until
+    // the memory profiling runtime is about to be shut down.
+    // Since this 'external' string actually points to strings
+    // owned by the target runtime, we do nothing here.
+  }
+
+public:
+  AutoExtStringManager(JSContext *cx) :
+    cx(cx),
+    type(-1),
+    strArray(NULL),
+    strArrayLen(0)
+    {
+      rt = JS_GetRuntime(cx);
+      strings.ops = NULL;
+    }
+
+  ~AutoExtStringManager() {
+    if (strArray) {
+      JS_RemoveRoot(cx, &strArray);
+      strArray = NULL;
+    }
+
+    if (strings.ops) {
+      JS_DHashTableFinish(&strings);
+      strings.ops = NULL;
+    }
+
+    if (type > 0) {
+      JS_RemoveExternalStringFinalizer(finalizeExtString);
+      type = -1;
+    }
+  }
+
+  // Converts a string from the target runtime to an 'external' string
+  // in the profiling runtime, returning NULL on failure.
+  JSString *getExtString(JSString *extString) {
+    String_HashEntry *entry = (String_HashEntry *)
+      JS_DHashTableOperate(&strings,
+                           extString,
+                           JS_DHASH_LOOKUP);
+    if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
+      JSString *str = JS_NewExternalString(cx,
+                                           JS_GetStringChars(extString),
+                                           JS_GetStringLength(extString),
+                                           type);
+      if (!str)
+        return NULL;
+
+      entry = (String_HashEntry *) JS_DHashTableOperate(&strings,
+                                                        extString,
+                                                        JS_DHASH_ADD);
+      if (entry == NULL)
+        return NULL;
+
+      entry->base.key = extString;
+      entry->string = str;
+      entry->index = strArrayLen;
+
+      if (!JS_DefineElement(
+            cx, strArray, entry->index,
+            STRING_TO_JSVAL(entry->string),
+            NULL, NULL,
+            JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT
+            ))
+        return NULL;
+
+      strArrayLen++;
+
+      if (!JS_SetArrayLength(cx, strArray, strArrayLen))
+        return NULL;
+    }
+    return entry->string;
+  }
+
+  // Initializes the string manager. If it returns JS_FALSE, an
+  // exception will be pending on the context.
+  JSBool init(void) {
+    type = JS_AddExternalStringFinalizer(finalizeExtString);
+    if (type == -1) {
+      JS_ReportError(cx, "JS_AddExternalStringFinalizer() failed");
+      return JS_FALSE;
+    }
+
+    strArray = JS_NewArrayObject(cx, 0, NULL);
+    if (!(strArray &&
+          JS_AddNamedRoot(cx, &strArray, "AutoExtStringManager Array"))) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+
+    if (!JS_DHashTableInit(&strings, JS_DHashGetStubOps(),
+                           NULL, sizeof(String_HashEntry),
+                           JS_DHASH_DEFAULT_CAPACITY(100))) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+    return JS_TRUE;
+  }
+};
+
+// Singleton string manager.
+static AutoExtStringManager *extStrings;
+
 static uint32 lookupIdForThing(void *thing);
 
 // JSTraceCallback to build object children.
@@ -182,10 +320,11 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
 
     JSString *targetFuncName = JS_GetFunctionId(fun);
     if (targetFuncName) {
-      JSString *funcName = JS_NewUCStringCopyZ(
-        cx,
-        JS_GetStringChars(targetFuncName)
-        );
+      JSString *funcName = extStrings->getExtString(targetFuncName);
+      if (!funcName) {
+        JS_ReportOutOfMemory(cx);
+        return JS_FALSE;
+      }
       name = STRING_TO_JSVAL(funcName);
     }
 
@@ -253,10 +392,7 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
     value = INT_TO_JSVAL(lookupIdForThing(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
-    JSString *valueStr = JS_NewUCStringCopyZ(
-      cx,
-      JS_GetStringChars(JSVAL_TO_STRING(value))
-      );
+    JSString *valueStr = extStrings->getExtString(JSVAL_TO_STRING(value));
     if (valueStr == NULL) {
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
@@ -820,17 +956,21 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
     goto cleanup;
 
-  if (argument) {
-    JSString *serverArgumentStr = JS_NewUCStringCopyZ(
-      serverCx,
-      JS_GetStringChars(argument)
-      );
+  extStrings = new AutoExtStringManager(serverCx);
+  if (!extStrings) {
+    JS_ReportOutOfMemory(serverCx);
+    goto cleanup;
+  }
 
+  if (!extStrings->init())
+    goto cleanup;
+
+  if (argument) {
+    JSString *serverArgumentStr = extStrings->getExtString(argument);
     if (serverArgumentStr == NULL) {
       JS_ReportOutOfMemory(serverCx);
       goto cleanup;
     }
-
     argumentVal = STRING_TO_JSVAL(serverArgumentStr);
   }
 
@@ -868,6 +1008,11 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
 
   /* Cleanup. */
 cleanup:
+  if (extStrings) {
+    delete extStrings;
+    extStrings = NULL;
+  }
+
   if (tracingState.ids) {
     PR_Free(tracingState.ids);
     tracingState.ids = NULL;
