@@ -740,8 +740,8 @@ static JSFunctionSpec server_global_functions[] = {
   JS_FS_END
 };
 
-static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
-                        jsval *argv, jsval *rval)
+JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
+                     jsval *argv, jsval *rval)
 {
   JSString *code;
   const char *filename;
@@ -887,10 +887,4 @@ cleanup:
     JS_DestroyRuntime(serverRuntime);
 
   return wasSuccessful;
-}
-
-JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
-                     jsval *argv, jsval *rval)
-{
-  return doProfile(cx, obj, argc, argv, rval);
 }
