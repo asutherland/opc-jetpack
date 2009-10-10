@@ -39,27 +39,29 @@ typedef struct _TracingState {
 static TracingState tracingState;
 
 typedef struct _ChildTracingState {
-  int num;
-  void **things;
-  uint32 *kinds;
+  int numObjects;
+  JSObject *objects;
+  JSBool result;
   JSTracer tracer;
 } ChildTracingState;
 
 static ChildTracingState childTracingState;
 
-// JSTraceCallback to build a hashtable of children.
-static void childCountBuilder(JSTracer *trc, void *thing, uint32 kind)
-{
-  childTracingState.num++;
-}
+static uint32 lookupIdForThing(void *thing);
 
-// JSTraceCallback to build a hashtable of children.
+// JSTraceCallback to build object children.
 static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
 {
-  *childTracingState.kinds = kind;
-  childTracingState.kinds++;
-  *childTracingState.things = thing;
-  childTracingState.things++;
+  if (kind == JSTRACE_OBJECT) {
+    if (!JS_DefineElement(trc->context,
+                          childTracingState.objects,
+                          childTracingState.numObjects,
+                          INT_TO_JSVAL(lookupIdForThing(thing)),
+                          NULL, NULL, JSPROP_ENUMERATE))
+      childTracingState.result = JS_FALSE;
+    else
+      childTracingState.numObjects++;
+  }
 }
 
 // JSTraceCallback to build a hashtable of existing object references.
@@ -128,58 +130,24 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
                               JSObject *target, JSContext *targetCx)
 {
   childTracingState.tracer.context = targetCx;
-  childTracingState.tracer.callback = childCountBuilder;
-  childTracingState.num = 0;
-  JS_TraceChildren(&childTracingState.tracer, target, JSTRACE_OBJECT);
-
-  jsval *childrenVals;
-  void **things = (void **)PR_Malloc(childTracingState.num * sizeof(void *));
-  uint32 *kinds = (uint32 *)PR_Malloc(childTracingState.num * sizeof(uint32));
-
-  childTracingState.things = things;
-  childTracingState.kinds = kinds;
-
   childTracingState.tracer.callback = childBuilder;
+  childTracingState.numObjects = 0;
+  childTracingState.result = JS_TRUE;
+
+  JSObject *objects = JS_NewArrayObject(cx, 0, NULL);
+  if (!objects) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  childTracingState.objects = objects;
   JS_TraceChildren(&childTracingState.tracer, target, JSTRACE_OBJECT);
 
-  int numObjectChildren = 0;
-  for (int i = 0; i < childTracingState.num; i++) {
-    if (kinds[i] == JSTRACE_OBJECT)
-      numObjectChildren++;
-  }
-
-  childrenVals = (jsval *)PR_Malloc(numObjectChildren * sizeof(jsval));
-
-  int currChild = 0;
-  for (int i = 0; i < childTracingState.num; i++) {
-    if (kinds[i] == JSTRACE_OBJECT) {
-      childrenVals[currChild] = INT_TO_JSVAL(lookupIdForThing(things[i]));
-      currChild += 1;
-    }
-  }
-
-  if (numObjectChildren != currChild) {
-    JS_ReportError(cx, "Assertion failure, numObjectChildren != currChild");
-    PR_Free(things);
-    PR_Free(kinds);
-    PR_Free(childrenVals);
+  if (!(childTracingState.result &&
+        JS_SetArrayLength(cx, objects, childTracingState.numObjects)))
     return JS_FALSE;
-  }
 
-  JSObject *children = JS_NewArrayObject(cx, numObjectChildren, childrenVals);
-  if (children == NULL) {
-    JS_ReportOutOfMemory(cx);
-    PR_Free(things);
-    PR_Free(kinds);
-    PR_Free(childrenVals);
-    return JS_FALSE;
-  }
-
-  PR_Free(things);
-  PR_Free(kinds);
-  PR_Free(childrenVals);
- 
-  return JS_DefineProperty(cx, info, "children", OBJECT_TO_JSVAL(children),
+  return JS_DefineProperty(cx, info, "children", OBJECT_TO_JSVAL(objects),
                            NULL, NULL, JSPROP_ENUMERATE);
 }
 
@@ -567,7 +535,7 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
 
   *rval = OBJECT_TO_JSVAL(table);
 
-  for (int i = 1; i < tracingState.currId; i++) {
+  for (unsigned int i = 1; i < tracingState.currId; i++) {
     JSObject *target = tracingState.ids[i];
     jsval value = JSVAL_NULL;
     JSContext *targetCx = tracingState.tracer.context;
