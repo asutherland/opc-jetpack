@@ -678,7 +678,7 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
     JSClass *classp = JS_GET_CLASS(targetCx, target);
 
     if (classp) {
-      JSString *name = JS_NewStringCopyZ(cx, classp->name);
+      JSString *name = JS_InternString(cx, classp->name);
       if (name == NULL) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;
@@ -742,8 +742,7 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                              JSPROP_ENUMERATE))
         return JS_FALSE;
 
-      // TODO: Should really be using an interned string here or something.
-      JSString *name = JS_NewStringCopyZ(cx, classp->name);
+      JSString *name = JS_InternString(cx, classp->name);
       if (name == NULL) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;        
