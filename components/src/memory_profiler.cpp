@@ -743,14 +743,17 @@ static JSFunctionSpec server_global_functions[] = {
 static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
                         jsval *argv, jsval *rval)
 {
-  // TODO: We really need to make sure everything gets cleaned up
-  // properly if an error occurred here.
-
   JSString *code;
   const char *filename;
   uint32 lineNumber = 1;
   JSObject *namedObjects = NULL;
   JSString *argument = NULL;
+  JSBool wasSuccessful = JS_FALSE;
+  JSRuntime *serverRuntime = NULL;
+  JSContext *serverCx = NULL;
+  jsval serverRval = JSVAL_NULL;
+  JSObject *serverGlobal = NULL;
+  jsval argumentVal = JSVAL_NULL;
 
   if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
                            &lineNumber, &namedObjects, &argument))
@@ -775,14 +778,14 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   JS_TraceRuntime(&tracingState.tracer);
 
   if (!tracingState.result)
-    return JS_FALSE;
+    goto cleanup;
 
   tracingState.ids = (JSObject **)PR_Malloc(
     (tracingState.currId) * sizeof(JSObject *)
     );
   if (tracingState.ids == NULL) {
     JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
+    goto cleanup;
   }
   tracingState.ids[0] = NULL;
   JS_DHashTableEnumerate(&tracingState.visited,
@@ -793,32 +796,29 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
   // to ensure that the object graph doesn't change while we're
   // profiling the memory.
 
-  JSRuntime *serverRuntime = JS_NewRuntime(8L * 1024L * 1024L);
+  serverRuntime = JS_NewRuntime(8L * 1024L * 1024L);
   if (serverRuntime == NULL) {
     JS_ReportError(cx, "Couldn't create server JS runtime.");
-    return JS_FALSE;
+    goto cleanup;
   }
 
-  JSContext *serverCx = JS_NewContext(serverRuntime, 8192);
+  serverCx = JS_NewContext(serverRuntime, 8192);
   if (serverCx == NULL) {
     JS_ReportError(cx, "Couldn't create server JS context.");
-    return JS_FALSE;
+    goto cleanup;
   }
   JS_SetOptions(serverCx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
   JS_SetVersion(serverCx, JSVERSION_LATEST);
 
   JS_BeginRequest(serverCx);
 
-  jsval serverRval;
   if (!TCB_init(serverCx, &serverRval))
-    return JS_FALSE;
+    goto cleanup;
 
-  JSObject *serverGlobal = JSVAL_TO_OBJECT(serverRval);
+  serverGlobal = JSVAL_TO_OBJECT(serverRval);
 
   if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
-    return JS_FALSE;
-
-  jsval argumentVal = JSVAL_NULL;
+    goto cleanup;
 
   if (argument) {
     JSString *serverArgumentStr = JS_NewUCStringCopyZ(
@@ -828,7 +828,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
     if (serverArgumentStr == NULL) {
       JS_ReportOutOfMemory(serverCx);
-      return JS_FALSE;
+      goto cleanup;
     }
 
     argumentVal = STRING_TO_JSVAL(serverArgumentStr);
@@ -836,9 +836,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
 
   if (!JS_DefineProperty(serverCx, serverGlobal, "argument",
                          argumentVal, NULL, NULL, JSPROP_ENUMERATE))
-    return JS_FALSE;
-
-  JSBool wasSuccessful = JS_TRUE;
+    goto cleanup;
 
   if (!JS_EvaluateScript(serverCx, serverGlobal,
                          JS_GetStringBytes(code),
@@ -847,7 +845,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
                          &serverRval)) {
     TCB_handleError(serverCx, serverGlobal);
     JS_ReportError(cx, "Profiling failed.");
-    wasSuccessful = JS_FALSE;
+    goto cleanup;
   } else {
     if (JSVAL_IS_STRING(serverRval)) {
       JSString *valueStr = JS_NewUCStringCopyZ(
@@ -856,7 +854,7 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
         );
       if (valueStr == NULL) {
         JS_ReportOutOfMemory(cx);
-        wasSuccessful = JS_FALSE;
+        goto cleanup;
       } else
         *rval = STRING_TO_JSVAL(valueStr);
     } else if (!JSVAL_IS_GCTHING(serverRval)) {
@@ -866,12 +864,27 @@ static JSBool doProfile(JSContext *cx, JSObject *obj, uintN argc,
     }
   }
 
+  wasSuccessful = JS_TRUE;
+
   /* Cleanup. */
-  PR_Free(tracingState.ids);
-  JS_DHashTableFinish(&tracingState.visited);
-  JS_EndRequest(serverCx);
-  JS_DestroyContext(serverCx);
-  JS_DestroyRuntime(serverRuntime);
+cleanup:
+  if (tracingState.ids) {
+    PR_Free(tracingState.ids);
+    tracingState.ids = NULL;
+  }
+
+  if (tracingState.visited.ops) {
+    JS_DHashTableFinish(&tracingState.visited);
+    tracingState.visited.ops = NULL;
+  }
+
+  if (serverCx) {
+    JS_EndRequest(serverCx);
+    JS_DestroyContext(serverCx);
+  }
+
+  if (serverRuntime)
+    JS_DestroyRuntime(serverRuntime);
 
   return wasSuccessful;
 }
