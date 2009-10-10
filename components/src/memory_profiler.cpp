@@ -115,6 +115,8 @@ public:
     }
   }
 
+  // TODO: Override new/delete to use NSPR?
+
   // Converts a string from the target runtime to an 'external' string
   // in the profiling runtime, returning NULL on failure.
   JSString *getExtString(JSString *extString) {
@@ -159,6 +161,8 @@ public:
   // Initializes the string manager. If it returns JS_FALSE, an
   // exception will be pending on the context.
   JSBool init(void) {
+    // TODO: We need to ensure that we're the only JS thread running
+    // when we do this, or bad things will happen, according to the docs.
     type = JS_AddExternalStringFinalizer(finalizeExtString);
     if (type == -1) {
       JS_ReportError(cx, "JS_AddExternalStringFinalizer() failed");
