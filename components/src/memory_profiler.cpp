@@ -90,9 +90,9 @@ class AutoExtStringManager {
 public:
   AutoExtStringManager(JSContext *cx) :
     cx(cx),
-    type(-1),
     strArray(NULL),
-    strArrayLen(0)
+    strArrayLen(0),
+    type(-1)
     {
       rt = JS_GetRuntime(cx);
       strings.ops = NULL;
@@ -188,6 +188,61 @@ public:
 
 // Singleton string manager.
 static AutoExtStringManager *extStrings;
+
+class AutoProfilerRuntime {
+public:
+  JSRuntime *rt;
+  JSContext *cx;
+  JSObject *global;
+
+  static JSFunctionSpec AutoProfilerRuntime::globalFunctions[];
+
+  AutoProfilerRuntime(void) :
+    rt(NULL),
+    cx(NULL),
+    global(NULL)
+    {
+    }
+
+  ~AutoProfilerRuntime() {
+    if (cx) {
+      JS_EndRequest(cx);
+      JS_DestroyContext(cx);
+      cx = NULL;
+    }
+
+    if (rt) {
+      JS_DestroyRuntime(rt);
+      rt = NULL;
+    }
+
+    global = NULL;
+  }
+
+  JSBool init() {
+    rt = JS_NewRuntime(8L * 1024L * 1024L);
+    if (!rt)
+      return JS_FALSE;
+
+    cx = JS_NewContext(rt, 8192);
+    if (!cx)
+      return JS_FALSE;
+
+    JS_SetOptions(cx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
+    JS_SetVersion(cx, JSVERSION_LATEST);
+    JS_BeginRequest(cx);
+
+    jsval rval;
+    if (!TCB_init(cx, &rval))
+      return JS_FALSE;
+
+    // Note that this is already rooted in our context.
+    global = JSVAL_TO_OBJECT(rval);
+
+    if (!JS_DefineFunctions(cx, global, globalFunctions))
+      return JS_FALSE;
+  }
+};
 
 static uint32 lookupIdForThing(void *thing);
 
@@ -867,7 +922,7 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
-static JSFunctionSpec server_global_functions[] = {
+JSFunctionSpec AutoProfilerRuntime::globalFunctions[] = {
   JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectParent",      getObjParent,       1, 0, 0),
@@ -888,10 +943,7 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   JSObject *namedObjects = NULL;
   JSString *argument = NULL;
   JSBool wasSuccessful = JS_FALSE;
-  JSRuntime *serverRuntime = NULL;
-  JSContext *serverCx = NULL;
   jsval serverRval = JSVAL_NULL;
-  JSObject *serverGlobal = NULL;
   jsval argumentVal = JSVAL_NULL;
 
   if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
@@ -931,37 +983,21 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
                          mapIdsToObjects,
                          NULL);
 
+  AutoProfilerRuntime *server = new AutoProfilerRuntime();
+  if (!server) {
+    JS_ReportOutOfMemory(cx);
+    goto cleanup;
+  }
+
+  if (!server->init())
+    goto cleanup;
+
   // TODO: We might want to lock the JS runtime of the caller here
   // to ensure that the object graph doesn't change while we're
   // profiling the memory.
-
-  serverRuntime = JS_NewRuntime(8L * 1024L * 1024L);
-  if (serverRuntime == NULL) {
-    JS_ReportError(cx, "Couldn't create server JS runtime.");
-    goto cleanup;
-  }
-
-  serverCx = JS_NewContext(serverRuntime, 8192);
-  if (serverCx == NULL) {
-    JS_ReportError(cx, "Couldn't create server JS context.");
-    goto cleanup;
-  }
-  JS_SetOptions(serverCx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
-  JS_SetVersion(serverCx, JSVERSION_LATEST);
-
-  JS_BeginRequest(serverCx);
-
-  if (!TCB_init(serverCx, &serverRval))
-    goto cleanup;
-
-  serverGlobal = JSVAL_TO_OBJECT(serverRval);
-
-  if (!JS_DefineFunctions(serverCx, serverGlobal, server_global_functions))
-    goto cleanup;
-
-  extStrings = new AutoExtStringManager(serverCx);
+  extStrings = new AutoExtStringManager(server->cx);
   if (!extStrings) {
-    JS_ReportOutOfMemory(serverCx);
+    JS_ReportOutOfMemory(cx);
     goto cleanup;
   }
 
@@ -971,22 +1007,22 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   if (argument) {
     JSString *serverArgumentStr = extStrings->getExtString(argument);
     if (serverArgumentStr == NULL) {
-      JS_ReportOutOfMemory(serverCx);
+      JS_ReportOutOfMemory(cx);
       goto cleanup;
     }
     argumentVal = STRING_TO_JSVAL(serverArgumentStr);
   }
 
-  if (!JS_DefineProperty(serverCx, serverGlobal, "argument",
+  if (!JS_DefineProperty(server->cx, server->global, "argument",
                          argumentVal, NULL, NULL, JSPROP_ENUMERATE))
     goto cleanup;
 
-  if (!JS_EvaluateScript(serverCx, serverGlobal,
+  if (!JS_EvaluateScript(server->cx, server->global,
                          JS_GetStringBytes(code),
                          JS_GetStringLength(code),
                          filename, lineNumber,
                          &serverRval)) {
-    TCB_handleError(serverCx, serverGlobal);
+    TCB_handleError(server->cx, server->global);
     JS_ReportError(cx, "Profiling failed.");
     goto cleanup;
   } else {
@@ -1026,13 +1062,10 @@ cleanup:
     tracingState.visited.ops = NULL;
   }
 
-  if (serverCx) {
-    JS_EndRequest(serverCx);
-    JS_DestroyContext(serverCx);
+  if (server) {
+    delete server;
+    server = NULL;
   }
-
-  if (serverRuntime)
-    JS_DestroyRuntime(serverRuntime);
 
   return wasSuccessful;
 }
