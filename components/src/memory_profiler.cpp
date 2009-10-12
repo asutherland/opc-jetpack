@@ -61,51 +61,9 @@ public:
 
   static JSFunctionSpec ProfilerRuntime::globalFunctions[];
 
-  ProfilerRuntime(void) :
-    rt(NULL),
-    cx(NULL),
-    global(NULL)
-    {
-    }
-
-  ~ProfilerRuntime() {
-    if (cx) {
-      JS_EndRequest(cx);
-      JS_DestroyContext(cx);
-      cx = NULL;
-    }
-
-    if (rt) {
-      JS_DestroyRuntime(rt);
-      rt = NULL;
-    }
-
-    global = NULL;
-  }
-
-  JSBool init() {
-    rt = JS_NewRuntime(8L * 1024L * 1024L);
-    if (!rt)
-      return JS_FALSE;
-
-    cx = JS_NewContext(rt, 8192);
-    if (!cx)
-      return JS_FALSE;
-
-    JS_SetOptions(cx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
-    JS_SetVersion(cx, JSVERSION_LATEST);
-    JS_BeginRequest(cx);
-
-    jsval rval;
-    if (!TCB_init(cx, &rval))
-      return JS_FALSE;
-
-    // Note that this is already rooted in our context.
-    global = JSVAL_TO_OBJECT(rval);
-
-    if (!JS_DefineFunctions(cx, global, globalFunctions))
-      return JS_FALSE;
-  }
+  ProfilerRuntime(void);
+  ~ProfilerRuntime();
+  JSBool init(void);
 };
 
 // A class to 'mirror' strings in the target runtime as external strings
@@ -978,6 +936,56 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
 
   return profiler.profile(cx, code, filename, lineNumber, namedObjects,
                           argument, rval);
+}
+
+ProfilerRuntime::ProfilerRuntime(void) :
+  rt(NULL),
+  cx(NULL),
+  global(NULL)
+{
+}
+
+ProfilerRuntime::~ProfilerRuntime()
+{
+  if (cx) {
+    JS_EndRequest(cx);
+    JS_DestroyContext(cx);
+    cx = NULL;
+  }
+
+  if (rt) {
+    JS_DestroyRuntime(rt);
+    rt = NULL;
+  }
+
+  global = NULL;
+}
+
+JSBool ProfilerRuntime::init(void)
+{
+  rt = JS_NewRuntime(8L * 1024L * 1024L);
+  if (!rt)
+    return JS_FALSE;
+
+  cx = JS_NewContext(rt, 8192);
+  if (!cx)
+    return JS_FALSE;
+
+  JS_SetOptions(cx, JSOPTION_VAROBJFIX | JSOPTION_JIT);
+  JS_SetVersion(cx, JSVERSION_LATEST);
+  JS_BeginRequest(cx);
+
+  jsval rval;
+  if (!TCB_init(cx, &rval))
+    return JS_FALSE;
+
+  // Note that this is already rooted in our context.
+  global = JSVAL_TO_OBJECT(rval);
+
+  if (!JS_DefineFunctions(cx, global, globalFunctions))
+    return JS_FALSE;
+
+  return JS_TRUE;
 }
 
 MemoryProfiler *MemoryProfiler::gSelf;
