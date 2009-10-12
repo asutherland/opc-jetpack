@@ -121,6 +121,67 @@ public:
   JSBool init(ProfilerRuntime *aProfiler);
 };
 
+class MemoryProfiler;
+
+class ExtObjectManager {
+private:
+  // Disallow copy constructors and assignment.
+  ExtObjectManager(const ExtObjectManager&);
+  ExtObjectManager& operator= (const ExtObjectManager&);
+
+  JSContext *targetCx;
+  JSContext *cx;
+
+  JSBool getChildrenInfo(JSObject *info, JSObject *target);
+
+  JSBool getFunctionInfo(JSObject *info, JSObject *target);
+
+  JSBool maybeIncludeObject(JSObject *info, const char *objName,
+                            JSObject *obj);
+
+  JSBool maybeIncludeObjectOp(JSObject *info, const char *objName,
+                              JSObjectOp objOp, JSObject *target);
+
+  JSBool lookupNamedObject(const char *name, uint32 *rid);
+
+public:
+  ExtObjectManager(void);
+  ~ExtObjectManager();
+
+  JSBool init(ProfilerRuntime *profiler, JSContext *atargetCx,
+              JSObject *anamedTargetObjects);
+
+  JSBool copyPropertyInfo(JSObject *propInfo, jsid targetPropId,
+                          const char *name, JSObject *target);
+
+  JSBool getPropertiesInfo(JSObject *propInfo, JSObject *target);
+
+  JSBool getPropertiesInfo2(JSObject *propInfo, JSObject *target);
+
+  // Mapping from strings to objects for the profiler's convenience.
+  // This object is owned by the target runtime.
+  JSObject *namedTargetObjects;
+
+  // Create a 'dictionary' of information about the target object
+  // and put it in rval. Return JS_FALSE if an error occurs.
+  JSBool getInfoForTarget(JSObject *target, jsval *rval);
+
+  // Given a named object string or an object ID at the front of argv,
+  // get the object in the JS runtime we're profiling and put it in
+  // rtarget. If it doesn't exist, put NULL in rtarget. If an error
+  // occurs, return JS_FALSE.
+  JSBool getTarget(uintN argc, jsval *argv, JSObject **rtarget);
+
+  // Given a JSObject * in the target runtime, return the small
+  // positive integer ID mapping to it, or 0 if no such object exists.
+  uint32 lookupIdForTarget(JSObject *target);
+
+  // Given a small positive integer ID, return the JSObject * mapping to
+  // it, or NULL if no such object exists. The JSObject * is property
+  // of the target runtime.
+  JSObject *lookupTargetForId(uint32 id);
+};
+
 // A singleton class that encapsulates the entire state of the memory
 // profiler.
 class MemoryProfiler {
@@ -142,14 +203,12 @@ public:
   // JS runtime that we're profiling (and which called us).
   JSRuntime *targetRt;
 
-  // Mapping from strings to objects for the profiler's convenience.
-  JSObject *namedObjects;
-
   // The order in which these are listed is the order in which their
   // constructors are called, and the reverse order in which their
   // destructors are called.
   ProfilerRuntime runtime;
   ExtStringManager strings;
+  ExtObjectManager objects;
 
   // Return the profiler's singleton instance.
   static MemoryProfiler *get() {
@@ -158,20 +217,21 @@ public:
 
   // Run a profiling script.
   JSBool profile(JSContext *cx, JSString *code, const char *filename,
-                 uint32 lineNumber, JSObject *theNamedObjects,
+                 uint32 lineNumber, JSObject *namedObjects,
                  JSString *argument, jsval *rval);
 };
-
-static uint32 lookupIdForThing(void *thing);
 
 // JSTraceCallback to build object children.
 static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
 {
   if (kind == JSTRACE_OBJECT) {
+    ExtObjectManager &objects = MemoryProfiler::get()->objects;
+    uint32 id = objects.lookupIdForTarget((JSObject *) thing);
+
     if (!JS_DefineElement(trc->context,
                           childTracingState.objects,
                           childTracingState.numObjects,
-                          INT_TO_JSVAL(lookupIdForThing(thing)),
+                          INT_TO_JSVAL(id),
                           NULL, NULL, JSPROP_ENUMERATE))
       childTracingState.result = JS_FALSE;
     else
@@ -213,23 +273,19 @@ static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
   }
 }
 
-// Given a small positive integer ID, return the JSObject * mapping to
-// it, or NULL if no such object exists.
-static JSObject *lookupObjectForId(uint32 id)
+JSObject *ExtObjectManager::lookupTargetForId(uint32 id)
 {
   if (id > 0 && id < tracingState.currId)
     return tracingState.ids[id];
   return NULL;
 }
 
-// Given a JSObject *, return the small positive integer ID mapping to
-// it, or 0 if no such object exists.
-static uint32 lookupIdForThing(void *thing)
+uint32 ExtObjectManager::lookupIdForTarget(JSObject *target)
 {
   Profiler_HashEntry *entry;
   entry = (Profiler_HashEntry *)
     JS_DHashTableOperate(&tracingState.visited,
-                         thing,
+                         target,
                          JS_DHASH_LOOKUP);
   
   if (entry == NULL)
@@ -241,8 +297,85 @@ static uint32 lookupIdForThing(void *thing)
     return 0;
 }
 
-static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
-                              JSObject *target, JSContext *targetCx)
+ExtObjectManager::ExtObjectManager(void) :
+  targetCx(NULL),
+  cx(NULL),
+  namedTargetObjects(NULL)
+{
+}
+
+ExtObjectManager::~ExtObjectManager()
+{
+  if (cx && targetCx) {
+    if (tracingState.ids) {
+      PR_Free(tracingState.ids);
+      tracingState.ids = NULL;
+    }
+
+    if (tracingState.visited.ops) {
+      JS_DHashTableFinish(&tracingState.visited);
+      tracingState.visited.ops = NULL;
+    }
+
+    cx = NULL;
+    targetCx = NULL;
+    namedTargetObjects = NULL;
+  }
+}
+
+static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
+                                       JSDHashEntryHdr *hdr,
+                                       uint32 number,
+                                       void *arg)
+{
+  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
+  tracingState.ids[entry->id] = (JSObject *) entry->base.key;
+  return JS_DHASH_NEXT;
+}
+
+JSBool ExtObjectManager::init(ProfilerRuntime *profiler,
+                              JSContext *atargetCx,
+                              JSObject *anamedTargetObjects)
+{
+  cx = profiler->cx;
+  targetCx = atargetCx;
+  namedTargetObjects = anamedTargetObjects;
+
+  tracingState.ids = NULL;
+  tracingState.visited.ops = NULL;
+
+  if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
+                         NULL, sizeof(Profiler_HashEntry),
+                         JS_DHASH_DEFAULT_CAPACITY(100))) {
+    JS_ReportOutOfMemory(targetCx);
+    return JS_FALSE;
+  }
+
+  tracingState.currId = 1;
+  tracingState.result = JS_TRUE;
+  tracingState.tracer.context = targetCx;
+  tracingState.tracer.callback = visitedBuilder;
+  JS_TraceRuntime(&tracingState.tracer);
+
+  if (!tracingState.result)
+    return JS_FALSE;
+
+  tracingState.ids = (JSObject **)PR_Malloc(
+    (tracingState.currId) * sizeof(JSObject *)
+    );
+  if (tracingState.ids == NULL) {
+    JS_ReportOutOfMemory(targetCx);
+    return JS_FALSE;
+  }
+  tracingState.ids[0] = NULL;
+  JS_DHashTableEnumerate(&tracingState.visited,
+                         mapIdsToObjects,
+                         NULL);
+
+  return JS_TRUE;
+}
+
+JSBool ExtObjectManager::getChildrenInfo(JSObject *info, JSObject *target)
 {
   childTracingState.tracer.context = targetCx;
   childTracingState.tracer.callback = childBuilder;
@@ -266,8 +399,7 @@ static JSBool getChildrenInfo(JSContext *cx, JSObject *info,
                            NULL, NULL, JSPROP_ENUMERATE);
 }
 
-static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
-                              JSObject *target, JSContext *targetCx)
+JSBool ExtObjectManager::getFunctionInfo(JSObject *info, JSObject *target)
 {
   // Thanks to dbaron's leakmon code for this:
   //
@@ -337,9 +469,10 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
   return JS_TRUE;
 }
 
-static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
-                               jsid targetPropId, const char *name,
-                               JSObject *target, JSContext *targetCx)
+JSBool ExtObjectManager::copyPropertyInfo(JSObject *propInfo,
+                                          jsid targetPropId,
+                                          const char *name,
+                                          JSObject *target)
 {
   jsval value;
   if (name == NULL) {
@@ -368,7 +501,7 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
 
   if (JSVAL_IS_OBJECT(value)) {
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
-    value = INT_TO_JSVAL(lookupIdForThing(valueObj));
+    value = INT_TO_JSVAL(lookupIdForTarget(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
     ExtStringManager &strings = MemoryProfiler::get()->strings;
     JSString *valueStr = strings.getExt(JSVAL_TO_STRING(value));
@@ -404,8 +537,8 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
   return JS_TRUE;
 }
 
-static JSBool getPropertiesInfo2(JSContext *cx, JSObject *propInfo,
-                                 JSObject *target, JSContext *targetCx)
+JSBool ExtObjectManager::getPropertiesInfo2(JSObject *propInfo,
+                                            JSObject *target)
 {
   JSObject *iterator = JS_NewPropertyIterator(targetCx, target);
   if (iterator == NULL)
@@ -420,17 +553,15 @@ static JSBool getPropertiesInfo2(JSContext *cx, JSObject *propInfo,
     if (iterId == JSVAL_VOID)
       break;
 
-    if (!copyPropertyInfo(cx, propInfo,
-                          iterId, NULL, target,
-                          targetCx))
+    if (!copyPropertyInfo(propInfo, iterId, NULL, target))
       return JS_FALSE;
   }
 
   return JS_TRUE;
 }
 
-static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
-                                JSObject *target, JSContext *targetCx)
+JSBool ExtObjectManager::getPropertiesInfo(JSObject *propInfo,
+                                           JSObject *target)
 {
   // TODO: It'd be nice if we could use the OBJ_IS_NATIVE() macro here,
   // but that appears to be defined in a private header, jsobj.h. Still,
@@ -448,9 +579,8 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
     return JS_TRUE;
 
   for (int i = 0; i < ids->length; i++) {
-    if (!copyPropertyInfo(cx, propInfo,
-                          ids->vector[i], NULL, target,
-                          targetCx)) {
+    if (!copyPropertyInfo(propInfo,
+                          ids->vector[i], NULL, target)) {
       success = JS_FALSE;
       break;
     }
@@ -461,37 +591,39 @@ static JSBool getPropertiesInfo(JSContext *cx, JSObject *propInfo,
   return success;
 }
 
-static JSBool maybeIncludeObject(JSContext *cx, JSObject *info,
-                                 const char *objName, JSObject *obj)
+JSBool ExtObjectManager::maybeIncludeObject(JSObject *info,
+                                            const char *objName,
+                                            JSObject *obj)
 {
   if (obj != NULL)
     if (!JS_DefineProperty(cx, info, objName,
-                           INT_TO_JSVAL(lookupIdForThing(obj)),
+                           INT_TO_JSVAL(lookupIdForTarget(obj)),
                            NULL, NULL, JSPROP_ENUMERATE))
       return JS_FALSE;
   return JS_TRUE;
 }
 
-static JSBool maybeIncludeObjectOp(JSContext *cx, JSObject *info,
-                                   const char *objName, JSObjectOp objOp,
-                                   JSContext *targetCx, JSObject *target)
+JSBool ExtObjectManager::maybeIncludeObjectOp(JSObject *info,
+                                              const char *objName,
+                                              JSObjectOp objOp,
+                                              JSObject *target)
 {
   if (objOp)
-    return maybeIncludeObject(cx, info, objName, objOp(targetCx, target));
+    return maybeIncludeObject(info, objName, objOp(targetCx, target));
   return JS_TRUE;
 }
 
-static JSBool lookupNamedObject(JSContext *cx, const char *name,
-                                uint32 *id)
+JSBool ExtObjectManager::lookupNamedObject(const char *name,
+                                           uint32 *id)
 {
   *id = 0;
 
-  if (MemoryProfiler::get()->namedObjects == NULL)
+  if (namedTargetObjects == NULL)
     return JS_TRUE;
 
   JSBool found;
-  if (!JS_HasProperty(MemoryProfiler::get()->targetCx,
-                      MemoryProfiler::get()->namedObjects,
+  if (!JS_HasProperty(targetCx,
+                      namedTargetObjects,
                       name,
                       &found)) {
     JS_ReportError(cx, "JS_HasProperty() failed.");
@@ -502,8 +634,8 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
     return JS_TRUE;
 
   jsval val;
-  if (!JS_LookupProperty(MemoryProfiler::get()->targetCx,
-                         MemoryProfiler::get()->namedObjects,
+  if (!JS_LookupProperty(targetCx,
+                         namedTargetObjects,
                          name,
                          &val)) {
     JS_ReportError(cx, "JS_LookupProperty failed.");
@@ -514,81 +646,156 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
     return JS_TRUE;
 
   JSObject *obj = JSVAL_TO_OBJECT(val);
-  *id = lookupIdForThing(obj);
+  *id = lookupIdForTarget(obj);
 
   return JS_TRUE;
 }
 
-// Given a named object string or an object ID, get the object in
-// the JS runtime we're profiling and put it in rval. If it doesn't
-// exist, put JSVAL_NULL in rval. If an error occurs, return JS_FALSE.
-static JSBool getJSObject(JSContext *cx, uintN argc, jsval *argv,
-                          jsval *rval)
+JSBool ExtObjectManager::getInfoForTarget(JSObject *target,
+                                          jsval *rval)
+{
+  JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+
+  if (info == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  // This should root the object.
+  *rval = OBJECT_TO_JSVAL(info);
+
+  JSClass *classp = JS_GET_CLASS(targetCx, target);
+  if (classp != NULL) {
+    if (!JS_DefineProperty(cx, info, "id",
+                           INT_TO_JSVAL(lookupIdForTarget(target)),
+                           NULL, NULL,
+                           JSPROP_ENUMERATE))
+      return JS_FALSE;
+
+    JSString *name = JS_InternString(cx, classp->name);
+    if (name == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;        
+    }
+    if (!JS_DefineProperty(cx, info, "nativeClass", STRING_TO_JSVAL(name),
+                           NULL, NULL, JSPROP_ENUMERATE)) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+  }
+
+  if (!JS_DefineProperty(
+        cx, info, "size",
+        INT_TO_JSVAL(JS_GetObjectTotalSize(targetCx, target)),
+        NULL, NULL, JSPROP_ENUMERATE)) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  if (!maybeIncludeObject(info, "parent",
+                          JS_GetParent(targetCx, target)) ||
+      !maybeIncludeObject(info, "prototype",
+                          JS_GetPrototype(targetCx, target)))
+    return JS_FALSE;
+
+  // TODO: We used to include 'constructor' here too, but
+  // we ran into a problem with Block objects, so removed it.
+
+  if (JS_ObjectIsFunction(targetCx, target))
+    if (!getFunctionInfo(info, target))
+      return JS_FALSE;
+
+  if (!getChildrenInfo(info, target))
+    return JS_FALSE;
+
+  if (classp->flags & JSCLASS_IS_EXTENDED) {
+    JSExtendedClass *exClassp = (JSExtendedClass *) classp;
+
+    if (!maybeIncludeObjectOp(info, "wrappedObject",
+                              exClassp->wrappedObject, target) ||
+        !maybeIncludeObjectOp(info, "outerObject",
+                              exClassp->outerObject, target) ||
+        !maybeIncludeObjectOp(info, "innerObject",
+                              exClassp->innerObject, target))
+      return JS_FALSE;
+  }
+
+  if (((classp->flags & JSCLASS_IS_EXTENDED) &&
+       ((JSExtendedClass *) classp)->wrappedObject)) {
+    if (!maybeIncludeObject(
+          info, "wrappedObject",
+          ((JSExtendedClass *) classp)->wrappedObject(targetCx, target)
+          ))
+      return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
+JSBool ExtObjectManager::getTarget(uintN argc, jsval *argv,
+                                   JSObject **rtarget)
 {
   uint32 id;
 
   if (argc >= 1 && JSVAL_IS_STRING(argv[0])) {
     const char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
-    if (!lookupNamedObject(cx, name, &id))
+    if (!lookupNamedObject(name, &id))
       return JS_FALSE;
   } else
     if (!JS_ConvertArguments(cx, argc, argv, "u", &id))
       return JS_FALSE;
 
-  JSObject *obj = lookupObjectForId(id);
-  if (obj)
-    *rval = OBJECT_TO_JSVAL(obj);
-  else
-    *rval = JSVAL_NULL;
-
+  *rtarget = lookupTargetForId(id);
   return JS_TRUE;
 }
 
 static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
                              jsval *argv, jsval *rval)
 {
-  jsval targetVal;
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
 
-  if (!getJSObject(cx, argc, argv, &targetVal))
+  if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
 
-  if (!JSVAL_IS_STRING(argv[1])) {
+  if (!(argc >= 2 && JSVAL_IS_STRING(argv[1]))) {
     JS_ReportError(cx, "Must supply a string as second parameter.");
     return JS_FALSE;
   }
 
   char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
 
-  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+  if (target) {
     JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
-    *rval = OBJECT_TO_JSVAL(info);
 
-    if (!copyPropertyInfo(cx, info,
-                          NULL, name, JSVAL_TO_OBJECT(targetVal),
-                          MemoryProfiler::get()->targetCx))
+    if (info == NULL) {
+      JS_ReportOutOfMemory(cx);
       return JS_FALSE;
-  } else
-    *rval = JSVAL_NULL;
+    }
 
+    *rval = OBJECT_TO_JSVAL(info);
+    return objects.copyPropertyInfo(info, NULL, name, target);
+  }
+
+  *rval = JSVAL_NULL;
   return JS_TRUE;
 }
 
 static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
                                jsval *argv, jsval *rval)
 {
-  jsval targetVal;
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+
+  if (!objects.getTarget(argc, argv, &target))
+    return JS_FALSE;
+
   bool useGetPropertiesInfo2 = false;
 
-  if (!getJSObject(cx, argc, argv, &targetVal))
-    return JS_FALSE;
-  
   if (argc > 1 && argv[1] == JSVAL_TRUE)
     useGetPropertiesInfo2 = true;
 
-  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
-    JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = MemoryProfiler::get()->targetCx;
-
+  if (target) {
     JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
     if (propInfo == NULL) {
       JS_ReportOutOfMemory(cx);
@@ -597,16 +804,13 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
 
     *rval = OBJECT_TO_JSVAL(propInfo);
 
-    if (useGetPropertiesInfo2) {
-      if (!getPropertiesInfo2(cx, propInfo, target, targetCx))
-        return JS_FALSE;
-    } else {
-      if (!getPropertiesInfo(cx, propInfo, target, targetCx))
-        return JS_FALSE;
-    }
-  } else
-    *rval = JSVAL_NULL;
+    if (useGetPropertiesInfo2)
+      return objects.getPropertiesInfo2(propInfo, target);
+    else
+      return objects.getPropertiesInfo(propInfo, target);
+  }
 
+  *rval = JSVAL_NULL;
   return JSVAL_TRUE;
 }
 
@@ -614,25 +818,20 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
                               jsval *argv, jsval *rval)
 {
   JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
-  *rval = OBJECT_TO_JSVAL(info);
- 
-  if (MemoryProfiler::get()->namedObjects != NULL) {
-    if (!getPropertiesInfo(cx, info, MemoryProfiler::get()->namedObjects,
-                           MemoryProfiler::get()->targetCx))
-      return JS_FALSE;
+
+  if (info == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
   }
 
-  return JS_TRUE;
-}
+  *rval = OBJECT_TO_JSVAL(info);
 
-static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
-                                       JSDHashEntryHdr *hdr,
-                                       uint32 number,
-                                       void *arg)
-{
-  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
-  tracingState.ids[entry->id] = (JSObject *) entry->base.key;
-  return JS_DHASH_NEXT;
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+
+  if (objects.namedTargetObjects != NULL)
+    return objects.getPropertiesInfo(info, objects.namedTargetObjects);
+
+  return JS_TRUE;
 }
 
 static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
@@ -640,8 +839,10 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
 {
   JSObject *table = JS_NewObject(cx, NULL, NULL, NULL);
 
-  if (table == NULL)
+  if (table == NULL) {
+    JS_ReportOutOfMemory(cx);
     return JS_FALSE;
+  }
 
   *rval = OBJECT_TO_JSVAL(table);
 
@@ -673,16 +874,17 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
 static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
                            jsval *argv, jsval *rval)
 {
-  jsval targetVal;
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
 
-  if (!getJSObject(cx, argc, argv, &targetVal))
+  if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
 
-  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
+  if (target) {
     JSObject *parent = JS_GetParent(MemoryProfiler::get()->targetCx,
-                                    JSVAL_TO_OBJECT(targetVal));
+                                    target);
     if (parent) {
-      *rval = INT_TO_JSVAL(lookupIdForThing(parent));
+      *rval = INT_TO_JSVAL(objects.lookupIdForTarget(parent));
       return JS_TRUE;
     }
   }
@@ -694,86 +896,16 @@ static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
 static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
-  jsval targetVal;
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
 
-  if (!getJSObject(cx, argc, argv, &targetVal))
+  if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
 
-  if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
-    JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
-    *rval = OBJECT_TO_JSVAL(info);
+  if (target)
+    return objects.getInfoForTarget(target, rval);
 
-    JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = MemoryProfiler::get()->targetCx;
-    JSClass *classp = JS_GET_CLASS(targetCx, target);
-    if (classp != NULL) {
-      if (!JS_DefineProperty(cx, info, "id",
-                             INT_TO_JSVAL(lookupIdForThing(target)),
-                             NULL, NULL,
-                             JSPROP_ENUMERATE))
-        return JS_FALSE;
-
-      JSString *name = JS_InternString(cx, classp->name);
-      if (name == NULL) {
-        JS_ReportOutOfMemory(cx);
-        return JS_FALSE;        
-      }
-      if (!JS_DefineProperty(cx, info, "nativeClass", STRING_TO_JSVAL(name),
-                             NULL, NULL, JSPROP_ENUMERATE)) {
-        JS_ReportOutOfMemory(cx);
-        return JS_FALSE;
-      }
-    }
-
-    if (!JS_DefineProperty(
-          cx, info, "size",
-          INT_TO_JSVAL(JS_GetObjectTotalSize(targetCx, target)),
-          NULL, NULL, JSPROP_ENUMERATE)) {
-      JS_ReportOutOfMemory(cx);
-      return JS_FALSE;
-    }
-
-    if (!maybeIncludeObject(cx, info, "parent",
-                            JS_GetParent(targetCx, target)) ||
-        !maybeIncludeObject(cx, info, "prototype",
-                            JS_GetPrototype(targetCx, target)))
-      return JS_FALSE;
-
-    // TODO: We used to include 'constructor' here too, but
-    // we ran into a problem with Block objects, so removed it.
-
-    if (JS_ObjectIsFunction(targetCx, target))
-      if (!getFunctionInfo(cx, info, target, targetCx))
-        return JS_FALSE;
-
-    if (!getChildrenInfo(cx, info, target, targetCx))
-      return JS_FALSE;
-
-    if (classp->flags & JSCLASS_IS_EXTENDED) {
-      JSExtendedClass *exClassp = (JSExtendedClass *) classp;
-
-      if (!maybeIncludeObjectOp(cx, info, "wrappedObject",
-                                exClassp->wrappedObject, targetCx, target) ||
-          !maybeIncludeObjectOp(cx, info, "outerObject",
-                                exClassp->outerObject, targetCx, target) ||
-          !maybeIncludeObjectOp(cx, info, "innerObject",
-                                exClassp->innerObject, targetCx, target))
-        return JS_FALSE;
-    }
-
-    if (((classp->flags & JSCLASS_IS_EXTENDED) &&
-          ((JSExtendedClass *) classp)->wrappedObject)) {
-      if (!maybeIncludeObject(
-            cx, info, "wrappedObject",
-            ((JSExtendedClass *) classp)->wrappedObject(targetCx, target)
-            ))
-        return JS_FALSE;
-    }
-
-    *rval = OBJECT_TO_JSVAL(info);
-  } else
-    *rval = JSVAL_NULL;
-
+  *rval = JSVAL_NULL;
   return JS_TRUE;
 }
 
@@ -798,8 +930,9 @@ static intN rootMapFun(void *rp, const char *name, void *data)
   // and hope that a later tracing will give us more information about
   // them.
 
+  ExtObjectManager &objects = MemoryProfiler::get()->objects;
   RootMapStruct *roots = (RootMapStruct *) data;
-  uint32 objId = lookupIdForThing(*((void **)rp));
+  uint32 objId = objects.lookupIdForTarget(*((JSObject **)rp));
   if (objId) {
     jsval id = INT_TO_JSVAL(objId);
     if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
@@ -1017,8 +1150,7 @@ MemoryProfiler *MemoryProfiler::gSelf;
 
 MemoryProfiler::MemoryProfiler() :
   targetCx(NULL),
-  targetRt(NULL),
-  namedObjects(NULL)
+  targetRt(NULL)
 {
   if (!gSelf)
     gSelf = this;
@@ -1030,24 +1162,9 @@ MemoryProfiler::~MemoryProfiler()
     gSelf = NULL;
 }
 
-class AutoCleanupTracingState {
-public:
-  ~AutoCleanupTracingState() {
-    if (tracingState.ids) {
-      PR_Free(tracingState.ids);
-      tracingState.ids = NULL;
-    }
-
-    if (tracingState.visited.ops) {
-      JS_DHashTableFinish(&tracingState.visited);
-      tracingState.visited.ops = NULL;
-    }
-  }
-};
-
 JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
                                const char *filename, uint32 lineNumber,
-                               JSObject *theNamedObjects, JSString *argument,
+                               JSObject *namedObjects, JSString *argument,
                                jsval *rval)
 {
   if (gSelf != this) {
@@ -1057,7 +1174,6 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
 
   targetCx = cx;
   targetRt = JS_GetRuntime(cx);
-  namedObjects = theNamedObjects;
 
   if (!runtime.init())
     return JS_FALSE;
@@ -1065,36 +1181,8 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
   if (!strings.init(&runtime))
     return JS_FALSE;
 
-  AutoCleanupTracingState autoCleanupTracingState;
-
-  if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
-                         NULL, sizeof(Profiler_HashEntry),
-                         JS_DHASH_DEFAULT_CAPACITY(100))) {
-    JS_ReportOutOfMemory(targetCx);
+  if (!objects.init(&runtime, targetCx, namedObjects))
     return JS_FALSE;
-  }
-
-  tracingState.currId = 1;
-  tracingState.ids = NULL;
-  tracingState.result = JS_TRUE;
-  tracingState.tracer.context = targetCx;
-  tracingState.tracer.callback = visitedBuilder;
-  JS_TraceRuntime(&tracingState.tracer);
-
-  if (!tracingState.result)
-    return JS_FALSE;
-
-  tracingState.ids = (JSObject **)PR_Malloc(
-    (tracingState.currId) * sizeof(JSObject *)
-    );
-  if (tracingState.ids == NULL) {
-    JS_ReportOutOfMemory(targetCx);
-    return JS_FALSE;
-  }
-  tracingState.ids[0] = NULL;
-  JS_DHashTableEnumerate(&tracingState.visited,
-                         mapIdsToObjects,
-                         NULL);
 
   jsval argumentVal = JSVAL_NULL;
 
