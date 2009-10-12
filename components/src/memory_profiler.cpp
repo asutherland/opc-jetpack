@@ -10,7 +10,6 @@ typedef struct {
 } Profiler_HashEntry;
 
 // Private structure to track the state of tracing the JS heap.
-
 typedef struct _TracingState {
   // C array that maps from object IDs to JSObject *'s in the runtime
   // that we're tracing.
@@ -53,12 +52,25 @@ typedef struct {
   int index;
 } String_HashEntry;
 
+// A class that encapsulates the profiler's JS runtime and
+// associated data.
 class ProfilerRuntime {
+private:
+  // Disallow copy constructors and assignment.
+  ProfilerRuntime(const ProfilerRuntime&);
+  ProfilerRuntime& operator= (const ProfilerRuntime&);
+
 public:
+  // JS runtime for our profiler.
   JSRuntime *rt;
+
+  // JS context for any code that runs.
   JSContext *cx;
+
+  // Global object for any code that runs.
   JSObject *global;
 
+  // The runtime's global functions.
   static JSFunctionSpec ProfilerRuntime::globalFunctions[];
 
   ProfilerRuntime(void);
@@ -71,6 +83,12 @@ public:
 // save time by not needlessly copying strings, and it also allows us
 // to figure out how much space is being taken up by strings.
 class ExtStringManager {
+private:
+  // Disallow copy constructors and assignment.
+  ExtStringManager(const ExtStringManager&);
+  ExtStringManager& operator= (const ExtStringManager&);
+
+  // Memory profiling runtime.
   ProfilerRuntime *profiler;
 
   // A hash table mapping strings in the external (target) runtime to
@@ -109,15 +127,25 @@ public:
   JSBool init(ProfilerRuntime *aProfiler);
 };
 
+// A singleton class that encapsulates the entire state of the memory
+// profiler.
 class MemoryProfiler {
 private:
+  // Disallow copy constructors and assignment.
+  MemoryProfiler(const MemoryProfiler&);
+  MemoryProfiler& operator= (const MemoryProfiler&);
+
+  // Singleton instance.
   static MemoryProfiler *gSelf;
 
 public:
   MemoryProfiler();
   ~MemoryProfiler();
 
+  // JS context of the target JS runtime that called us.
   JSContext *targetCx;
+
+  // JS runtime that we're profiling (and which called us).
   JSRuntime *targetRt;
 
   // The order in which these are listed is the order in which their
@@ -126,10 +154,12 @@ public:
   ProfilerRuntime runtime;
   ExtStringManager strings;
 
+  // Return the profiler's singleton instance.
   static MemoryProfiler *get() {
     return gSelf;
   }
 
+  // Run a profiling script.
   JSBool profile(JSContext *cx, JSString *code, const char *filename,
                  uint32 lineNumber, JSObject *namedObjects,
                  JSString *argument, jsval *rval);
