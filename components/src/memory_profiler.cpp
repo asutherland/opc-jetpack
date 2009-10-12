@@ -24,9 +24,6 @@ typedef struct _TracingState {
   // Whether the tracing operation is successful or failed.
   JSBool result;
 
-  // Mapping from strings to objects for the profiler's convenience.
-  JSObject *namedObjects;
-
   // Structure required to use JS tracing functions.
   JSTracer tracer;
 } TracingState;
@@ -145,6 +142,9 @@ public:
   // JS runtime that we're profiling (and which called us).
   JSRuntime *targetRt;
 
+  // Mapping from strings to objects for the profiler's convenience.
+  JSObject *namedObjects;
+
   // The order in which these are listed is the order in which their
   // constructors are called, and the reverse order in which their
   // destructors are called.
@@ -158,7 +158,7 @@ public:
 
   // Run a profiling script.
   JSBool profile(JSContext *cx, JSString *code, const char *filename,
-                 uint32 lineNumber, JSObject *namedObjects,
+                 uint32 lineNumber, JSObject *theNamedObjects,
                  JSString *argument, jsval *rval);
 };
 
@@ -486,12 +486,12 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
 {
   *id = 0;
 
-  if (tracingState.namedObjects == NULL)
+  if (MemoryProfiler::get()->namedObjects == NULL)
     return JS_TRUE;
 
   JSBool found;
   if (!JS_HasProperty(MemoryProfiler::get()->targetCx,
-                      tracingState.namedObjects,
+                      MemoryProfiler::get()->namedObjects,
                       name,
                       &found)) {
     JS_ReportError(cx, "JS_HasProperty() failed.");
@@ -503,7 +503,7 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
 
   jsval val;
   if (!JS_LookupProperty(MemoryProfiler::get()->targetCx,
-                         tracingState.namedObjects,
+                         MemoryProfiler::get()->namedObjects,
                          name,
                          &val)) {
     JS_ReportError(cx, "JS_LookupProperty failed.");
@@ -616,8 +616,8 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
   JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
   *rval = OBJECT_TO_JSVAL(info);
  
-  if (tracingState.namedObjects != NULL) {
-    if (!getPropertiesInfo(cx, info, tracingState.namedObjects,
+  if (MemoryProfiler::get()->namedObjects != NULL) {
+    if (!getPropertiesInfo(cx, info, MemoryProfiler::get()->namedObjects,
                            MemoryProfiler::get()->targetCx))
       return JS_FALSE;
   }
@@ -1017,7 +1017,8 @@ MemoryProfiler *MemoryProfiler::gSelf;
 
 MemoryProfiler::MemoryProfiler() :
   targetCx(NULL),
-  targetRt(NULL)
+  targetRt(NULL),
+  namedObjects(NULL)
 {
   if (!gSelf)
     gSelf = this;
@@ -1046,7 +1047,7 @@ public:
 
 JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
                                const char *filename, uint32 lineNumber,
-                               JSObject *namedObjects, JSString *argument,
+                               JSObject *theNamedObjects, JSString *argument,
                                jsval *rval)
 {
   if (gSelf != this) {
@@ -1056,6 +1057,7 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
 
   targetCx = cx;
   targetRt = JS_GetRuntime(cx);
+  namedObjects = theNamedObjects;
 
   if (!runtime.init())
     return JS_FALSE;
@@ -1075,7 +1077,6 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
   tracingState.currId = 1;
   tracingState.ids = NULL;
   tracingState.result = JS_TRUE;
-  tracingState.namedObjects = namedObjects;
   tracingState.tracer.context = targetCx;
   tracingState.tracer.callback = visitedBuilder;
   JS_TraceRuntime(&tracingState.tracer);
