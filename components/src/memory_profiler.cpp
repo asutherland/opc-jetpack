@@ -36,6 +36,7 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
+// Structure to track information with when tracing GC roots.
 struct RootMapStruct {
   JSBool rval;
   int length;
@@ -75,9 +76,16 @@ public:
 // to figure out how much space is being taken up by strings.
 class ExtStringManager {
 private:
+  // Hashtable entry subclass mapping external strings (in the target
+  // runtime) to profiler runtime strings.
   struct StringHashEntry {
+    // base.key points to a JSString * in the target runtime.
     JSDHashEntryStub base;
+
+    // Mirrored string in profiler runtime.
     JSString *string;
+
+    // Numeric ID for mirrored string.
     int index;
   };
 
@@ -126,11 +134,18 @@ public:
 
 class ExtObjectManager {
 private:
+  // Hashtable entry subclass mapping JSObject * in the target runtime
+  // to numeric IDs in the profiling runtime.
   struct ObjectHashEntry {
+    // base.key is a JSObject * in the target runtime.
     JSDHashEntryStub base;
+
+    // Numeric ID of the object in the profiling runtime.
     unsigned int id;
   };
 
+  // JSTracer subclass that includes additional properties used when
+  // tracing objects in the target runtime.
   struct ProfilerTracer {
     JSTracer base;
     ExtObjectManager *self;
@@ -166,20 +181,39 @@ private:
   // the objects in the runtime we're profiling.
   JSDHashTable visited;
 
+  // JSContext of the target runtime.
   JSContext *targetCx;
+
+  // JSContext of the profiling runtime.
   JSContext *cx;
+
+  // External strings in the target runtime mirrored to the profiling
+  // runtime.
   ExtStringManager *strings;
 
+  // Adds properties to the given info object containing information
+  // about the object's children (in the JS heap) in the target
+  // runtime.
   JSBool getChildrenInfo(JSObject *info, JSObject *target);
 
+  // Adds properties to the given info object containing
+  // information about the given function in the target runtime.
   JSBool getFunctionInfo(JSObject *info, JSObject *target);
 
+  // If obj is a non-NULL object in the target runtime, adds a
+  // property with the given name to the given info object whose value
+  // is the object ID of the target object.
   JSBool maybeIncludeObject(JSObject *info, const char *objName,
                             JSObject *obj);
 
+  // If objOp is non-NULL, adds a property with the given name
+  // to the given info object whose value is the object ID of
+  // the objOp applied to the given target object.
   JSBool maybeIncludeObjectOp(JSObject *info, const char *objName,
                               JSObjectOp objOp, JSObject *target);
 
+  // Attempts to look up a named object in the target runtime with the
+  // given name, placing its object ID in rid if it's found.
   JSBool lookupNamedObject(const char *name, uint32 *rid);
 
   // JSTraceCallback to build a hashtable of existing object references.
@@ -188,7 +222,9 @@ private:
   // JSTraceCallback to build object children.
   static void childBuilder(JSTracer *trc, void *thing, uint32 kind);
 
-  static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
+  // JSDHashEnumerator that maps each JSObject * in the target runtime
+  // to a numeric object ID in the profiling runtime.
+  static JSDHashOperator mapObjectsToIds(JSDHashTable *table,
                                          JSDHashEntryHdr *hdr,
                                          uint32 number,
                                          void *arg);
@@ -197,18 +233,33 @@ public:
   ExtObjectManager(void);
   ~ExtObjectManager();
 
+  // Initialize the object manager. Must be called before using
+  // any other methods.
   JSBool init(ProfilerRuntime *aprofiler,
               ExtStringManager *astrings,
               JSContext *atargetCx,
               JSObject *anamedTargetObjects);
 
+  // Copy information about the given property (name or ID) on the
+  // given object in the target runtime, and assign it to a property
+  // with the same name on propInfo in the profiling runtime. If the
+  // property is a primitive value or string, its value is
+  // copied/mirrored; if it's a JSObject *, its value is set to the
+  // object's numeric object ID in the profiling runtime.
   JSBool copyPropertyInfo(JSObject *propInfo, jsid targetPropId,
                           const char *name, JSObject *target);
 
+  // Uses JS_Enumerate to put information about all the
+  // target runtime object's properties on propInfo.
   JSBool getPropertiesInfo(JSObject *propInfo, JSObject *target);
 
+  // Uses JS_NewPropertyIterator to put information about all the
+  // target runtime object's properties on propInfo.
   JSBool getPropertiesInfo2(JSObject *propInfo, JSObject *target);
 
+  // Returns, into rval, a memory profiling runtime JSObject * mapping
+  // object IDs to their native JSClass names. rval is assumed to be
+  // rooted.
   JSBool getTargetTable(jsval *rval);
 
   // Mapping from strings to objects for the profiler's convenience.
@@ -216,7 +267,7 @@ public:
   JSObject *namedTargetObjects;
 
   // Create a 'dictionary' of information about the target object
-  // and put it in rval. Return JS_FALSE if an error occurs.
+  // and put it in rval. rval is assumed to be rooted.
   JSBool getInfoForTarget(JSObject *target, jsval *rval);
 
   // Given a named object string or an object ID at the front of argv,
@@ -387,7 +438,7 @@ ExtObjectManager::~ExtObjectManager()
   namedTargetObjects = NULL;
 }
 
-JSDHashOperator ExtObjectManager::mapIdsToObjects(JSDHashTable *table,
+JSDHashOperator ExtObjectManager::mapObjectsToIds(JSDHashTable *table,
                                                   JSDHashEntryHdr *hdr,
                                                   uint32 number,
                                                   void *arg)
@@ -435,7 +486,7 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
   }
   ids[0] = NULL;
   JS_DHashTableEnumerate(&visited,
-                         mapIdsToObjects,
+                         mapObjectsToIds,
                          this);
 
   return JS_TRUE;
@@ -600,29 +651,6 @@ JSBool ExtObjectManager::copyPropertyInfo(JSObject *propInfo,
   return JS_TRUE;
 }
 
-JSBool ExtObjectManager::getPropertiesInfo2(JSObject *propInfo,
-                                            JSObject *target)
-{
-  JSObject *iterator = JS_NewPropertyIterator(targetCx, target);
-  if (iterator == NULL)
-    return JS_TRUE;
-
-  jsid iterId;
-  while (1) {
-    if (!JS_NextProperty(targetCx, iterator, &iterId)) {
-      JS_ReportError(cx, "Iterating to next property failed.");
-      return JS_FALSE;
-    }
-    if (iterId == JSVAL_VOID)
-      break;
-
-    if (!copyPropertyInfo(propInfo, iterId, NULL, target))
-      return JS_FALSE;
-  }
-
-  return JS_TRUE;
-}
-
 JSBool ExtObjectManager::getPropertiesInfo(JSObject *propInfo,
                                            JSObject *target)
 {
@@ -652,6 +680,29 @@ JSBool ExtObjectManager::getPropertiesInfo(JSObject *propInfo,
   JS_DestroyIdArray(targetCx, ids);
 
   return success;
+}
+
+JSBool ExtObjectManager::getPropertiesInfo2(JSObject *propInfo,
+                                            JSObject *target)
+{
+  JSObject *iterator = JS_NewPropertyIterator(targetCx, target);
+  if (iterator == NULL)
+    return JS_TRUE;
+
+  jsid iterId;
+  while (1) {
+    if (!JS_NextProperty(targetCx, iterator, &iterId)) {
+      JS_ReportError(cx, "Iterating to next property failed.");
+      return JS_FALSE;
+    }
+    if (iterId == JSVAL_VOID)
+      break;
+
+    if (!copyPropertyInfo(propInfo, iterId, NULL, target))
+      return JS_FALSE;
+  }
+
+  return JS_TRUE;
 }
 
 JSBool ExtObjectManager::maybeIncludeObject(JSObject *info,
