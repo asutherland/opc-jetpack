@@ -131,6 +131,25 @@ public:
 
 class ExtObjectManager {
 private:
+  struct ProfilerTracer {
+    JSTracer base;
+    ExtObjectManager *self;
+    JSBool result;
+
+    // These are used only when using the childBuilder tracer.
+    int numObjects;
+    JSObject *objects;
+
+    ProfilerTracer(ExtObjectManager *parent) :
+      self(parent),
+      result(JS_TRUE),
+      numObjects(0),
+      objects(NULL)
+      {
+        base.context = parent->targetCx;
+      }
+  };
+
   // Disallow copy constructors and assignment.
   ExtObjectManager(const ExtObjectManager&);
   ExtObjectManager& operator= (const ExtObjectManager&);
@@ -214,16 +233,6 @@ public:
   // it, or NULL if no such object exists. The JSObject * is property
   // of the target runtime.
   JSObject *lookupTargetForId(uint32 id);
-};
-
-struct ProfilerTracer {
-  JSTracer base;
-  ExtObjectManager *self;
-  JSBool result;
-
-  // These are used only when using the childBuilder tracer.
-  int numObjects;
-  JSObject *objects;
 };
 
 // A singleton class that encapsulates the entire state of the memory
@@ -411,11 +420,8 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
     return JS_FALSE;
   }
 
-  ProfilerTracer tracer;
+  ProfilerTracer tracer(this);
 
-  tracer.self = this;
-  tracer.result = JS_TRUE;
-  tracer.base.context = targetCx;
   tracer.base.callback = visitedBuilder;
   JS_TraceRuntime(&tracer.base);
 
@@ -437,13 +443,9 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
 
 JSBool ExtObjectManager::getChildrenInfo(JSObject *info, JSObject *target)
 {
-  ProfilerTracer tracer;
+  ProfilerTracer tracer(this);
 
-  tracer.self = this;
-  tracer.result = JS_TRUE;
-  tracer.base.context = targetCx;
   tracer.base.callback = childBuilder;
-  tracer.numObjects = 0;
 
   JSObject *objects = JS_NewArrayObject(cx, 0, NULL);
   if (!objects) {
