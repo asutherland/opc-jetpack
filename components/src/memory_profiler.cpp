@@ -129,13 +129,6 @@ public:
   JSBool init(ProfilerRuntime *aProfiler);
 };
 
-class MemoryProfiler;
-
-struct ChildTracingState {
-  int numObjects;
-  JSObject *objects;
-};
-
 class ExtObjectManager {
 private:
   // Disallow copy constructors and assignment.
@@ -153,15 +146,6 @@ private:
   // Keeps track of what objects we've visited so far while tracing
   // the objects in the runtime we're profiling.
   JSDHashTable visited;
-
-  // Whether the tracing operation is successful or failed.
-  JSBool tracerResult;
-
-  // Structure required to use JS tracing functions.
-  JSTracer tracer;
-
-  // Temporary storage needed for tracing children.
-  ChildTracingState childTracingState;
 
   JSContext *targetCx;
   JSContext *cx;
@@ -232,6 +216,16 @@ public:
   JSObject *lookupTargetForId(uint32 id);
 };
 
+struct ProfilerTracer {
+  JSTracer base;
+  ExtObjectManager *self;
+  JSBool result;
+
+  // These are used only when using the childBuilder tracer.
+  int numObjects;
+  JSObject *objects;
+};
+
 // A singleton class that encapsulates the entire state of the memory
 // profiler.
 class MemoryProfiler {
@@ -274,53 +268,53 @@ public:
 void ExtObjectManager::childBuilder(JSTracer *trc, void *thing,
                                     uint32 kind)
 {
-  if (kind == JSTRACE_OBJECT) {
-    ExtObjectManager &self = MemoryProfiler::get()->objects;
+  ProfilerTracer *tracer = (ProfilerTracer *) trc;
 
-    if (!self.tracerResult)
+  if (kind == JSTRACE_OBJECT) {
+    if (!tracer->result)
       return;
 
-    uint32 id = self.lookupIdForTarget((JSObject *) thing);
+    uint32 id = tracer->self->lookupIdForTarget((JSObject *) thing);
 
     if (!JS_DefineElement(trc->context,
-                          self.childTracingState.objects,
-                          self.childTracingState.numObjects,
+                          tracer->objects,
+                          tracer->numObjects,
                           INT_TO_JSVAL(id),
                           NULL, NULL, JSPROP_ENUMERATE))
-      self.tracerResult = JS_FALSE;
+      tracer->result = JS_FALSE;
     else
-      self.childTracingState.numObjects++;
+      tracer->numObjects++;
   }
 }
 
 void ExtObjectManager::visitedBuilder(JSTracer *trc, void *thing,
                                       uint32 kind)
 {
-  ExtObjectManager &self = MemoryProfiler::get()->objects;
+  ProfilerTracer *tracer = (ProfilerTracer *) trc;
   Profiler_HashEntry *entry;
 
-  if (!self.tracerResult)
+  if (!tracer->result)
     return;
 
   switch (kind) {
   case JSTRACE_OBJECT:
     entry = (Profiler_HashEntry *)
-      JS_DHashTableOperate(&self.visited,
+      JS_DHashTableOperate(&tracer->self->visited,
                            thing,
                            JS_DHASH_LOOKUP);
     if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
       entry = (Profiler_HashEntry *) JS_DHashTableOperate(
-        &self.visited,
+        &tracer->self->visited,
         thing,
         JS_DHASH_ADD
         );
       if (entry == NULL) {
         JS_ReportOutOfMemory(trc->context);
-        self.tracerResult = JS_FALSE;
+        tracer->result = JS_FALSE;
         return;
       }
       entry->base.key = thing;
-      entry->id = self.currId++;
+      entry->id = tracer->self->currId++;
       JS_TraceChildren(trc, thing, kind);
     }
     break;
@@ -417,12 +411,15 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
     return JS_FALSE;
   }
 
-  tracerResult = JS_TRUE;
-  tracer.context = targetCx;
-  tracer.callback = visitedBuilder;
-  JS_TraceRuntime(&tracer);
+  ProfilerTracer tracer;
 
-  if (!tracerResult)
+  tracer.self = this;
+  tracer.result = JS_TRUE;
+  tracer.base.context = targetCx;
+  tracer.base.callback = visitedBuilder;
+  JS_TraceRuntime(&tracer.base);
+
+  if (!tracer.result)
     return JS_FALSE;
 
   ids = (JSObject **)PR_Malloc((currId) * sizeof(JSObject *));
@@ -440,9 +437,13 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
 
 JSBool ExtObjectManager::getChildrenInfo(JSObject *info, JSObject *target)
 {
-  tracer.callback = childBuilder;
-  childTracingState.numObjects = 0;
-  tracerResult = JS_TRUE;
+  ProfilerTracer tracer;
+
+  tracer.self = this;
+  tracer.result = JS_TRUE;
+  tracer.base.context = targetCx;
+  tracer.base.callback = childBuilder;
+  tracer.numObjects = 0;
 
   JSObject *objects = JS_NewArrayObject(cx, 0, NULL);
   if (!objects) {
@@ -450,11 +451,11 @@ JSBool ExtObjectManager::getChildrenInfo(JSObject *info, JSObject *target)
     return JS_FALSE;
   }
 
-  childTracingState.objects = objects;
-  JS_TraceChildren(&tracer, target, JSTRACE_OBJECT);
+  tracer.objects = objects;
+  JS_TraceChildren(&tracer.base, target, JSTRACE_OBJECT);
 
-  if (!(tracerResult &&
-        JS_SetArrayLength(cx, objects, childTracingState.numObjects)))
+  if (!(tracer.result &&
+        JS_SetArrayLength(cx, objects, tracer.numObjects)))
     return JS_FALSE;
 
   return JS_DefineProperty(cx, info, "children", OBJECT_TO_JSVAL(objects),
