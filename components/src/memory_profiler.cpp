@@ -9,28 +9,6 @@ typedef struct {
   unsigned int id;
 } Profiler_HashEntry;
 
-// Private structure to track the state of tracing the JS heap.
-typedef struct _TracingState {
-  // C array that maps from object IDs to JSObject *'s in the runtime
-  // that we're tracing.
-  JSObject **ids;
-
-  // The latest object ID that we've assigned.
-  unsigned int currId;
-
-  // Keeps track of what objects we've visited so far.
-  JSDHashTable visited;
-
-  // Whether the tracing operation is successful or failed.
-  JSBool result;
-
-  // Structure required to use JS tracing functions.
-  JSTracer tracer;
-} TracingState;
-
-// Static singleton for tracking the state of tracing the JS heap.
-static TracingState tracingState;
-
 typedef struct _ChildTracingState {
   int numObjects;
   JSObject *objects;
@@ -129,6 +107,22 @@ private:
   ExtObjectManager(const ExtObjectManager&);
   ExtObjectManager& operator= (const ExtObjectManager&);
 
+  // C array that maps from object IDs to JSObject *'s in the runtime
+  // that we're tracing.
+  JSObject **ids;
+
+  // The latest object ID that we've assigned.
+  unsigned int currId;
+
+  // Keeps track of what objects we've visited so far.
+  JSDHashTable visited;
+
+  // Whether the tracing operation is successful or failed.
+  JSBool tracerResult;
+
+  // Structure required to use JS tracing functions.
+  JSTracer tracer;
+
   JSContext *targetCx;
   JSContext *cx;
 
@@ -144,6 +138,14 @@ private:
 
   JSBool lookupNamedObject(const char *name, uint32 *rid);
 
+  // JSTraceCallback to build a hashtable of existing object references.
+  static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind);
+
+  static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
+                                         JSDHashEntryHdr *hdr,
+                                         uint32 number,
+                                         void *arg);
+
 public:
   ExtObjectManager(void);
   ~ExtObjectManager();
@@ -157,6 +159,8 @@ public:
   JSBool getPropertiesInfo(JSObject *propInfo, JSObject *target);
 
   JSBool getPropertiesInfo2(JSObject *propInfo, JSObject *target);
+
+  JSBool getTargetTable(jsval *rval);
 
   // Mapping from strings to objects for the profiler's convenience.
   // This object is owned by the target runtime.
@@ -239,30 +243,34 @@ static void childBuilder(JSTracer *trc, void *thing, uint32 kind)
   }
 }
 
-// JSTraceCallback to build a hashtable of existing object references.
-static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
+void ExtObjectManager::visitedBuilder(JSTracer *trc, void *thing,
+                                      uint32 kind)
 {
+  ExtObjectManager &self = MemoryProfiler::get()->objects;
   Profiler_HashEntry *entry;
+
+  if (!self.tracerResult)
+    return;
 
   switch (kind) {
   case JSTRACE_OBJECT:
     entry = (Profiler_HashEntry *)
-      JS_DHashTableOperate(&tracingState.visited,
+      JS_DHashTableOperate(&self.visited,
                            thing,
                            JS_DHASH_LOOKUP);
     if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
       entry = (Profiler_HashEntry *) JS_DHashTableOperate(
-        &tracingState.visited,
+        &self.visited,
         thing,
         JS_DHASH_ADD
         );
       if (entry == NULL) {
         JS_ReportOutOfMemory(trc->context);
-        tracingState.result = JS_FALSE;
+        self.tracerResult = JS_FALSE;
         return;
       }
       entry->base.key = thing;
-      entry->id = tracingState.currId++;
+      entry->id = self.currId++;
       JS_TraceChildren(trc, thing, kind);
     }
     break;
@@ -275,8 +283,8 @@ static void visitedBuilder(JSTracer *trc, void *thing, uint32 kind)
 
 JSObject *ExtObjectManager::lookupTargetForId(uint32 id)
 {
-  if (id > 0 && id < tracingState.currId)
-    return tracingState.ids[id];
+  if (id > 0 && id < currId)
+    return ids[id];
   return NULL;
 }
 
@@ -284,7 +292,7 @@ uint32 ExtObjectManager::lookupIdForTarget(JSObject *target)
 {
   Profiler_HashEntry *entry;
   entry = (Profiler_HashEntry *)
-    JS_DHashTableOperate(&tracingState.visited,
+    JS_DHashTableOperate(&visited,
                          target,
                          JS_DHASH_LOOKUP);
   
@@ -298,38 +306,40 @@ uint32 ExtObjectManager::lookupIdForTarget(JSObject *target)
 }
 
 ExtObjectManager::ExtObjectManager(void) :
+  ids(NULL),
+  currId(1),
   targetCx(NULL),
   cx(NULL),
   namedTargetObjects(NULL)
 {
+  visited.ops = NULL;
 }
 
 ExtObjectManager::~ExtObjectManager()
 {
-  if (cx && targetCx) {
-    if (tracingState.ids) {
-      PR_Free(tracingState.ids);
-      tracingState.ids = NULL;
-    }
-
-    if (tracingState.visited.ops) {
-      JS_DHashTableFinish(&tracingState.visited);
-      tracingState.visited.ops = NULL;
-    }
-
-    cx = NULL;
-    targetCx = NULL;
-    namedTargetObjects = NULL;
+  if (ids) {
+    PR_Free(ids);
+    ids = NULL;
   }
+
+  if (visited.ops) {
+    JS_DHashTableFinish(&visited);
+    visited.ops = NULL;
+  }
+
+  cx = NULL;
+  targetCx = NULL;
+  namedTargetObjects = NULL;
 }
 
-static JSDHashOperator mapIdsToObjects(JSDHashTable *table,
-                                       JSDHashEntryHdr *hdr,
-                                       uint32 number,
-                                       void *arg)
+JSDHashOperator ExtObjectManager::mapIdsToObjects(JSDHashTable *table,
+                                                  JSDHashEntryHdr *hdr,
+                                                  uint32 number,
+                                                  void *arg)
 {
+  ExtObjectManager *self = (ExtObjectManager *) arg;
   Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
-  tracingState.ids[entry->id] = (JSObject *) entry->base.key;
+  self->ids[entry->id] = (JSObject *) entry->base.key;
   return JS_DHASH_NEXT;
 }
 
@@ -337,40 +347,39 @@ JSBool ExtObjectManager::init(ProfilerRuntime *profiler,
                               JSContext *atargetCx,
                               JSObject *anamedTargetObjects)
 {
+  if (cx) {
+    JS_ReportError(atargetCx, "ExtObjectManager already inited");
+    return JS_FALSE;
+  }
+
   cx = profiler->cx;
   targetCx = atargetCx;
   namedTargetObjects = anamedTargetObjects;
 
-  tracingState.ids = NULL;
-  tracingState.visited.ops = NULL;
-
-  if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
+  if (!JS_DHashTableInit(&visited, JS_DHashGetStubOps(),
                          NULL, sizeof(Profiler_HashEntry),
                          JS_DHASH_DEFAULT_CAPACITY(100))) {
     JS_ReportOutOfMemory(targetCx);
     return JS_FALSE;
   }
 
-  tracingState.currId = 1;
-  tracingState.result = JS_TRUE;
-  tracingState.tracer.context = targetCx;
-  tracingState.tracer.callback = visitedBuilder;
-  JS_TraceRuntime(&tracingState.tracer);
+  tracerResult = JS_TRUE;
+  tracer.context = targetCx;
+  tracer.callback = visitedBuilder;
+  JS_TraceRuntime(&tracer);
 
-  if (!tracingState.result)
+  if (!tracerResult)
     return JS_FALSE;
 
-  tracingState.ids = (JSObject **)PR_Malloc(
-    (tracingState.currId) * sizeof(JSObject *)
-    );
-  if (tracingState.ids == NULL) {
+  ids = (JSObject **)PR_Malloc((currId) * sizeof(JSObject *));
+  if (ids == NULL) {
     JS_ReportOutOfMemory(targetCx);
     return JS_FALSE;
   }
-  tracingState.ids[0] = NULL;
-  JS_DHashTableEnumerate(&tracingState.visited,
+  ids[0] = NULL;
+  JS_DHashTableEnumerate(&visited,
                          mapIdsToObjects,
-                         NULL);
+                         this);
 
   return JS_TRUE;
 }
@@ -732,6 +741,42 @@ JSBool ExtObjectManager::getInfoForTarget(JSObject *target,
   return JS_TRUE;
 }
 
+JSBool ExtObjectManager::getTargetTable(jsval *rval)
+{
+  JSObject *table = JS_NewObject(cx, NULL, NULL, NULL);
+
+  if (table == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  // This should root table.
+  *rval = OBJECT_TO_JSVAL(table);
+
+  for (unsigned int i = 1; i < currId; i++) {
+    jsval value = JSVAL_NULL;
+    JSClass *classp = JS_GET_CLASS(targetCx, ids[i]);
+
+    if (classp) {
+      JSString *name = JS_InternString(cx, classp->name);
+      if (name == NULL) {
+        JS_ReportOutOfMemory(cx);
+        return JS_FALSE;
+      }
+      value = STRING_TO_JSVAL(name);
+    }
+
+    if (!JS_DefineElement(cx, table, i,
+                          value, NULL, NULL,
+                          JSPROP_ENUMERATE | JSPROP_INDEX)) {
+      JS_ReportError(cx, "JS_DefineElement() failed");
+      return JS_FALSE;
+    }
+  }
+
+  return JS_TRUE;
+}
+
 JSBool ExtObjectManager::getTarget(uintN argc, jsval *argv,
                                    JSObject **rtarget)
 {
@@ -837,38 +882,7 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
 static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
                           jsval *argv, jsval *rval)
 {
-  JSObject *table = JS_NewObject(cx, NULL, NULL, NULL);
-
-  if (table == NULL) {
-    JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
-  }
-
-  *rval = OBJECT_TO_JSVAL(table);
-
-  for (unsigned int i = 1; i < tracingState.currId; i++) {
-    jsval value = JSVAL_NULL;
-    JSClass *classp = JS_GET_CLASS(MemoryProfiler::get()->targetCx,
-                                   tracingState.ids[i]);
-
-    if (classp) {
-      JSString *name = JS_InternString(cx, classp->name);
-      if (name == NULL) {
-        JS_ReportOutOfMemory(cx);
-        return JS_FALSE;
-      }
-      value = STRING_TO_JSVAL(name);
-    }
-
-    if (!JS_DefineElement(cx, table, i,
-                          value, NULL, NULL,
-                          JSPROP_ENUMERATE | JSPROP_INDEX)) {
-      JS_ReportError(cx, "JS_DefineElement() failed");
-      return JS_FALSE;
-    }
-  }
-
-  return JS_TRUE;
+  return MemoryProfiler::get()->objects.getTargetTable(rval);
 }
 
 static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
