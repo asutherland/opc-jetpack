@@ -57,7 +57,7 @@ typedef struct {
 // in the profiling runtime. This allows us both to conserve memory and
 // save time by not needlessly copying strings, and it also allows us
 // to figure out how much space is being taken up by strings.
-class AutoExtStringManager {
+class ExtStringManager {
   // Memory profiling context.
   JSRuntime *rt;
 
@@ -88,20 +88,22 @@ class AutoExtStringManager {
   }
 
 public:
-  AutoExtStringManager(JSContext *cx) :
-    cx(cx),
+  ExtStringManager(void) :
+    rt(NULL),
+    cx(NULL),
     strArray(NULL),
     strArrayLen(0),
     type(-1)
     {
-      rt = JS_GetRuntime(cx);
       strings.ops = NULL;
     }
 
-  ~AutoExtStringManager() {
-    if (strArray) {
+  ~ExtStringManager() {
+    if (cx && strArray) {
       JS_RemoveRoot(cx, &strArray);
       strArray = NULL;
+      cx = NULL;
+      rt = NULL;
     }
 
     if (strings.ops) {
@@ -114,8 +116,6 @@ public:
       type = -1;
     }
   }
-
-  // TODO: Override new/delete to use NSPR?
 
   // Converts a string from the target runtime to an 'external' string
   // in the profiling runtime, returning NULL on failure.
@@ -160,7 +160,10 @@ public:
 
   // Initializes the string manager. If it returns JS_FALSE, an
   // exception will be pending on the context.
-  JSBool init(void) {
+  JSBool init(JSContext *acx) {
+    cx = acx;
+    rt = JS_GetRuntime(cx);
+
     // TODO: We need to ensure that we're the only JS thread running
     // when we do this, or bad things will happen, according to the docs.
     type = JS_AddExternalStringFinalizer(finalizeExtString);
@@ -171,7 +174,7 @@ public:
 
     strArray = JS_NewArrayObject(cx, 0, NULL);
     if (!(strArray &&
-          JS_AddNamedRoot(cx, &strArray, "AutoExtStringManager Array"))) {
+          JS_AddNamedRoot(cx, &strArray, "ExtStringManager Array"))) {
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
     }
@@ -186,25 +189,22 @@ public:
   }
 };
 
-// Singleton string manager.
-static AutoExtStringManager *extStrings;
-
-class AutoProfilerRuntime {
+class ProfilerRuntime {
 public:
   JSRuntime *rt;
   JSContext *cx;
   JSObject *global;
 
-  static JSFunctionSpec AutoProfilerRuntime::globalFunctions[];
+  static JSFunctionSpec ProfilerRuntime::globalFunctions[];
 
-  AutoProfilerRuntime(void) :
+  ProfilerRuntime(void) :
     rt(NULL),
     cx(NULL),
     global(NULL)
     {
     }
 
-  ~AutoProfilerRuntime() {
+  ~ProfilerRuntime() {
     if (cx) {
       JS_EndRequest(cx);
       JS_DestroyContext(cx);
@@ -242,6 +242,36 @@ public:
     if (!JS_DefineFunctions(cx, global, globalFunctions))
       return JS_FALSE;
   }
+};
+
+class MemoryProfiler {
+private:
+  static MemoryProfiler *gSelf;
+
+  JSContext *targetCx;
+  JSRuntime *targetRt;
+
+  // The order in which these are listed is the order in which their
+  // constructors are called, and the reverse order in which their
+  // destructors are called.
+  ProfilerRuntime runtime;
+  ExtStringManager strings;
+
+public:
+  MemoryProfiler();
+  ~MemoryProfiler();
+
+  static MemoryProfiler *get() {
+    return gSelf;
+  }
+
+  ExtStringManager *getStrings() {
+    return &strings;
+  }
+
+  JSBool profile(JSContext *cx, JSString *code, const char *filename,
+                 uint32 lineNumber, JSObject *namedObjects,
+                 JSString *argument, jsval *rval);
 };
 
 static uint32 lookupIdForThing(void *thing);
@@ -379,7 +409,8 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
 
     JSString *targetFuncName = JS_GetFunctionId(fun);
     if (targetFuncName) {
-      JSString *funcName = extStrings->getExtString(targetFuncName);
+      ExtStringManager *strings = MemoryProfiler::get()->getStrings();
+      JSString *funcName = strings->getExtString(targetFuncName);
       if (!funcName) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;
@@ -451,7 +482,8 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
     value = INT_TO_JSVAL(lookupIdForThing(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
-    JSString *valueStr = extStrings->getExtString(JSVAL_TO_STRING(value));
+    ExtStringManager *strings = MemoryProfiler::get()->getStrings();
+    JSString *valueStr = strings->getExtString(JSVAL_TO_STRING(value));
     if (valueStr == NULL) {
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
@@ -922,7 +954,7 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
   return JS_TRUE;
 }
 
-JSFunctionSpec AutoProfilerRuntime::globalFunctions[] = {
+JSFunctionSpec ProfilerRuntime::globalFunctions[] = {
   JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
   JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
   JS_FS("getObjectParent",      getObjParent,       1, 0, 0),
@@ -942,130 +974,142 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   uint32 lineNumber = 1;
   JSObject *namedObjects = NULL;
   JSString *argument = NULL;
-  JSBool wasSuccessful = JS_FALSE;
-  jsval serverRval = JSVAL_NULL;
-  jsval argumentVal = JSVAL_NULL;
 
   if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
                            &lineNumber, &namedObjects, &argument))
     return JS_FALSE;
 
-  if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
-                         NULL, sizeof(Profiler_HashEntry),
-                         JS_DHASH_DEFAULT_CAPACITY(100))) {
-    JS_ReportOutOfMemory(cx);
+  MemoryProfiler profiler;
+
+  return profiler.profile(cx, code, filename, lineNumber, namedObjects,
+                          argument, rval);
+}
+
+MemoryProfiler *MemoryProfiler::gSelf;
+
+MemoryProfiler::MemoryProfiler() :
+  targetCx(NULL),
+  targetRt(NULL)
+{
+  if (!gSelf)
+    gSelf = this;
+}
+
+MemoryProfiler::~MemoryProfiler()
+{
+  if (gSelf == this)
+    gSelf = NULL;
+}
+
+class AutoCleanupTracingState {
+public:
+  ~AutoCleanupTracingState() {
+    if (tracingState.ids) {
+      PR_Free(tracingState.ids);
+      tracingState.ids = NULL;
+    }
+
+    if (tracingState.visited.ops) {
+      JS_DHashTableFinish(&tracingState.visited);
+      tracingState.visited.ops = NULL;
+    }
+  }
+};
+
+JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
+                               const char *filename, uint32 lineNumber,
+                               JSObject *namedObjects, JSString *argument,
+                               jsval *rval)
+{
+  if (gSelf != this) {
+    JS_ReportError(cx, "memory profiling singleton already exists");
     return JS_FALSE;
   }
 
-  // TODO: We might want to JS_GC() before starting the trace.
+  targetCx = cx;
+  targetRt = JS_GetRuntime(cx);
+
+  if (!runtime.init())
+    return JS_FALSE;
+
+  if (!strings.init(runtime.cx))
+    return JS_FALSE;
+
+  AutoCleanupTracingState autoCleanupTracingState;
+
+  if (!JS_DHashTableInit(&tracingState.visited, JS_DHashGetStubOps(),
+                         NULL, sizeof(Profiler_HashEntry),
+                         JS_DHASH_DEFAULT_CAPACITY(100))) {
+    JS_ReportOutOfMemory(targetCx);
+    return JS_FALSE;
+  }
 
   tracingState.currId = 1;
   tracingState.ids = NULL;
-  tracingState.runtime = JS_GetRuntime(cx);
+  tracingState.runtime = targetRt;
   tracingState.result = JS_TRUE;
   tracingState.namedObjects = namedObjects;
-  tracingState.tracer.context = cx;
+  tracingState.tracer.context = targetCx;
   tracingState.tracer.callback = visitedBuilder;
   JS_TraceRuntime(&tracingState.tracer);
 
   if (!tracingState.result)
-    goto cleanup;
+    return JS_FALSE;
 
   tracingState.ids = (JSObject **)PR_Malloc(
     (tracingState.currId) * sizeof(JSObject *)
     );
   if (tracingState.ids == NULL) {
-    JS_ReportOutOfMemory(cx);
-    goto cleanup;
+    JS_ReportOutOfMemory(targetCx);
+    return JS_FALSE;
   }
   tracingState.ids[0] = NULL;
   JS_DHashTableEnumerate(&tracingState.visited,
                          mapIdsToObjects,
                          NULL);
 
-  AutoProfilerRuntime *server = new AutoProfilerRuntime();
-  if (!server) {
-    JS_ReportOutOfMemory(cx);
-    goto cleanup;
-  }
-
-  if (!server->init())
-    goto cleanup;
-
-  // TODO: We might want to lock the JS runtime of the caller here
-  // to ensure that the object graph doesn't change while we're
-  // profiling the memory.
-  extStrings = new AutoExtStringManager(server->cx);
-  if (!extStrings) {
-    JS_ReportOutOfMemory(cx);
-    goto cleanup;
-  }
-
-  if (!extStrings->init())
-    goto cleanup;
+  jsval argumentVal = JSVAL_NULL;
 
   if (argument) {
-    JSString *serverArgumentStr = extStrings->getExtString(argument);
+    JSString *serverArgumentStr = strings.getExtString(argument);
     if (serverArgumentStr == NULL) {
-      JS_ReportOutOfMemory(cx);
-      goto cleanup;
+      JS_ReportOutOfMemory(targetCx);
+      return JS_FALSE;
     }
     argumentVal = STRING_TO_JSVAL(serverArgumentStr);
   }
 
-  if (!JS_DefineProperty(server->cx, server->global, "argument",
+  if (!JS_DefineProperty(runtime.cx, runtime.global, "argument",
                          argumentVal, NULL, NULL, JSPROP_ENUMERATE))
-    goto cleanup;
+    return JS_FALSE;
 
-  if (!JS_EvaluateScript(server->cx, server->global,
+  jsval scriptRval;
+
+  if (!JS_EvaluateScript(runtime.cx, runtime.global,
                          JS_GetStringBytes(code),
                          JS_GetStringLength(code),
                          filename, lineNumber,
-                         &serverRval)) {
-    TCB_handleError(server->cx, server->global);
-    JS_ReportError(cx, "Profiling failed.");
-    goto cleanup;
+                         &scriptRval)) {
+    TCB_handleError(runtime.cx, runtime.global);
+    JS_ReportError(targetCx, "Profiling failed.");
+    return JS_FALSE;
   } else {
-    if (JSVAL_IS_STRING(serverRval)) {
-      JSString *valueStr = JS_NewUCStringCopyZ(
-        cx,
-        JS_GetStringChars(JSVAL_TO_STRING(serverRval))
+    if (JSVAL_IS_STRING(scriptRval)) {
+      JSString *scriptRstring = JS_NewUCStringCopyZ(
+        targetCx,
+        JS_GetStringChars(JSVAL_TO_STRING(scriptRval))
         );
-      if (valueStr == NULL) {
-        JS_ReportOutOfMemory(cx);
-        goto cleanup;
+      if (scriptRstring == NULL) {
+        JS_ReportOutOfMemory(targetCx);
+        return JS_FALSE;
       } else
-        *rval = STRING_TO_JSVAL(valueStr);
-    } else if (!JSVAL_IS_GCTHING(serverRval)) {
-      *rval = serverRval;
+        *rval = STRING_TO_JSVAL(scriptRstring);
+    } else if (!JSVAL_IS_GCTHING(scriptRval)) {
+      *rval = scriptRval;
     } else {
       *rval = JSVAL_VOID;
     }
   }
 
-  wasSuccessful = JS_TRUE;
-
-  /* Cleanup. */
-cleanup:
-  if (extStrings) {
-    delete extStrings;
-    extStrings = NULL;
-  }
-
-  if (tracingState.ids) {
-    PR_Free(tracingState.ids);
-    tracingState.ids = NULL;
-  }
-
-  if (tracingState.visited.ops) {
-    JS_DHashTableFinish(&tracingState.visited);
-    tracingState.visited.ops = NULL;
-  }
-
-  if (server) {
-    delete server;
-    server = NULL;
-  }
-
-  return wasSuccessful;
+  return JS_TRUE;
 }
