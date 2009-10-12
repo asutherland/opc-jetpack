@@ -4,16 +4,23 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
-typedef struct {
+struct RootMapStruct {
+  JSBool rval;
+  int length;
+  JSContext *cx;
+  JSObject *array;
+};
+
+struct Profiler_HashEntry {
   JSDHashEntryStub base;
   unsigned int id;
-} Profiler_HashEntry;
+};
 
-typedef struct {
+struct String_HashEntry {
   JSDHashEntryStub base;
   JSString *string;
   int index;
-} String_HashEntry;
+};
 
 // A class that encapsulates the profiler's JS runtime and
 // associated data.
@@ -92,10 +99,10 @@ public:
 
 class MemoryProfiler;
 
-typedef struct _ChildTracingState {
+struct ChildTracingState {
   int numObjects;
   JSObject *objects;
-} ChildTracingState;
+};
 
 class ExtObjectManager {
 private:
@@ -934,13 +941,6 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
   *rval = JSVAL_NULL;
   return JS_TRUE;
 }
-
-typedef struct _RootMapStruct {
-  JSBool rval;
-  int length;
-  JSContext *cx;
-  JSObject *array;
-} RootMapStruct;
 
 static intN rootMapFun(void *rp, const char *name, void *data)
 {
