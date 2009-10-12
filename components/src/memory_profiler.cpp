@@ -24,9 +24,6 @@ typedef struct _TracingState {
   // Whether the tracing operation is successful or failed.
   JSBool result;
 
-  // Runtime that we're tracing.
-  JSRuntime *runtime;
-
   // Mapping from strings to objects for the profiler's convenience.
   JSObject *namedObjects;
 
@@ -1077,7 +1074,6 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
 
   tracingState.currId = 1;
   tracingState.ids = NULL;
-  tracingState.runtime = targetRt;
   tracingState.result = JS_TRUE;
   tracingState.namedObjects = namedObjects;
   tracingState.tracer.context = targetCx;
