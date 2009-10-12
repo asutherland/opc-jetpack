@@ -36,6 +36,10 @@
 #include "memory_profiler.h"
 #include "server_socket.h"
 
+// **********************************************************************
+// Class Declarations
+// **********************************************************************
+
 // Structure to track information with when tracing GC roots.
 struct RootMapStruct {
   JSBool rval;
@@ -321,6 +325,10 @@ public:
                  uint32 lineNumber, JSObject *namedObjects,
                  JSString *argument, jsval *rval);
 };
+
+// **********************************************************************
+// Method Definitions
+// **********************************************************************
 
 void ExtObjectManager::childBuilder(JSTracer *trc, void *thing,
                                     uint32 kind)
@@ -896,217 +904,6 @@ JSBool ExtObjectManager::getTarget(uintN argc, jsval *argv,
   return JS_TRUE;
 }
 
-static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
-                             jsval *argv, jsval *rval)
-{
-  JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
-
-  if (!objects.getTarget(argc, argv, &target))
-    return JS_FALSE;
-
-  if (!(argc >= 2 && JSVAL_IS_STRING(argv[1]))) {
-    JS_ReportError(cx, "Must supply a string as second parameter.");
-    return JS_FALSE;
-  }
-
-  char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
-
-  if (target) {
-    JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
-
-    if (info == NULL) {
-      JS_ReportOutOfMemory(cx);
-      return JS_FALSE;
-    }
-
-    *rval = OBJECT_TO_JSVAL(info);
-    return objects.copyPropertyInfo(info, NULL, name, target);
-  }
-
-  *rval = JSVAL_NULL;
-  return JS_TRUE;
-}
-
-static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
-                               jsval *argv, jsval *rval)
-{
-  JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
-
-  if (!objects.getTarget(argc, argv, &target))
-    return JS_FALSE;
-
-  bool useGetPropertiesInfo2 = false;
-
-  if (argc > 1 && argv[1] == JSVAL_TRUE)
-    useGetPropertiesInfo2 = true;
-
-  if (target) {
-    JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
-    if (propInfo == NULL) {
-      JS_ReportOutOfMemory(cx);
-      return JS_FALSE;
-    }
-
-    *rval = OBJECT_TO_JSVAL(propInfo);
-
-    if (useGetPropertiesInfo2)
-      return objects.getPropertiesInfo2(propInfo, target);
-    else
-      return objects.getPropertiesInfo(propInfo, target);
-  }
-
-  *rval = JSVAL_NULL;
-  return JSVAL_TRUE;
-}
-
-static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
-                              jsval *argv, jsval *rval)
-{
-  JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
-
-  if (info == NULL) {
-    JS_ReportOutOfMemory(cx);
-    return JS_FALSE;
-  }
-
-  *rval = OBJECT_TO_JSVAL(info);
-
-  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
-
-  if (objects.namedTargetObjects != NULL)
-    return objects.getPropertiesInfo(info, objects.namedTargetObjects);
-
-  return JS_TRUE;
-}
-
-static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
-                          jsval *argv, jsval *rval)
-{
-  return MemoryProfiler::get(cx)->objects.getTargetTable(rval);
-}
-
-static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
-                           jsval *argv, jsval *rval)
-{
-  JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
-
-  if (!objects.getTarget(argc, argv, &target))
-    return JS_FALSE;
-
-  if (target) {
-    JSObject *parent = JS_GetParent(MemoryProfiler::get(cx)->targetCx,
-                                    target);
-    if (parent) {
-      *rval = INT_TO_JSVAL(objects.lookupIdForTarget(parent));
-      return JS_TRUE;
-    }
-  }
-
-  *rval = JSVAL_NULL;
-  return JS_TRUE;
-}
-
-static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
-                         jsval *argv, jsval *rval)
-{
-  JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
-
-  if (!objects.getTarget(argc, argv, &target))
-    return JS_FALSE;
-
-  if (target)
-    return objects.getInfoForTarget(target, rval);
-
-  *rval = JSVAL_NULL;
-  return JS_TRUE;
-}
-
-static intN rootMapFun(void *rp, const char *name, void *data)
-{
-  // rp is a JS GC root. From the documentation for JS_AddRoot() in jsapi.h:
-  //
-  //   A JS GC root is a pointer to a JSObject *, JSString *, or
-  //   jsdouble * that itself points into the GC heap (more recently,
-  //   we support this extension: a root may be a pointer to a jsval v
-  //   for which JSVAL_IS_GCTHING(v) is true).
-  //
-  // The public JSAPI appears to provide no way of actually determining
-  // which it is, though, so we're just going to have to list them all,
-  // and hope that a later tracing will give us more information about
-  // them.
-
-  RootMapStruct *roots = (RootMapStruct *) data;
-  ExtObjectManager &objects = MemoryProfiler::get(roots->cx)->objects;
-  uint32 objId = objects.lookupIdForTarget(*((JSObject **)rp));
-  if (objId) {
-    jsval id = INT_TO_JSVAL(objId);
-    if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
-      roots->rval = JS_FALSE;
-      return JS_MAP_GCROOT_STOP;
-    }
-    roots->length++;
-  }
-  return JS_MAP_GCROOT_NEXT;
-}
-
-static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
-                         jsval *argv, jsval *rval)
-{
-  RootMapStruct roots;
-  roots.array = JS_NewArrayObject(cx, 0, NULL);
-  roots.length = 0;
-  roots.rval = JS_TRUE;
-  roots.cx = cx;
-
-  if (roots.array == NULL) {
-    JS_ReportError(cx, "Creating array failed.");
-    return JS_FALSE;
-  }
-
-  JS_MapGCRoots(MemoryProfiler::get(cx)->targetRt, rootMapFun, &roots);
-
-  if (roots.rval == JS_FALSE)
-    return JS_FALSE;
-
-  *rval = OBJECT_TO_JSVAL(roots.array);
-  return JS_TRUE;
-}
-
-JSFunctionSpec ProfilerRuntime::globalFunctions[] = {
-  JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
-  JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
-  JS_FS("getObjectParent",      getObjParent,       1, 0, 0),
-  JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
-  JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
-  JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),
-  JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
-  JS_FS("getObjectTable",       getObjTable,        0, 0, 0),
-  JS_FS_END
-};
-
-JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
-                     jsval *argv, jsval *rval)
-{
-  JSString *code;
-  const char *filename;
-  uint32 lineNumber = 1;
-  JSObject *namedObjects = NULL;
-  JSString *argument = NULL;
-
-  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
-                           &lineNumber, &namedObjects, &argument))
-    return JS_FALSE;
-
-  MemoryProfiler profiler;
-
-  return profiler.profile(cx, code, filename, lineNumber, namedObjects,
-                          argument, rval);
-}
-
 ProfilerRuntime::ProfilerRuntime(void) :
   rt(NULL),
   cx(NULL),
@@ -1329,3 +1126,222 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
 
   return JS_TRUE;
 }
+
+// **********************************************************************
+// JSNative Function Definitions
+// **********************************************************************
+
+static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
+                             jsval *argv, jsval *rval)
+{
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
+
+  if (!objects.getTarget(argc, argv, &target))
+    return JS_FALSE;
+
+  if (!(argc >= 2 && JSVAL_IS_STRING(argv[1]))) {
+    JS_ReportError(cx, "Must supply a string as second parameter.");
+    return JS_FALSE;
+  }
+
+  char *name = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
+
+  if (target) {
+    JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+
+    if (info == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+
+    *rval = OBJECT_TO_JSVAL(info);
+    return objects.copyPropertyInfo(info, NULL, name, target);
+  }
+
+  *rval = JSVAL_NULL;
+  return JS_TRUE;
+}
+
+static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
+                               jsval *argv, jsval *rval)
+{
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
+
+  if (!objects.getTarget(argc, argv, &target))
+    return JS_FALSE;
+
+  bool useGetPropertiesInfo2 = false;
+
+  if (argc > 1 && argv[1] == JSVAL_TRUE)
+    useGetPropertiesInfo2 = true;
+
+  if (target) {
+    JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
+    if (propInfo == NULL) {
+      JS_ReportOutOfMemory(cx);
+      return JS_FALSE;
+    }
+
+    *rval = OBJECT_TO_JSVAL(propInfo);
+
+    if (useGetPropertiesInfo2)
+      return objects.getPropertiesInfo2(propInfo, target);
+    else
+      return objects.getPropertiesInfo(propInfo, target);
+  }
+
+  *rval = JSVAL_NULL;
+  return JSVAL_TRUE;
+}
+
+static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
+                              jsval *argv, jsval *rval)
+{
+  JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
+
+  if (info == NULL) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  *rval = OBJECT_TO_JSVAL(info);
+
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
+
+  if (objects.namedTargetObjects != NULL)
+    return objects.getPropertiesInfo(info, objects.namedTargetObjects);
+
+  return JS_TRUE;
+}
+
+static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
+                          jsval *argv, jsval *rval)
+{
+  return MemoryProfiler::get(cx)->objects.getTargetTable(rval);
+}
+
+static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
+                           jsval *argv, jsval *rval)
+{
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
+
+  if (!objects.getTarget(argc, argv, &target))
+    return JS_FALSE;
+
+  if (target) {
+    JSObject *parent = JS_GetParent(MemoryProfiler::get(cx)->targetCx,
+                                    target);
+    if (parent) {
+      *rval = INT_TO_JSVAL(objects.lookupIdForTarget(parent));
+      return JS_TRUE;
+    }
+  }
+
+  *rval = JSVAL_NULL;
+  return JS_TRUE;
+}
+
+static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
+                         jsval *argv, jsval *rval)
+{
+  JSObject *target;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
+
+  if (!objects.getTarget(argc, argv, &target))
+    return JS_FALSE;
+
+  if (target)
+    return objects.getInfoForTarget(target, rval);
+
+  *rval = JSVAL_NULL;
+  return JS_TRUE;
+}
+
+static intN rootMapFun(void *rp, const char *name, void *data)
+{
+  // rp is a JS GC root. From the documentation for JS_AddRoot() in jsapi.h:
+  //
+  //   A JS GC root is a pointer to a JSObject *, JSString *, or
+  //   jsdouble * that itself points into the GC heap (more recently,
+  //   we support this extension: a root may be a pointer to a jsval v
+  //   for which JSVAL_IS_GCTHING(v) is true).
+  //
+  // The public JSAPI appears to provide no way of actually determining
+  // which it is, though, so we're just going to have to list them all,
+  // and hope that a later tracing will give us more information about
+  // them.
+
+  RootMapStruct *roots = (RootMapStruct *) data;
+  ExtObjectManager &objects = MemoryProfiler::get(roots->cx)->objects;
+  uint32 objId = objects.lookupIdForTarget(*((JSObject **)rp));
+  if (objId) {
+    jsval id = INT_TO_JSVAL(objId);
+    if (!JS_SetElement(roots->cx, roots->array, roots->length, &id)) {
+      roots->rval = JS_FALSE;
+      return JS_MAP_GCROOT_STOP;
+    }
+    roots->length++;
+  }
+  return JS_MAP_GCROOT_NEXT;
+}
+
+static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
+                         jsval *argv, jsval *rval)
+{
+  RootMapStruct roots;
+  roots.array = JS_NewArrayObject(cx, 0, NULL);
+  roots.length = 0;
+  roots.rval = JS_TRUE;
+  roots.cx = cx;
+
+  if (roots.array == NULL) {
+    JS_ReportError(cx, "Creating array failed.");
+    return JS_FALSE;
+  }
+
+  JS_MapGCRoots(MemoryProfiler::get(cx)->targetRt, rootMapFun, &roots);
+
+  if (roots.rval == JS_FALSE)
+    return JS_FALSE;
+
+  *rval = OBJECT_TO_JSVAL(roots.array);
+  return JS_TRUE;
+}
+
+JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
+                     jsval *argv, jsval *rval)
+{
+  JSString *code;
+  const char *filename;
+  uint32 lineNumber = 1;
+  JSObject *namedObjects = NULL;
+  JSString *argument = NULL;
+
+  if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
+                           &lineNumber, &namedObjects, &argument))
+    return JS_FALSE;
+
+  MemoryProfiler profiler;
+
+  return profiler.profile(cx, code, filename, lineNumber, namedObjects,
+                          argument, rval);
+}
+
+// **********************************************************************
+// Static Storage Definitions
+// **********************************************************************
+
+JSFunctionSpec ProfilerRuntime::globalFunctions[] = {
+  JS_FS("ServerSocket",         createServerSocket, 0, 0, 0),
+  JS_FS("getGCRoots",           getGCRoots,         0, 0, 0),
+  JS_FS("getObjectParent",      getObjParent,       1, 0, 0),
+  JS_FS("getObjectInfo",        getObjInfo,         1, 0, 0),
+  JS_FS("getObjectProperties",  getObjProperties,   1, 0, 0),
+  JS_FS("getObjectProperty",    getObjProperty,     2, 0, 0),
+  JS_FS("getNamedObjects",      getNamedObjects,    0, 0, 0),
+  JS_FS("getObjectTable",       getObjTable,        0, 0, 0),
+  JS_FS_END
+};
