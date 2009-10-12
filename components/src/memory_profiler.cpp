@@ -286,16 +286,12 @@ public:
   JSObject *lookupTargetForId(uint32 id);
 };
 
-// A singleton class that encapsulates the entire state of the memory
-// profiler.
+// A class that encapsulates the entire state of the memory profiler.
 class MemoryProfiler {
 private:
   // Disallow copy constructors and assignment.
   MemoryProfiler(const MemoryProfiler&);
   MemoryProfiler& operator= (const MemoryProfiler&);
-
-  // Singleton instance.
-  static MemoryProfiler *gSelf;
 
 public:
   MemoryProfiler();
@@ -314,9 +310,10 @@ public:
   ExtStringManager strings;
   ExtObjectManager objects;
 
-  // Return the profiler's singleton instance.
-  static MemoryProfiler *get() {
-    return gSelf;
+  // Return the profiler instance associated with the given profiler
+  // JS context.
+  static MemoryProfiler *get(JSContext *cx) {
+    return (MemoryProfiler *) JS_GetContextPrivate(cx);
   }
 
   // Run a profiling script.
@@ -903,7 +900,7 @@ static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
                              jsval *argv, jsval *rval)
 {
   JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
 
   if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
@@ -935,7 +932,7 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
                                jsval *argv, jsval *rval)
 {
   JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
 
   if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
@@ -976,7 +973,7 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
 
   *rval = OBJECT_TO_JSVAL(info);
 
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
 
   if (objects.namedTargetObjects != NULL)
     return objects.getPropertiesInfo(info, objects.namedTargetObjects);
@@ -987,20 +984,20 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
 static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
                           jsval *argv, jsval *rval)
 {
-  return MemoryProfiler::get()->objects.getTargetTable(rval);
+  return MemoryProfiler::get(cx)->objects.getTargetTable(rval);
 }
 
 static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
                            jsval *argv, jsval *rval)
 {
   JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
 
   if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
 
   if (target) {
-    JSObject *parent = JS_GetParent(MemoryProfiler::get()->targetCx,
+    JSObject *parent = JS_GetParent(MemoryProfiler::get(cx)->targetCx,
                                     target);
     if (parent) {
       *rval = INT_TO_JSVAL(objects.lookupIdForTarget(parent));
@@ -1016,7 +1013,7 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
                          jsval *argv, jsval *rval)
 {
   JSObject *target;
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
+  ExtObjectManager &objects = MemoryProfiler::get(cx)->objects;
 
   if (!objects.getTarget(argc, argv, &target))
     return JS_FALSE;
@@ -1042,8 +1039,8 @@ static intN rootMapFun(void *rp, const char *name, void *data)
   // and hope that a later tracing will give us more information about
   // them.
 
-  ExtObjectManager &objects = MemoryProfiler::get()->objects;
   RootMapStruct *roots = (RootMapStruct *) data;
+  ExtObjectManager &objects = MemoryProfiler::get(roots->cx)->objects;
   uint32 objId = objects.lookupIdForTarget(*((JSObject **)rp));
   if (objId) {
     jsval id = INT_TO_JSVAL(objId);
@@ -1070,7 +1067,7 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  JS_MapGCRoots(MemoryProfiler::get()->targetRt, rootMapFun, &roots);
+  JS_MapGCRoots(MemoryProfiler::get(cx)->targetRt, rootMapFun, &roots);
 
   if (roots.rval == JS_FALSE)
     return JS_FALSE;
@@ -1258,20 +1255,14 @@ JSBool ExtStringManager::init(ProfilerRuntime *aProfiler)
   return JS_TRUE;
 }
 
-MemoryProfiler *MemoryProfiler::gSelf;
-
 MemoryProfiler::MemoryProfiler() :
   targetCx(NULL),
   targetRt(NULL)
 {
-  if (!gSelf)
-    gSelf = this;
 }
 
 MemoryProfiler::~MemoryProfiler()
 {
-  if (gSelf == this)
-    gSelf = NULL;
 }
 
 JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
@@ -1279,16 +1270,13 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
                                JSObject *namedObjects, JSString *argument,
                                jsval *rval)
 {
-  if (gSelf != this) {
-    JS_ReportError(cx, "memory profiling singleton already exists");
-    return JS_FALSE;
-  }
-
   targetCx = cx;
   targetRt = JS_GetRuntime(cx);
 
   if (!runtime.init())
     return JS_FALSE;
+
+  JS_SetContextPrivate(runtime.cx, this);
 
   if (!strings.init(&runtime))
     return JS_FALSE;
