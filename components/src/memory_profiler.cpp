@@ -102,7 +102,7 @@ public:
 
   // Converts a string from the target runtime to an 'external' string
   // in the profiling runtime, returning NULL on failure.
-  JSString *getExtString(JSString *extString);
+  JSString *getExt(JSString *extString);
 
   // Initializes the string manager. If it returns JS_FALSE, an
   // exception will be pending on the context.
@@ -113,6 +113,10 @@ class MemoryProfiler {
 private:
   static MemoryProfiler *gSelf;
 
+public:
+  MemoryProfiler();
+  ~MemoryProfiler();
+
   JSContext *targetCx;
   JSRuntime *targetRt;
 
@@ -122,16 +126,8 @@ private:
   ProfilerRuntime runtime;
   ExtStringManager strings;
 
-public:
-  MemoryProfiler();
-  ~MemoryProfiler();
-
   static MemoryProfiler *get() {
     return gSelf;
-  }
-
-  ExtStringManager *getStrings() {
-    return &strings;
   }
 
   JSBool profile(JSContext *cx, JSString *code, const char *filename,
@@ -274,8 +270,8 @@ static JSBool getFunctionInfo(JSContext *cx, JSObject *info,
 
     JSString *targetFuncName = JS_GetFunctionId(fun);
     if (targetFuncName) {
-      ExtStringManager *strings = MemoryProfiler::get()->getStrings();
-      JSString *funcName = strings->getExtString(targetFuncName);
+      ExtStringManager &strings = MemoryProfiler::get()->strings;
+      JSString *funcName = strings.getExt(targetFuncName);
       if (!funcName) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;
@@ -347,8 +343,8 @@ static JSBool copyPropertyInfo(JSContext *cx, JSObject *propInfo,
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
     value = INT_TO_JSVAL(lookupIdForThing(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
-    ExtStringManager *strings = MemoryProfiler::get()->getStrings();
-    JSString *valueStr = strings->getExtString(JSVAL_TO_STRING(value));
+    ExtStringManager &strings = MemoryProfiler::get()->strings;
+    JSString *valueStr = strings.getExt(JSVAL_TO_STRING(value));
     if (valueStr == NULL) {
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
@@ -467,7 +463,7 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
     return JS_TRUE;
 
   JSBool found;
-  if (!JS_HasProperty(tracingState.tracer.context,
+  if (!JS_HasProperty(MemoryProfiler::get()->targetCx,
                       tracingState.namedObjects,
                       name,
                       &found)) {
@@ -479,7 +475,7 @@ static JSBool lookupNamedObject(JSContext *cx, const char *name,
     return JS_TRUE;
 
   jsval val;
-  if (!JS_LookupProperty(tracingState.tracer.context,
+  if (!JS_LookupProperty(MemoryProfiler::get()->targetCx,
                          tracingState.namedObjects,
                          name,
                          &val)) {
@@ -540,12 +536,9 @@ static JSBool getObjProperty(JSContext *cx, JSObject *obj, uintN argc,
     JSObject *info = JS_NewObject(cx, NULL, NULL, NULL);
     *rval = OBJECT_TO_JSVAL(info);
 
-    JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = tracingState.tracer.context;
-
     if (!copyPropertyInfo(cx, info,
-                          NULL, name, target,
-                          targetCx))
+                          NULL, name, JSVAL_TO_OBJECT(targetVal),
+                          MemoryProfiler::get()->targetCx))
       return JS_FALSE;
   } else
     *rval = JSVAL_NULL;
@@ -567,7 +560,7 @@ static JSBool getObjProperties(JSContext *cx, JSObject *obj, uintN argc,
 
   if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
     JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = tracingState.tracer.context;
+    JSContext *targetCx = MemoryProfiler::get()->targetCx;
 
     JSObject *propInfo = JS_NewObject(cx, NULL, NULL, NULL);
     if (propInfo == NULL) {
@@ -597,10 +590,8 @@ static JSBool getNamedObjects(JSContext *cx, JSObject *obj, uintN argc,
   *rval = OBJECT_TO_JSVAL(info);
  
   if (tracingState.namedObjects != NULL) {
-    JSContext *targetCx = tracingState.tracer.context;
-    JSObject *target = tracingState.namedObjects;
-
-    if (!getPropertiesInfo(cx, info, target, targetCx))
+    if (!getPropertiesInfo(cx, info, tracingState.namedObjects,
+                           MemoryProfiler::get()->targetCx))
       return JS_FALSE;
   }
 
@@ -628,10 +619,9 @@ static JSBool getObjTable(JSContext *cx, JSObject *obj, uintN argc,
   *rval = OBJECT_TO_JSVAL(table);
 
   for (unsigned int i = 1; i < tracingState.currId; i++) {
-    JSObject *target = tracingState.ids[i];
     jsval value = JSVAL_NULL;
-    JSContext *targetCx = tracingState.tracer.context;
-    JSClass *classp = JS_GET_CLASS(targetCx, target);
+    JSClass *classp = JS_GET_CLASS(MemoryProfiler::get()->targetCx,
+                                   tracingState.ids[i]);
 
     if (classp) {
       JSString *name = JS_InternString(cx, classp->name);
@@ -662,10 +652,8 @@ static JSBool getObjParent(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
 
   if (JSVAL_IS_OBJECT(targetVal) && !JSVAL_IS_NULL(targetVal)) {
-    JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = tracingState.tracer.context;
-
-    JSObject *parent = JS_GetParent(targetCx, target);
+    JSObject *parent = JS_GetParent(MemoryProfiler::get()->targetCx,
+                                    JSVAL_TO_OBJECT(targetVal));
     if (parent) {
       *rval = INT_TO_JSVAL(lookupIdForThing(parent));
       return JS_TRUE;
@@ -689,7 +677,7 @@ static JSBool getObjInfo(JSContext *cx, JSObject *obj, uintN argc,
     *rval = OBJECT_TO_JSVAL(info);
 
     JSObject *target = JSVAL_TO_OBJECT(targetVal);
-    JSContext *targetCx = tracingState.tracer.context;
+    JSContext *targetCx = MemoryProfiler::get()->targetCx;
     JSClass *classp = JS_GET_CLASS(targetCx, target);
     if (classp != NULL) {
       if (!JS_DefineProperty(cx, info, "id",
@@ -810,7 +798,7 @@ static JSBool getGCRoots(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  JS_MapGCRoots(tracingState.runtime, rootMapFun, &roots);
+  JS_MapGCRoots(MemoryProfiler::get()->targetRt, rootMapFun, &roots);
 
   if (roots.rval == JS_FALSE)
     return JS_FALSE;
@@ -929,7 +917,7 @@ ExtStringManager::~ExtStringManager()
   }
 }
 
-JSString *ExtStringManager::getExtString(JSString *extString)
+JSString *ExtStringManager::getExt(JSString *extString)
 {
   String_HashEntry *entry = (String_HashEntry *)
     JS_DHashTableOperate(&strings,
@@ -1084,7 +1072,7 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
   jsval argumentVal = JSVAL_NULL;
 
   if (argument) {
-    JSString *serverArgumentStr = strings.getExtString(argument);
+    JSString *serverArgumentStr = strings.getExt(argument);
     if (serverArgumentStr == NULL) {
       JS_ReportOutOfMemory(targetCx);
       return JS_FALSE;
