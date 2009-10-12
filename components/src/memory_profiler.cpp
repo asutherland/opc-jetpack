@@ -97,104 +97,16 @@ class ExtStringManager {
   }
 
 public:
-  ExtStringManager(void) :
-    profiler(NULL),
-    strArray(NULL),
-    strArrayLen(0),
-    type(-1)
-    {
-      strings.ops = NULL;
-    }
-
-  ~ExtStringManager() {
-    if (profiler && strArray) {
-      JS_RemoveRoot(profiler->cx, &strArray);
-      strArray = NULL;
-    }
-
-    profiler = NULL;
-
-    if (strings.ops) {
-      JS_DHashTableFinish(&strings);
-      strings.ops = NULL;
-    }
-
-    if (type > 0) {
-      JS_RemoveExternalStringFinalizer(finalizeExtString);
-      type = -1;
-    }
-  }
+  ExtStringManager(void);
+  ~ExtStringManager();
 
   // Converts a string from the target runtime to an 'external' string
   // in the profiling runtime, returning NULL on failure.
-  JSString *getExtString(JSString *extString) {
-    String_HashEntry *entry = (String_HashEntry *)
-      JS_DHashTableOperate(&strings,
-                           extString,
-                           JS_DHASH_LOOKUP);
-    if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
-      JSString *str = JS_NewExternalString(profiler->cx,
-                                           JS_GetStringChars(extString),
-                                           JS_GetStringLength(extString),
-                                           type);
-      if (!str)
-        return NULL;
-
-      entry = (String_HashEntry *) JS_DHashTableOperate(&strings,
-                                                        extString,
-                                                        JS_DHASH_ADD);
-      if (entry == NULL)
-        return NULL;
-
-      entry->base.key = extString;
-      entry->string = str;
-      entry->index = strArrayLen;
-
-      if (!JS_DefineElement(
-            profiler->cx, strArray, entry->index,
-            STRING_TO_JSVAL(entry->string),
-            NULL, NULL,
-            JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT
-            ))
-        return NULL;
-
-      strArrayLen++;
-
-      if (!JS_SetArrayLength(profiler->cx, strArray, strArrayLen))
-        return NULL;
-    }
-    return entry->string;
-  }
+  JSString *getExtString(JSString *extString);
 
   // Initializes the string manager. If it returns JS_FALSE, an
   // exception will be pending on the context.
-  JSBool init(ProfilerRuntime *aProfiler) {
-    profiler = aProfiler;
-    JSContext *cx = profiler->cx;
-
-    // TODO: We need to ensure that we're the only JS thread running
-    // when we do this, or bad things will happen, according to the docs.
-    type = JS_AddExternalStringFinalizer(finalizeExtString);
-    if (type == -1) {
-      JS_ReportError(cx, "JS_AddExternalStringFinalizer() failed");
-      return JS_FALSE;
-    }
-
-    strArray = JS_NewArrayObject(cx, 0, NULL);
-    if (!(strArray &&
-          JS_AddNamedRoot(cx, &strArray, "ExtStringManager Array"))) {
-      JS_ReportOutOfMemory(cx);
-      return JS_FALSE;
-    }
-
-    if (!JS_DHashTableInit(&strings, JS_DHashGetStubOps(),
-                           NULL, sizeof(String_HashEntry),
-                           JS_DHASH_DEFAULT_CAPACITY(100))) {
-      JS_ReportOutOfMemory(cx);
-      return JS_FALSE;
-    }
-    return JS_TRUE;
-  }
+  JSBool init(ProfilerRuntime *aProfiler);
 };
 
 class MemoryProfiler {
@@ -985,6 +897,104 @@ JSBool ProfilerRuntime::init(void)
   if (!JS_DefineFunctions(cx, global, globalFunctions))
     return JS_FALSE;
 
+  return JS_TRUE;
+}
+
+ExtStringManager::ExtStringManager(void) :
+  profiler(NULL),
+  strArray(NULL),
+  strArrayLen(0),
+  type(-1)
+{
+  strings.ops = NULL;
+}
+
+ExtStringManager::~ExtStringManager()
+{
+  if (profiler && strArray) {
+    JS_RemoveRoot(profiler->cx, &strArray);
+    strArray = NULL;
+  }
+
+  profiler = NULL;
+
+  if (strings.ops) {
+    JS_DHashTableFinish(&strings);
+    strings.ops = NULL;
+  }
+
+  if (type > 0) {
+    JS_RemoveExternalStringFinalizer(finalizeExtString);
+    type = -1;
+  }
+}
+
+JSString *ExtStringManager::getExtString(JSString *extString)
+{
+  String_HashEntry *entry = (String_HashEntry *)
+    JS_DHashTableOperate(&strings,
+                         extString,
+                         JS_DHASH_LOOKUP);
+  if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
+    JSString *str = JS_NewExternalString(profiler->cx,
+                                         JS_GetStringChars(extString),
+                                         JS_GetStringLength(extString),
+                                         type);
+    if (!str)
+      return NULL;
+
+    entry = (String_HashEntry *) JS_DHashTableOperate(&strings,
+                                                      extString,
+                                                      JS_DHASH_ADD);
+    if (entry == NULL)
+      return NULL;
+
+    entry->base.key = extString;
+    entry->string = str;
+    entry->index = strArrayLen;
+
+    if (!JS_DefineElement(
+          profiler->cx, strArray, entry->index,
+          STRING_TO_JSVAL(entry->string),
+          NULL, NULL,
+          JSPROP_ENUMERATE | JSPROP_READONLY | JSPROP_PERMANENT
+          ))
+      return NULL;
+
+    strArrayLen++;
+    
+    if (!JS_SetArrayLength(profiler->cx, strArray, strArrayLen))
+      return NULL;
+  }
+  return entry->string;
+}
+
+JSBool ExtStringManager::init(ProfilerRuntime *aProfiler)
+{
+  profiler = aProfiler;
+  JSContext *cx = profiler->cx;
+
+  // TODO: We need to ensure that we're the only JS thread running
+  // when we do this, or bad things will happen, according to the docs.
+  type = JS_AddExternalStringFinalizer(finalizeExtString);
+  if (type == -1) {
+    JS_ReportError(cx, "JS_AddExternalStringFinalizer() failed");
+    return JS_FALSE;
+  }
+
+  strArray = JS_NewArrayObject(cx, 0, NULL);
+  if (!(strArray &&
+        JS_AddNamedRoot(cx, &strArray, "ExtStringManager Array"))) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
+
+  if (!JS_DHashTableInit(&strings, JS_DHashGetStubOps(),
+                         NULL, sizeof(String_HashEntry),
+                         JS_DHASH_DEFAULT_CAPACITY(100))) {
+    JS_ReportOutOfMemory(cx);
+    return JS_FALSE;
+  }
   return JS_TRUE;
 }
 
