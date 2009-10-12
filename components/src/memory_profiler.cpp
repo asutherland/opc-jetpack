@@ -43,17 +43,6 @@ struct RootMapStruct {
   JSObject *array;
 };
 
-struct Profiler_HashEntry {
-  JSDHashEntryStub base;
-  unsigned int id;
-};
-
-struct String_HashEntry {
-  JSDHashEntryStub base;
-  JSString *string;
-  int index;
-};
-
 // A class that encapsulates the profiler's JS runtime and
 // associated data.
 class ProfilerRuntime {
@@ -86,6 +75,12 @@ public:
 // to figure out how much space is being taken up by strings.
 class ExtStringManager {
 private:
+  struct StringHashEntry {
+    JSDHashEntryStub base;
+    JSString *string;
+    int index;
+  };
+
   // Disallow copy constructors and assignment.
   ExtStringManager(const ExtStringManager&);
   ExtStringManager& operator= (const ExtStringManager&);
@@ -131,6 +126,11 @@ public:
 
 class ExtObjectManager {
 private:
+  struct ObjectHashEntry {
+    JSDHashEntryStub base;
+    unsigned int id;
+  };
+
   struct ProfilerTracer {
     JSTracer base;
     ExtObjectManager *self;
@@ -300,19 +300,19 @@ void ExtObjectManager::visitedBuilder(JSTracer *trc, void *thing,
                                       uint32 kind)
 {
   ProfilerTracer *tracer = (ProfilerTracer *) trc;
-  Profiler_HashEntry *entry;
+  ObjectHashEntry *entry;
 
   if (!tracer->result)
     return;
 
   switch (kind) {
   case JSTRACE_OBJECT:
-    entry = (Profiler_HashEntry *)
+    entry = (ObjectHashEntry *)
       JS_DHashTableOperate(&tracer->self->visited,
                            thing,
                            JS_DHASH_LOOKUP);
     if (JS_DHASH_ENTRY_IS_FREE((JSDHashEntryHdr *)entry)) {
-      entry = (Profiler_HashEntry *) JS_DHashTableOperate(
+      entry = (ObjectHashEntry *) JS_DHashTableOperate(
         &tracer->self->visited,
         thing,
         JS_DHASH_ADD
@@ -343,8 +343,8 @@ JSObject *ExtObjectManager::lookupTargetForId(uint32 id)
 
 uint32 ExtObjectManager::lookupIdForTarget(JSObject *target)
 {
-  Profiler_HashEntry *entry;
-  entry = (Profiler_HashEntry *)
+  ObjectHashEntry *entry;
+  entry = (ObjectHashEntry *)
     JS_DHashTableOperate(&visited,
                          target,
                          JS_DHASH_LOOKUP);
@@ -393,7 +393,7 @@ JSDHashOperator ExtObjectManager::mapIdsToObjects(JSDHashTable *table,
                                                   void *arg)
 {
   ExtObjectManager *self = (ExtObjectManager *) arg;
-  Profiler_HashEntry *entry = (Profiler_HashEntry *) hdr;
+  ObjectHashEntry *entry = (ObjectHashEntry *) hdr;
   self->ids[entry->id] = (JSObject *) entry->base.key;
   return JS_DHASH_NEXT;
 }
@@ -414,7 +414,7 @@ JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
   namedTargetObjects = anamedTargetObjects;
 
   if (!JS_DHashTableInit(&visited, JS_DHashGetStubOps(),
-                         NULL, sizeof(Profiler_HashEntry),
+                         NULL, sizeof(ObjectHashEntry),
                          JS_DHASH_DEFAULT_CAPACITY(100))) {
     JS_ReportOutOfMemory(targetCx);
     return JS_FALSE;
@@ -1140,7 +1140,7 @@ ExtStringManager::~ExtStringManager()
 
 JSString *ExtStringManager::getExt(JSString *extString)
 {
-  String_HashEntry *entry = (String_HashEntry *)
+  StringHashEntry *entry = (StringHashEntry *)
     JS_DHashTableOperate(&strings,
                          extString,
                          JS_DHASH_LOOKUP);
@@ -1152,9 +1152,9 @@ JSString *ExtStringManager::getExt(JSString *extString)
     if (!str)
       return NULL;
 
-    entry = (String_HashEntry *) JS_DHashTableOperate(&strings,
-                                                      extString,
-                                                      JS_DHASH_ADD);
+    entry = (StringHashEntry *) JS_DHashTableOperate(&strings,
+                                                     extString,
+                                                     JS_DHASH_ADD);
     if (entry == NULL)
       return NULL;
 
@@ -1199,7 +1199,7 @@ JSBool ExtStringManager::init(ProfilerRuntime *aProfiler)
   }
 
   if (!JS_DHashTableInit(&strings, JS_DHashGetStubOps(),
-                         NULL, sizeof(String_HashEntry),
+                         NULL, sizeof(StringHashEntry),
                          JS_DHASH_DEFAULT_CAPACITY(100))) {
     JS_ReportOutOfMemory(cx);
     return JS_FALSE;
