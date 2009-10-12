@@ -126,6 +126,7 @@ private:
 
   JSContext *targetCx;
   JSContext *cx;
+  ExtStringManager *strings;
 
   JSBool getChildrenInfo(JSObject *info, JSObject *target);
 
@@ -154,7 +155,9 @@ public:
   ExtObjectManager(void);
   ~ExtObjectManager();
 
-  JSBool init(ProfilerRuntime *profiler, JSContext *atargetCx,
+  JSBool init(ProfilerRuntime *aprofiler,
+              ExtStringManager *astrings,
+              JSContext *atargetCx,
               JSObject *anamedTargetObjects);
 
   JSBool copyPropertyInfo(JSObject *propInfo, jsid targetPropId,
@@ -318,6 +321,7 @@ ExtObjectManager::ExtObjectManager(void) :
   currId(1),
   targetCx(NULL),
   cx(NULL),
+  strings(NULL),
   namedTargetObjects(NULL)
 {
   visited.ops = NULL;
@@ -337,6 +341,7 @@ ExtObjectManager::~ExtObjectManager()
 
   cx = NULL;
   targetCx = NULL;
+  strings = NULL;
   namedTargetObjects = NULL;
 }
 
@@ -351,7 +356,8 @@ JSDHashOperator ExtObjectManager::mapIdsToObjects(JSDHashTable *table,
   return JS_DHASH_NEXT;
 }
 
-JSBool ExtObjectManager::init(ProfilerRuntime *profiler,
+JSBool ExtObjectManager::init(ProfilerRuntime *aprofiler,
+                              ExtStringManager *astrings,
                               JSContext *atargetCx,
                               JSObject *anamedTargetObjects)
 {
@@ -360,7 +366,8 @@ JSBool ExtObjectManager::init(ProfilerRuntime *profiler,
     return JS_FALSE;
   }
 
-  cx = profiler->cx;
+  cx = aprofiler->cx;
+  strings = astrings;
   targetCx = atargetCx;
   namedTargetObjects = anamedTargetObjects;
 
@@ -445,8 +452,7 @@ JSBool ExtObjectManager::getFunctionInfo(JSObject *info, JSObject *target)
 
     JSString *targetFuncName = JS_GetFunctionId(fun);
     if (targetFuncName) {
-      ExtStringManager &strings = MemoryProfiler::get()->strings;
-      JSString *funcName = strings.getExt(targetFuncName);
+      JSString *funcName = strings->getExt(targetFuncName);
       if (!funcName) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;
@@ -519,8 +525,7 @@ JSBool ExtObjectManager::copyPropertyInfo(JSObject *propInfo,
     JSObject *valueObj = JSVAL_TO_OBJECT(value);
     value = INT_TO_JSVAL(lookupIdForTarget(valueObj));
   } else if (JSVAL_IS_STRING(value)) {
-    ExtStringManager &strings = MemoryProfiler::get()->strings;
-    JSString *valueStr = strings.getExt(JSVAL_TO_STRING(value));
+    JSString *valueStr = strings->getExt(JSVAL_TO_STRING(value));
     if (valueStr == NULL) {
       JS_ReportOutOfMemory(cx);
       return JS_FALSE;
@@ -1202,7 +1207,7 @@ JSBool MemoryProfiler::profile(JSContext *cx, JSString *code,
   if (!strings.init(&runtime))
     return JS_FALSE;
 
-  if (!objects.init(&runtime, targetCx, namedObjects))
+  if (!objects.init(&runtime, &strings, targetCx, namedObjects))
     return JS_FALSE;
 
   jsval argumentVal = JSVAL_NULL;
