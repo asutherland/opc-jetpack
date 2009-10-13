@@ -1335,6 +1335,14 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
       return JS_FALSE;
     }
 
+  // TODO: Consider using JS_SetGCParameter() to effectively disable the
+  // target runtime's GC while we're profiling, because it's almost
+  // certain that some code will inadvertently be run on it while we
+  // introspect it. Alternatively, install a GC callback on the
+  // target runtime while we're profiling, to ensure that we
+  // the profiling context doesn't try to access objects that were
+  // GC'd while it was profiling.
+
   if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
                            &lineNumber, &namedObjects, &argument))
     return JS_FALSE;
