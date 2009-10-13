@@ -590,6 +590,9 @@ var WrapperTests = {
       "functionInfo() must contain accurate line number component."
     );
 
+    if (endpoint.collectCycles)
+      endpoint.collectCycles();
+
     profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
                   "if (inf.hi != 'sup') throw new Error()",
                   "<string>", 1,

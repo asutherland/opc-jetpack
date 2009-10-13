@@ -37,6 +37,7 @@ EXTRA_DSO_LDOPTS += \
     $(MOZ_JS_LIBS) \
     $(XPCOM_GLUE_LDOPTS) \
     $(NSPR_LIBS) \
+    -lxpcom_core \
     $(NULL)
 
 clobber::
