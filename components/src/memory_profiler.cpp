@@ -1320,6 +1320,21 @@ JSBool profileMemory(JSContext *cx, JSObject *obj, uintN argc,
   JSObject *namedObjects = NULL;
   JSString *argument = NULL;
 
+  jsword myThread = JS_GetContextThread(cx);
+  JSContext *iter = NULL;
+  JSContext *acx;
+  while ((acx = JS_ContextIterator(JS_GetRuntime(cx), &iter)) != NULL)
+    if ((JS_GetContextThread(acx) != myThread) &&
+        JS_IsRunning(acx)) {
+      // TODO: Just because the thread's context isn't currently running
+      // doesn't mean it won't start while we're profiling. We should
+      // really figure out a better solution here.
+      JS_ReportError(cx,
+                     "Multi-threaded memory profiling is currently "
+                     "unsupported.");
+      return JS_FALSE;
+    }
+
   if (!JS_ConvertArguments(cx, argc, argv, "Ss/uoS", &code, &filename,
                            &lineNumber, &namedObjects, &argument))
     return JS_FALSE;
