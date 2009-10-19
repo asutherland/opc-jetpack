@@ -64,9 +64,14 @@ var JetpackRuntime = {
     var unsafeSandbox;
     var sandbox;
 
-    unsafeSandbox = Components.utils.Sandbox(feed.srcUri.spec);
+    var systemPrincipal = Cc["@mozilla.org/systemprincipal;1"]
+                          .createInstance(Ci.nsIPrincipal);
+
+    //unsafeSandbox = Components.utils.Sandbox(feed.srcUri.spec);
+    unsafeSandbox = Components.utils.Sandbox(systemPrincipal);
     sandbox = new Object();
-    unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
+    //unsafeSandbox.__proto__ = SecureMembrane.wrapTrusted(sandbox);
+    unsafeSandbox.__proto__ = sandbox;
 
     sandbox.location = feed.srcUri.spec;
 
@@ -132,8 +137,11 @@ var JetpackRuntime = {
 
     if (!Extension.isInSafeMode) {
       try {
-        Components.utils.evalInSandbox(code, unsafeSandbox, "1.8",
-                                       feed.srcUri.spec, 1);
+        Components.utils.evalInSandbox(
+          code, unsafeSandbox, "1.8",
+          ("chrome://jetpack/content/index.html -> " +
+           feed.srcUri.spec), 1
+        );
       } catch (e) {
         console.exception(e);
       }

@@ -27,7 +27,11 @@ var JQuerySandbox = {
   },
 
   create: function create(principal, proto) {
-    var sb = Components.utils.Sandbox(principal);
+    var systemPrincipal = Cc["@mozilla.org/systemprincipal;1"]
+                          .createInstance(Ci.nsIPrincipal);
+
+    //var sb = Components.utils.Sandbox(principal);
+    var sb = Components.utils.Sandbox(systemPrincipal);
 
     var fakeWindow = new Object();
 
@@ -61,9 +65,12 @@ var JQuerySandbox = {
     if (proto)
       fakeWindow.__proto__ = proto;
 
-    sb.__proto__ = SecureMembrane.wrapTrusted(fakeWindow);
+    //sb.__proto__ = SecureMembrane.wrapTrusted(fakeWindow);
+    sb.__proto__ = fakeWindow;
 
-    Cu.evalInSandbox(this.code, sb, "1.8", this.uri.spec, 1);
+    Cu.evalInSandbox(this.code, sb, "1.8",
+                     "chrome://jetpack/content/index.html -> " +
+                     this.uri.spec, 1);
 
     var sandbox = {
       unload: function() {
