@@ -207,11 +207,13 @@ var Tests = {
     function runNextTest(lastResult) {
       var currentCount = recomputeCount();
       if (lastResult == "success") {
-        succeeded += 1;
         var memoryDiff = currentCount.total - lastCount.total;
-        if (memoryDiff)
-          console.warn("Memory differences:",
-                       JSON.stringify(diffCounts(currentCount, lastCount)));
+        if (memoryDiff) {
+          failed += 1;
+          var diff = diffCounts(currentCount, lastCount);
+          console.error("Memory differences:", JSON.stringify(diff));
+        } else
+          succeeded += 1;
       } else if (lastResult == "failure") {
         failed += 1;
       }
