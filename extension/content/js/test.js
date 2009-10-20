@@ -63,6 +63,7 @@ var Tests = {
         result = "failure";
       listener.unload();
       listener = null;
+      runner.lastException = null;
       console.info(test.name,
                    (result == "success") ? "succeeded" : "failed");
       onFinished(result);
