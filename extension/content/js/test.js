@@ -62,6 +62,7 @@ var Tests = {
       if (wasErrorLogged && result == "success")
         result = "failure";
       listener.unload();
+      listener = null;
       console.info(test.name,
                    (result == "success") ? "succeeded" : "failed");
       onFinished(result);
