@@ -9,6 +9,12 @@ var Tests = {
     return contents;
   },
 
+  cycleCollect: function cycleCollect() {
+    var test_utils = window.QueryInterface(Ci.nsIInterfaceRequestor).
+                     getInterface(Ci.nsIDOMWindowUtils);
+    test_utils.garbageCollect();
+  },
+
   _findTestJsFiles: function _findTestJsFiles() {
     // TODO: This is yucky because it assumes things about how our
     // chrome: URIs are mapped to our filesystem.
@@ -96,9 +102,6 @@ var Tests = {
           self._exceptionAtCaller(message);
         }
       },
-      allowForMemoryError: function allowForMemoryError(margin) {
-        test.memoryErrorMargin = margin;
-      },
       setTimeout: function setTimeout(ms, message) {
         timeoutId = window.setTimeout(
           function() {
@@ -155,8 +158,7 @@ var Tests = {
         if (testName.indexOf('test') == 0) {
           var test = {func: suite[testName],
                       suite: suite,
-                      name: name + "." + testName,
-                      memoryErrorMargin: 0};
+                      name: name + "." + testName};
           if (!filter || test.name.indexOf(filter) != -1)
             tests.push(test);
         }
@@ -166,7 +168,7 @@ var Tests = {
     var failed = 0;
 
     function recomputeCount() {
-      Components.utils.forceGC();
+      self.cycleCollect();
       MemoryTracking.compact();
       return MemoryTracking.getLiveObjects().length;
     }
@@ -179,7 +181,7 @@ var Tests = {
       if (lastResult == "success") {
         succeeded += 1;
         var memoryDiff = Math.abs(currentCount - lastCount);
-        if (memoryDiff > currentTest.memoryErrorMargin)
+        if (memoryDiff)
           console.warn("Object count was", lastCount, "but is now",
                        currentCount, ". You may want to check for " +
                        "memory leaks, though this could be a false " +
