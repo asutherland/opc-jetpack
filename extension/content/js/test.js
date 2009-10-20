@@ -167,10 +167,36 @@ var Tests = {
     var succeeded = 0;
     var failed = 0;
 
+    function diffCounts(current, last) {
+      var diff = {};
+      for (name in current.bins) {
+        if (name in last.bins) {
+          if (current.bins[name] != last.bins[name])
+            diff[name] = current.bins[name] - last.bins[name];
+        } else
+          diff[name] = current.bins[name];
+      }
+
+      for (name in last.bins)
+        if (!(name in current.bins))
+          diff[name] = -last.bins[name];
+
+      return diff;
+    }
+
     function recomputeCount() {
       self.cycleCollect();
       MemoryTracking.compact();
-      return MemoryTracking.getLiveObjects().length;
+      var bins = {};
+      var names = MemoryTracking.getBins();
+      var total = 0;
+      names.forEach(
+        function(name) {
+          var count = MemoryTracking.getLiveObjects(name).length;
+          bins[name] = count;
+          total += count;
+        });
+      return {bins: bins, total: total};
     }
 
     var lastCount = recomputeCount();
@@ -180,12 +206,10 @@ var Tests = {
       var currentCount = recomputeCount();
       if (lastResult == "success") {
         succeeded += 1;
-        var memoryDiff = Math.abs(currentCount - lastCount);
+        var memoryDiff = currentCount.total - lastCount.total;
         if (memoryDiff)
-          console.warn("Object count was", lastCount, "but is now",
-                       currentCount, ". You may want to check for " +
-                       "memory leaks, though this could be a false " +
-                       "alarm.");
+          console.warn("Memory differences:",
+                       JSON.stringify(diffCounts(currentCount, lastCount)));
       } else if (lastResult == "failure") {
         failed += 1;
       }
