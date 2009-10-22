@@ -50,7 +50,8 @@ var XHR = {
       var currWindow = XULApp.mostRecentAppWindow;
       xhr = new currWindow.XMLHttpRequest();
     }
-    xhr = new XMLHttpRequest();
+    else
+      xhr = new XMLHttpRequest();
     MemoryTracking.track(xhr, "XMLHttpRequest");
     return xhr;
   }
