@@ -290,3 +290,20 @@ a {
     width: 20em;
 }
 
+.setting-group-box {
+    border: solid 1px black;
+    -moz-border-radius: 4px;
+    padding-top: 0.5em;
+}
+
+.setting-group-caption-text {
+    position: relative;
+    background-color: white;
+    color: black;
+    top: 0.5em;
+    margin-left: 5px;
+}
+
+.setting-box {
+    width: 100%;
+}

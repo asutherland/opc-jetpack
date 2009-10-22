@@ -80,6 +80,7 @@ var JetpackRuntime = {
 
     this.unsafeSandbox = unsafeSandbox;
     this.sandbox = sandbox;
+    this.feed = feed;
     this.url = feed.uri.spec;
     this.srcUrl = feed.srcUri.spec;
     // Generate an ID for the feature based on its source URL.
@@ -142,6 +143,10 @@ var JetpackRuntime = {
           ("chrome://jetpack/content/index.html -> " +
            feed.srcUri.spec), 1
         );
+        // TODO: What are the security implications of retrieving the
+        // manifest from the sandbox?
+        if ("manifest" in unsafeSandbox)
+          this.manifest = unsafeSandbox.manifest;
       } catch (e) {
         console.exception(e);
       }

@@ -189,6 +189,9 @@ window.addLazyLoaders(
    "js/selection.js": [
      "_Selection"
    ],
+   "js/settings-store.js": [
+     "SettingsStore"
+   ],
    "js/slidebar.js": [
      "SlideBar"
    ],
@@ -356,13 +359,7 @@ JetpackEnv.setFutures(
    },
 
    "jetpack.storage.settings": function (context) {
-     var s = {};
-     Cu.import("resource://jetpack/modules/simple-storage.js", s);
-
-     var ss = new s.simpleStorage.SimpleStorage(context.id, "settings");
-     s.simpleStorage.register(ss);
-     context.addUnloader({ unload: function () s.simpleStorage.unregister(ss)});
-     return ss;
+     return new SettingsStore(context);
    },
 
    "jetpack.slideBar": function(context) {

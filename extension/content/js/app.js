@@ -39,6 +39,10 @@ var App = {
     case "purge":
       feed.purge();
       break;
+    case "open-settings":
+      var context = JetpackRuntime.getJetpack(url);
+      new SettingsView(context);
+      break;
     }
   },
 
@@ -228,6 +232,7 @@ var App = {
     }
 
     this._addButton(div, "view-source", "view source");
+    this._addButton(div, "open-settings", "settings");
 
     div.hide();
     if (parent.children('.jetpack').length == 0)
