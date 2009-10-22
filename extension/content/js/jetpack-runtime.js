@@ -82,6 +82,16 @@ var JetpackRuntime = {
     this.sandbox = sandbox;
     this.feed = feed;
     this.url = feed.uri.spec;
+    this.__defineGetter__(
+      "manifest",
+      function() {
+        // TODO: Ultimately we should get the manifest via static
+        // analysis of the code, or by executing the Jetpack in an
+        // extremely limited sandbox.
+        if ("manifest" in this.unsafeSandbox)
+          return this.unsafeSandbox.manifest;
+        return null;
+      });
     this.srcUrl = feed.srcUri.spec;
     // Generate an ID for the feature based on its source URL.
     // TODO: this.srcUrl or this.url?  We hash this as the feature's ID,
@@ -143,10 +153,6 @@ var JetpackRuntime = {
           ("chrome://jetpack/content/index.html -> " +
            feed.srcUri.spec), 1
         );
-        // TODO: What are the security implications of retrieving the
-        // manifest from the sandbox?
-        if ("manifest" in unsafeSandbox)
-          this.manifest = unsafeSandbox.manifest;
       } catch (e) {
         console.exception(e);
       }
