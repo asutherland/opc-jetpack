@@ -501,7 +501,8 @@ def run_program(args, **kwargs):
 
 @task
 @cmdopts([("srcdir=", "t", "The root of your mozilla-central checkout"),
-          ("objdir=", "o", "The root of your objdir")])
+          ("objdir=", "o", "The root of your objdir"),
+          ("gdb", "d", "Use the GNU debugger to debug the test suite")])
 def xpcom(options):
     """Builds binary XPCOM components for Jetpack."""
 
@@ -616,9 +617,14 @@ def xpcom(options):
     if sys.platform.startswith("linux"):
         env['LD_LIBRARY_PATH'] = os.path.dirname(options.xpcshell)
 
-    run_program([options.xpcshell,
-                 os.path.join(options.my_dir, "extension",
-                              "content", "js", "tests",
-                              "test-nsjetpack.js")],
+    cmdline = [options.xpcshell,
+               os.path.join(options.my_dir, "extension",
+                            "content", "js", "tests",
+                            "test-nsjetpack.js")]
+
+    if options.get("gdb"):
+        cmdline = ["gdb", "--args"] + cmdline
+
+    run_program(cmdline,
                 env=env,
                 cwd=os.path.dirname(options.xpcshell))
