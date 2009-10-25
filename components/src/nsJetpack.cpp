@@ -95,35 +95,28 @@ nsJetpack::NewResolve(nsIXPConnectWrappedNative *wrapper,
                       jsval id, PRUint32 flags,
                       JSObject * *objp, PRBool *_retval)
 {
-  if (JSVAL_IS_STRING(id)) {
-    JSString *getStr = JS_NewStringCopyZ(cx, "get");
-    if (!getStr) {
+  if (JSVAL_IS_STRING(id) &&
+      strncmp(JS_GetStringBytes(JSVAL_TO_STRING(id)), "get", 3) == 0) {
+    JSFunction *get = JS_NewFunction(cx, getEndpoint, 0, 0, 
+                                     JS_GetParent(cx, obj), "get");
+    if (!get) {
       JS_ReportOutOfMemory(cx);
       *_retval = PR_FALSE;
       return NS_OK;
     }
-    if (JS_CompareStrings(getStr, JSVAL_TO_STRING(id)) == 0) {
-      JSFunction *get = JS_NewFunction(cx, getEndpoint, 0, 0, 
-                                       JS_GetParent(cx, obj), "get");
-      if (!get) {
-        JS_ReportOutOfMemory(cx);
-        *_retval = PR_FALSE;
-        return NS_OK;
-      }
       
-      JSObject *getObj = JS_GetFunctionObject(get);
+    JSObject *getObj = JS_GetFunctionObject(get);
 
-      jsid idid;
-      *objp = obj;
-      *_retval = (JS_ValueToId(cx, id, &idid) &&
-                  JS_DefinePropertyById(cx, obj, idid,
-                                        OBJECT_TO_JSVAL(getObj),
-                                        nsnull, nsnull,
-                                        JSPROP_ENUMERATE |
-                                        JSPROP_READONLY |
-                                        JSPROP_PERMANENT));
-      return NS_OK;
-    }
+    jsid idid;
+    *objp = obj;
+    *_retval = (JS_ValueToId(cx, id, &idid) &&
+                JS_DefinePropertyById(cx, obj, idid,
+                                      OBJECT_TO_JSVAL(getObj),
+                                      nsnull, nsnull,
+                                      JSPROP_ENUMERATE |
+                                      JSPROP_READONLY |
+                                      JSPROP_PERMANENT));
+    return NS_OK;
   }
 
   *objp = nsnull;
