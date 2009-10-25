@@ -4,12 +4,20 @@
 #include "memory_profiler.h"
 
 #include "jsapi.h"
+#include "nsMemory.h"
 #include "nsIXPConnect.h"
 #include "nsAXPCNativeCallContext.h"
 #include "nsServiceManagerUtils.h"
 #include "nsComponentManagerUtils.h"
 
-NS_IMPL_ISUPPORTS1(nsJetpack, nsIJetpack)
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           nsJetpack
+#define XPC_MAP_QUOTED_CLASSNAME   "nsJetpack"
+#define XPC_MAP_WANT_NEWRESOLVE
+#define XPC_MAP_FLAGS nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE
+#include "xpc_map_end.h" /* This will #undef the above */
+
+NS_IMPL_ISUPPORTS2(nsJetpack, nsIJetpack, nsIXPCScriptable)
 
 #ifdef USE_COWS
 static JSBool makeCOW(JSContext *cx, JSObject *obj, uintN argc,
@@ -66,48 +74,68 @@ nsJetpack::~nsJetpack()
 {
 }
 
-NS_IMETHODIMP nsJetpack::Get()
+static JSBool getEndpoint(JSContext *cx, JSObject *obj, uintN argc,
+                          jsval *argv, jsval *rval)
 {
-  nsresult rv = NS_OK;
-  nsCOMPtr<nsIXPConnect> xpc = do_GetService(
-    "@mozilla.org/js/xpc/XPConnect;1",
-    &rv
-  );
-  if (NS_FAILED(rv))
-    return NS_ERROR_FAILURE;
-
-  // get the xpconnect native call context
-  nsAXPCNativeCallContext *cc = nsnull;
-  xpc->GetCurrentNativeCallContext(&cc);
-  if(!cc)
-    return NS_ERROR_FAILURE;
-
-  // Get JSContext of current call
-  JSContext* cx;
-  rv = cc->GetJSContext(&cx);
-  if(NS_FAILED(rv) || !cx)
-    return NS_ERROR_FAILURE;
-
-  // get place for return value
-  jsval *rval = nsnull;
-  rv = cc->GetRetValPtr(&rval);
-  if(NS_FAILED(rv) || !rval)
-    return NS_ERROR_FAILURE;
-
   JSObject *endpoint = JS_NewObject(cx, NULL, NULL, NULL);
-  if (endpoint == NULL) {
-    return NS_ERROR_FAILURE;
-  }
+  if (endpoint == NULL)
+    return JS_FALSE;
 
   *rval = OBJECT_TO_JSVAL(endpoint);
 
-  if (!JS_DefineFunctions(cx, endpoint, endpointFunctions)) {
-    // The JS exception state was set.
-    cc->SetReturnValueWasSet(PR_FALSE);
-    return NS_OK;
+  if (!JS_DefineFunctions(cx, endpoint, endpointFunctions))
+    return JS_FALSE;
+
+  return JS_TRUE;
+}
+
+NS_IMETHODIMP
+nsJetpack::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                      JSContext * cx, JSObject * obj,
+                      jsval id, PRUint32 flags,
+                      JSObject * *objp, PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString *getStr = JS_NewStringCopyZ(cx, "get");
+    if (!getStr) {
+      JS_ReportOutOfMemory(cx);
+      *_retval = PR_FALSE;
+      return NS_OK;
+    }
+    if (JS_CompareStrings(getStr, JSVAL_TO_STRING(id)) == 0) {
+      JSFunction *get = JS_NewFunction(cx, getEndpoint, 0, 0, 
+                                       JS_GetParent(cx, obj), "get");
+      if (!get) {
+        JS_ReportOutOfMemory(cx);
+        *_retval = PR_FALSE;
+        return NS_OK;
+      }
+      
+      JSObject *getObj = JS_GetFunctionObject(get);
+
+      jsid idid;
+      *objp = obj;
+      *_retval = (JS_ValueToId(cx, id, &idid) &&
+                  JS_DefinePropertyById(cx, obj, idid,
+                                        OBJECT_TO_JSVAL(getObj),
+                                        nsnull, nsnull,
+                                        JSPROP_ENUMERATE |
+                                        JSPROP_READONLY |
+                                        JSPROP_PERMANENT));
+      return NS_OK;
+    }
   }
 
-  cc->SetReturnValueWasSet(PR_TRUE);
+  *objp = nsnull;
+  *_retval = PR_TRUE;
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsJetpack::Get()
+{
+  // This should never actually be called by JS code; instead, the 
+  // getEndpoint() JS native function should get called, since this
+  // object implements nsIXPCScriptable.
   return NS_OK;
 }
