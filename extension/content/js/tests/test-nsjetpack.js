@@ -590,21 +590,6 @@ var WrapperTests = {
       "functionInfo() must contain accurate line number component."
     );
 
-    if (endpoint.collectCycles) {
-      output("Testing collectCycles().");
-      var ccCount = 0;
-      var obs = {observe: function(s, t, d) { ccCount++; }};
-      var osvc = Cc["@mozilla.org/observer-service;1"]
-                 .getService(Ci.nsIObserverService);
-      osvc.addObserver(obs, "cycle-collector-begin", false);
-      assertEqual(ccCount, 0);
-      Cu.forceGC();
-      assertEqual(ccCount, 0);
-      endpoint.collectCycles();
-      assertEqual(ccCount, 1);
-    } else
-      output("Skipping collectCycles() tests.");
-
     profileMemory("var inf = getObjectProperty('blarg', 'hi');" +
                   "if (inf.hi != 'sup') throw new Error()",
                   "<string>", 1,

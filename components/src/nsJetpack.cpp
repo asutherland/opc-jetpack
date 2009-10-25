@@ -8,22 +8,8 @@
 #include "nsAXPCNativeCallContext.h"
 #include "nsServiceManagerUtils.h"
 #include "nsComponentManagerUtils.h"
-#include "nsCycleCollector.h"
 
 NS_IMPL_ISUPPORTS1(nsJetpack, nsIJetpack)
-
-static JSBool collectCycles(JSContext *cx, JSObject *obj, uintN argc,
-                            jsval *argv, jsval *rval)
-{
-  PRUint32 collected = nsCycleCollector_collect();
-
-  if (INT_FITS_IN_JSVAL(collected))
-    *rval = INT_TO_JSVAL(collected);
-  else
-    *rval = JS_GetPositiveInfinityValue(cx);
-
-  return JS_TRUE;
-}
 
 #ifdef USE_COWS
 static JSBool makeCOW(JSContext *cx, JSObject *obj, uintN argc,
@@ -66,7 +52,6 @@ static JSFunctionSpec endpointFunctions[] = {
   JS_FS("functionInfo",  TCB_functionInfo, 1, JSPROP_ENUMERATE, 0),
   JS_FS("seal",          TCB_seal,         1, JSPROP_ENUMERATE, 0),
   JS_FS("getClassName",  TCB_getClassName, 1, JSPROP_ENUMERATE, 0),
-  JS_FS("collectCycles", collectCycles,    0, JSPROP_ENUMERATE, 0),
 #ifdef USE_COWS
   JS_FS("makeCOW",       makeCOW,          1, JSPROP_ENUMERATE, 0),
 #endif
