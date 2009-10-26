@@ -543,10 +543,6 @@ var WrapperTests = {
       var leftToVisit = [namedObjects[name] for (name in namedObjects)];
       if (leftToVisit.length == 0)
         leftToVisit = getGCRoots();
-      var STANDARD_PROPERTY_INFO = false;
-      var ALTERNATE_PROPERTY_INFO = true;
-      var classProps = {Function: STANDARD_PROPERTY_INFO,
-                        Object: STANDARD_PROPERTY_INFO};
       while (leftToVisit.length > 0) {
         var id = leftToVisit.pop();
         if (!(id in visited)) {
@@ -556,12 +552,10 @@ var WrapperTests = {
           var info = getObjectInfo(id);
           if (info) {
             leftToVisit = leftToVisit.concat(info.children);
-            if (info.nativeClass in classProps)
-              getObjectProperties(id, classProps[info.nativeClass]);
-
-            //        if (info.name && info.filename &&
-            //            info.filename.indexOf("http") == "0")
-            //          print(JSON.stringify(info));
+            if (info.nativeClass == "Object") {
+              getObjectProperties(id, false);
+              getObjectProperties(id, true);
+            }
           }
         }
       }
@@ -571,8 +565,9 @@ var WrapperTests = {
         if (!(id in visited)) {
           visitedCount++;
           var info = getObjectInfo(parseInt(id));
-          if (info && info.nativeClass in classProps) {
-            getObjectProperties(id, classProps[info.nativeClass]);
+          if (info && info.nativeClass == "Object") {
+            getObjectProperties(id, false);
+            getObjectProperties(id, true);
           }
         }
       }
