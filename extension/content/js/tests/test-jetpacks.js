@@ -10,7 +10,7 @@
      function(path) {
        dir.append(path);
      });
-   var files = Tests.listDir(dir);
+   var files = Tests.listDir(dir).filter(function (f) /\.js$/.test(f));
    var tests = {};
 
    var ios = Cc["@mozilla.org/network/io-service;1"]
