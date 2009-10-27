@@ -101,6 +101,13 @@ var JetpackRuntime = {
     this.addUnloader = function addUnloader(unloader) {
       unloaders.push(unloader);
     };
+    this.removeUnloader = function removeUnloader(unloader) {
+      if (unloaders) {
+        var idx = unloaders.indexOf(unloader);
+        if (idx >= 0)
+          unloaders.splice(idx, 1);
+      }
+    };
     this.doImport = function doImport(name, importer) {
       var parts = name.split(".");
       var obj = this.sandbox;
@@ -161,7 +168,8 @@ var JetpackRuntime = {
     Extension.addUnloadMethod(
       this,
       function() {
-        unloaders.forEach(function(obj) { obj.unload(); });
+        while (unloaders.length > 0)
+          unloaders.shift().unload();
         unloaders = null;
       });
   },
