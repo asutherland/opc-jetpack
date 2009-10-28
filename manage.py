@@ -516,18 +516,16 @@ def xpcom(options):
         options[dirname] = os.path.abspath(options[dirname])
 
     resolve_options(options)
-    options.xpcshell = os.path.join(options.objdir, "dist", "bin",
-                                    "xpcshell")
 
     xpcom_info = Bunch()
-    xpcom_info.components_dir = os.path.join(options.objdir, "dist",
-                                             "bin", "components")
 
     autoconf = open(os.path.join(options.objdir, "config", "autoconf.mk"),
                     "r").readlines()
     for line in autoconf:
         if line.startswith("OS_TARGET"):
             xpcom_info.os = line.split("=")[1].strip()
+        elif line.startswith("LIBXUL_SDK"):
+            xpcom_info.libxul = line.split("=")[1].strip()
         elif line.startswith("TARGET_XPCOM_ABI"):
             xpcom_info.abi = line.split("=")[1].strip()
         elif line.startswith("MOZILLA_VERSION"):
@@ -600,6 +598,17 @@ def xpcom(options):
     for filename in xptfiles:
         shutil.copy(os.path.join(comp_xpi_dir, filename),
                     os.path.join(options.path_to_ext_root, "components"))
+
+    # Set up infrastructure for running tests.
+
+    if xpcom_info.libxul:
+        gecko_sdk_base = os.path.join(xpcom_info.libxul)
+    else:
+        gecko_sdk_base = os.path.join(options.objdir, "dist")
+
+    options.xpcshell = os.path.join(gecko_sdk_base, "bin", "xpcshell")
+    xpcom_info.components_dir = os.path.join(gecko_sdk_base,
+                                             "bin", "components")
 
     for filename in os.listdir(comp_xpi_dir):
         shutil.copy(os.path.join(comp_xpi_dir, filename),
