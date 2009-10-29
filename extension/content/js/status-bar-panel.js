@@ -1,5 +1,6 @@
-function StatusBar(urlFactory) {
-  this._urlFactory = urlFactory;
+function StatusBar(featureContext) {
+  this._featureContext = featureContext;
+  this._urlFactory = featureContext.urlFactory;
   this._browserWatchers = [];
   this._panels = [];
   this._windows = [];
@@ -77,6 +78,19 @@ StatusBar.prototype = {
     var document = window.document;
     var statusBar = document.getElementById("status-bar");
     var statusBarPanel = document.createElement("statusbarpanel");
+
+    // Set up the panel's context menu.  It must be the first child!  If the
+    // feature hasn't loaded the jetpack.menu namespace, cancel the menu.
+    var contextMenu = document.createElement("menupopup");
+    statusBarPanel.appendChild(contextMenu);
+    statusBarPanel.contextMenu = "_child";
+    this._onContextMenuShowing = function _onContextMenuShowing(event) {
+      if (!("menuNamespaceLoaded" in self._featureContext))
+        event.preventDefault();
+    }
+    contextMenu.addEventListener("popupshowing", this._onContextMenuShowing,
+                                 true);
+
     var iframe = document.createElement("iframe");
     MemoryTracking.track(iframe, "StatusBarPanel");
     iframe.setAttribute("type", "content");
@@ -105,6 +119,10 @@ StatusBar.prototype = {
 
           iframe.removeEventListener("DOMContentLoaded", onPanelLoad, true);
           self._injectPanelWindowFunctions(iframe);
+
+          // Store the feature ID in the iframe's content window so jetpack.menu
+          // will know which feature the iframe is associated with.
+          iframe.contentWindow._featureId = self._featureContext.id;
 
           // Shrink the width of the document to the size of the content
           // it contains so we can automatically size the iframe to the size
@@ -304,9 +322,15 @@ StatusBar.prototype = {
 
              // Remove the statusbarpanel containing the iframe from the doc,
              // which has the effect of removing the iframe as well.
-             if (panel.iframe.parentNode && panel.iframe.parentNode.parentNode)
+             if (panel.iframe.parentNode &&
+                 panel.iframe.parentNode.parentNode) {
+               var contextMenu = panel.iframe.parentNode.childNodes[0];
+               contextMenu.removeEventListener("popupshowing",
+                                               self._onContextMenuShowing,
+                                               true);
                panel.iframe.parentNode.parentNode.
                      removeChild(panel.iframe.parentNode);
+             }
            }
          }
         }));

@@ -11,7 +11,8 @@ var StatusBarPanelTests = {
     bw = null;
 
     if (browserCount) {
-      var sb = new StatusBar();
+      var fakeContext = {};
+      var sb = new StatusBar(fakeContext);
       function onDone() {
         browserCount -= 1;
         if (browserCount == 0) {

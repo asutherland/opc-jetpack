@@ -313,7 +313,7 @@ JetpackEnv.addLazyLoaders({
    },
 
    "jetpack.statusBar": function(context) {
-     var statusBar = new StatusBar(context.urlFactory);
+     var statusBar = new StatusBar(context);
      context.addUnloader(statusBar);
      return {
        append: function append(options) {
@@ -324,6 +324,12 @@ JetpackEnv.addLazyLoaders({
 
    "jetpack.info": function(context) {
      return new Information();
+   },
+
+   "jetpack.Menu": function (context) {
+     var s = {};
+     Cu.import("resource://jetpack/modules/menu.js", s);
+     return s.exports.Menu(context);
    }
 });
 
@@ -388,6 +394,12 @@ JetpackEnv.setFutures(
      var s = {};
      Cu.import("resource://jetpack/modules/video.js", s);
      return new s.VideoModule();
+   },
+
+   "jetpack.menu": function (context) {
+     var s = {};
+     Cu.import("resource://jetpack/modules/menu.js", s);
+     return s.exports.menu(context);
    }
   });
 

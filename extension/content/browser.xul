@@ -22,4 +22,8 @@
               label="about:jetpack" accesskey="t"
               oncommand="gJetpack.openAboutPage(false);"/>
   </menupopup>
+
+  <popupset id="mainPopupSet">
+    <menupopup id="jetpack:slidebarContextMenu"/>
+  </popupset>
 </overlay>

@@ -17,6 +17,7 @@
 *
 * Contributor(s):
 *  Edward Lee <edilee@mozilla.com> (original author)
+*  Drew Willcoxon <adw@mozilla.com>
 *
 * Alternatively, the contents of this file may be used under the terms of either
 * the GNU General Public License Version 2 or later (the "GPL"), or the GNU
@@ -182,6 +183,10 @@ let SlideBar = let (T = {
     if (T.hasPersonas)
       slideBar.style.marginTop = tabStrip.clientHeight + "px";
     slideBar.style.opacity = 1;
+
+    // Setup the context menu listener
+    let menu = window.document.getElementById("jetpack:slidebarContextMenu");
+    menu.addEventListener("popupshowing", T.onContextMenuShowing, true);
 
     // == Window ==
     // Extend the browser window with custom SlideBar properties such as its
@@ -446,6 +451,10 @@ let SlideBar = let (T = {
 
     // Forget about this window now that it's unloaded
     T.removeItem(T.windows, window);
+
+    // Remove the context menu listener
+    let menu = window.document.getElementById("jetpack:slidebarContextMenu");
+    menu.removeEventListener("popupshowing", T.onContextMenuShowing, true);
   },
 
   //////////////////////////////////////////////////////////////////////////////
@@ -583,6 +592,10 @@ let SlideBar = let (T = {
     F.iframe.addEventListener("DOMContentLoaded", function iframeLoaded() {
       F.iframe.removeEventListener("DOMContentLoaded", iframeLoaded, false);
 
+      // Store the feature ID in the iframe's content window so jetpack.menu
+      // will know which feature the iframe is associated with.
+      F.iframe.contentWindow._featureId = context.id;
+
       // Let the feature know the iframe has loaded
       T.catchCall(args, "onReady", F.cbArgs);
     }, false);
@@ -645,5 +658,31 @@ let SlideBar = let (T = {
   removeFeatures: function SlideBar_removeFeatures(features) {
     // Make a copy of the array as it might change as we remove features
     features.slice().forEach(function(feature) T.removeFeature(feature));
+  },
+
+  // ==== {{{SlideBar.onContextMenuShowing()}}} ====
+  // If the SlideBar context menu is invoked on an iframe created by a feature
+  // that has not loaded the jetpack.menu namespace, cancel the menu
+  onContextMenuShowing: function SlideBar_onContextMenuShowing(event) {
+    // Get the feature ID of the iframe containing the node that was clicked
+    let browserWin = event.view;
+    let iframeWin = browserWin.document.popupNode.ownerDocument.defaultView;
+    let featureId = iframeWin._featureId;
+
+    if (featureId) {
+      // Find the context of the feature that created the iframe
+      for (let i = 0; i < T.contexts.length; i++) {
+        let context = T.contexts[i];
+        if (context.id === featureId) {
+          if (!("menuNamespaceLoaded" in context))
+            event.preventDefault();
+          return;
+        }
+      }
+    }
+    else {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 }) T.init();
