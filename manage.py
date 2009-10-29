@@ -526,6 +526,14 @@ def xpcom(options):
             xpcom_info.os = line.split("=")[1].strip()
         elif line.startswith("LIBXUL_SDK"):
             xpcom_info.libxul = line.split("=")[1].strip()
+            if sys.platform.startswith('win'):
+                # The path is mingw-style, convert it to windows-style.
+                sh_echo = subprocess.Popen(["sh", "-c",
+                                            "cmd //c echo " +
+                                            xpcom_info.libxul],
+                                           stdout=subprocess.PIPE)
+                sh_echo.wait()
+                xpcom_info.libxul = sh_echo.stdout.read().strip()
         elif line.startswith("TARGET_XPCOM_ABI"):
             xpcom_info.abi = line.split("=")[1].strip()
         elif line.startswith("MOZILLA_VERSION"):
