@@ -63,6 +63,16 @@ var MenuTests = {
              getMostRecentWindow("navigator:browser");
   },
 
+  // Returns popup.childNodes sans hidden children.
+  _childNodes: function (popup) {
+    var nodes = [];
+    for (var i = 0; i < popup.childNodes.length; i++) {
+      if (!popup.childNodes[i].hidden)
+        nodes.push(popup.childNodes[i]);
+    }
+    return nodes;
+  },
+
   // The object that the menu module exports.
   _exports: (function (self) {
     if (!self.__exports) {
@@ -299,9 +309,10 @@ var MenuTests = {
       win.addEventListener("popupshown", function popupshown(event) {
         win.removeEventListener("popupshown", popupshown, true);
         var popup = event.target;
-        runner.assertEqual(popup.childNodes.length, 1,
+        var childNodes = self._childNodes(popup);
+        runner.assertEqual(childNodes.length, 1,
                            "Popup should have expected number of children");
-        popup.childNodes[0].click();
+        childNodes[0].click();
       }, true);
       m.show(doc.getElementById("stop-button"));
       runner.setTimeout(5000, "Showing, clicking popup should not time out");
@@ -329,14 +340,16 @@ var MenuTests = {
       win.addEventListener("popupshown", function popupshown(event) {
         win.removeEventListener("popupshown", popupshown, true);
         var popup = event.target;
-        runner.assertEqual(popup.childNodes.length, 1,
+        var childNodes = self._childNodes(popup);
+        runner.assertEqual(childNodes.length, 1,
                            "Popup should have expected number of children");
-        var xulMenu = popup.childNodes[0];
+        var xulMenu = childNodes[0];
         xulMenu.open = true;
         var subpopup = xulMenu.childNodes[0];
-        runner.assertEqual(subpopup.childNodes.length, 1,
+        childNodes = self._childNodes(subpopup);
+        runner.assertEqual(childNodes.length, 1,
                            "Subpopup should have expected number of children");
-        var subpopupItem = subpopup.childNodes[0];
+        var subpopupItem = childNodes[0];
         subpopupItem.click();
       }, true);
       m.show(doc.getElementById("stop-button"));

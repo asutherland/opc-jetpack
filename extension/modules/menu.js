@@ -42,6 +42,10 @@ let EXPORTED_SYMBOLS = ["exports"];
 let Cc = Components.classes;
 let Ci = Components.interfaces;
 
+let gOsX = Cc["@mozilla.org/xre/app-info;1"].
+             getService(Ci.nsIXULRuntime).
+             OS === "Darwin";
+
 Components.utils.import("resource://jetpack/modules/track.js");
 
 // Exports /////////////////////////////////////////////////////////////////////
@@ -310,6 +314,7 @@ function Menu(aOpts, aFeatureContext, aTransforms) {
 
     if (!aPassive) {
       var context;
+      var dummyChild;
 
       // Apply the Menu's transforms when aPopup is shown.
       function Menu__addPopup_onPopupshowing(event) {
@@ -320,6 +325,16 @@ function Menu(aOpts, aFeatureContext, aTransforms) {
           if (typeof(self.beforeShow) === "function")
             callUserFunc(self, self.beforeShow, [self]);
           Menu.popups.onPopupshowing(aPopup);
+
+          // This stupid business is needed for popups in the OS X menu bar.
+          // popuphiding is dispatched to those popups only the first time
+          // they're hidden -- unless, for some reason, they're modified during
+          // popupshowing.  So, make sure they're modified.
+          if (gOsX) {
+            dummyChild = aPopup.ownerDocument.createElement("menuitem");
+            dummyChild.hidden = true;
+            aPopup.appendChild(dummyChild);
+          }
         }
       }
 
@@ -335,6 +350,9 @@ function Menu(aOpts, aFeatureContext, aTransforms) {
             // is removed from this Menu or Menu__addPopup_onPopupshowing is
             // called again, whichever happens first.
             context = null;
+
+            if (dummyChild)
+              aPopup.removeChild(dummyChild);
           });
       }
 
