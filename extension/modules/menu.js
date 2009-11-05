@@ -390,6 +390,7 @@ function Menu(aOpts, aFeatureContext, aTransforms) {
   function attachToXul(aNode, aAttr) {
     let doc = browserXulDocFromNode(aNode);
     let popup = doc.createElement("menupopup");
+    MemoryTracking.track(popup, "XUL menupopup");
     self._addPopup(popup);
     let id = newGuid();
     popup.setAttribute("id", id);
@@ -493,6 +494,7 @@ function Menu(aOpts, aFeatureContext, aTransforms) {
     aAnchorNode = rawNode(aAnchorNode);
     let doc = browserXulDocFromNode(aAnchorNode);
     let popup = doc.createElement("menupopup");
+    MemoryTracking.track(popup, "XUL menupopup");
     self._addPopup(popup);
     let popupset = doc.getElementById("mainPopupSet");
     popupset.appendChild(popup);
@@ -580,12 +582,14 @@ function Menuitem(aOpts) {
     let elt = aBrowserXulDoc.createElement(eltName);
     if (hasMenu) {
       let popup = aBrowserXulDoc.createElement("menupopup");
+      MemoryTracking.track(popup, "XUL menupopup");
       this.menu._addPopup(popup);
       elt.appendChild(popup);
 
       // Unregister popup when this item's parent popup is hidden.
       let unloader = new Unloader(function Menuitem__makeXulElt_menu_unload() {
         self.menu._removePopup(popup);
+        elt.removeChild(popup);
       });
       unloader.onCapture("popuphiding", aBrowserXulDoc,
         function Menuitem__makeXulElt_menu_hiding(target)
