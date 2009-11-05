@@ -45,7 +45,10 @@ function SettingsStore(context) {
   context.addUnloader({ unload: function () s.simpleStorage.unregister(ss) });
 
   let manifest;
-  if (("manifest" in context) && ("settings" in context.manifest))
+  if ("manifest" in context &&
+      context.manifest &&
+      type(context.manifest) == "object" &&
+      "settings" in context.manifest)
     manifest = context.manifest.settings;
 
   return new SettingsWrapper(ss, ss, context.id, manifest, []);
