@@ -47,7 +47,7 @@ function SettingsStore(context) {
   let manifest;
   if ("manifest" in context &&
       context.manifest &&
-      type(context.manifest) == "object" &&
+      typeof(context.manifest) == "object" &&
       "settings" in context.manifest)
     manifest = context.manifest.settings;
 
