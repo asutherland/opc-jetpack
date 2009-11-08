@@ -236,14 +236,16 @@ PopupTracker.prototype = {
 
 // Private Menu constructor.  aOpts is any value appropriate to the public Menu
 // constructor.  aTransforms is a Transforms object that describes how to apply
-// the menu's stack of transforms to a receiver.
-function Menu(aOpts, aFeatureContext, aTransforms) {
+// the menu's stack of transforms to a receiver.  aStack is a TransformsStack
+// and can be used to initialize the Menu with an existing stack of transforms.
+// Both aTransforms and aStack are optional.
+function Menu(aOpts, aFeatureContext, aTransforms, aStack) {
   MemoryTracking.track(this);
 
   const self = this;
   let mFeatureContext = aFeatureContext;
   let mTransforms = aTransforms || new Transforms();
-  let mStack = new TransformsStack();
+  let mStack = aStack || new TransformsStack();
   let mPopups = []; // Contains { popup, cleanup() } objects.
 
   mTransforms.mixin(this, mStack);
@@ -792,17 +794,17 @@ ContextMenuDomain.prototype = {
       let popupNode = aXulDoc.popupNode;
       let contentDoc = popupNode.ownerDocument;
 
-      // menu is passed to beforeShow() and beforeHide().
-      let menu = new Menu(null, self.featureContext);
-      menu._addPopup(popup, true);
-
       // Apply the transforms of all matching sets.  Speculative sets last.
       self.sets.concat(specSets).forEach(function (set) {
         if (nodeMatchesSelector(popupNode, set.selector, contentDoc)) {
           let context = new TransformsContext(set._stack, set._transforms,
                                               new PopupWrapper(popup));
+          let menu = new Menu(null, self.featureContext, set._transforms,
+                              set._stack);
+          menu._addPopup(popup, true);
+
           // Unshift so that transforms are undone in reverse order below.
-          matchingSets.unshift({ set: set, context: context });
+          matchingSets.unshift({ set: set, context: context, menu: menu });
           context.apply();
           if (typeof(set.beforeShow) === "function")
             callUserFunc(set, set.beforeShow,
@@ -821,10 +823,10 @@ ContextMenuDomain.prototype = {
                 matchingSets.forEach(function (s) {
                   if (typeof(s.set.beforeHide) === "function")
                     callUserFunc(s.set, s.set.beforeHide,
-                                 [menu, makeContextObject(aXulDoc)]);
+                                 [s.menu, makeContextObject(aXulDoc)]);
+                  s.menu._removePopup(popup);
                   s.context.undo().cleanup();
                 });
-                menu._removePopup(popup);
               });
           }
         }, false);

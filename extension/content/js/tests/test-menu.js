@@ -41,6 +41,18 @@ var MenuTests = {
 
   // Helpers //////////////////////////////////////////////////////////////////
 
+  // Ensures that popup contains the specified number of children (count) with
+  // the given targetLabel.
+  _assertPopupContains: function (runner, popup, targetLabel, count) {
+    var foundCount = 0;
+    var nodes = this._childNodes(popup);
+    for (var i = 0; i < nodes.length; i++)
+      if (nodes[i].getAttribute("label") === targetLabel)
+        foundCount++;
+    runner.assertEqual(foundCount, count,
+                       "Popup should contain expected number of target items");
+  },
+
   // Asserts that the labels of menu.items match the values in expectedItems,
   // which may be strings, functions that return strings, or objects with a
   // label member.
@@ -71,6 +83,12 @@ var MenuTests = {
         nodes.push(popup.childNodes[i]);
     }
     return nodes;
+  },
+
+  // Returns the browser's content context menu, a XUL menupopup.
+  _contentContextMenupopup: function () {
+    return this._browserWindow().document.
+             getElementById("contentAreaContextMenu");
   },
 
   // The object that the menu module exports.
@@ -112,9 +130,20 @@ var MenuTests = {
     context.unload();
   },
 
+  // Shows the content context menu in the currently visible page.
+  _showContentContextMenu: function () {
+    // We can't just openPopup() the menupopup.  Our menu code sniffs for
+    // contextmenu events, so dispatch one.
+    this._browserWindow().content.
+      QueryInterface(Components.interfaces.nsIInterfaceRequestor).
+      getInterface(Components.interfaces.nsIDOMWindowUtils).
+      sendMouseEvent("contextmenu", 0, 0, 2, 1, 0);
+  },
+
 
   // Tests ////////////////////////////////////////////////////////////////////
 
+  // Menu initialized from an array should contain correct items.
   testMenuInitArray: function (runner) {
     this._run(function (context, menuNs, Menu) {
       var items = ["a", { label: "b" }, function () "c"];
@@ -123,6 +152,7 @@ var MenuTests = {
     });
   },
 
+  // Menu initialized from an object should contain correct items.
   testMenuInitObject: function (runner) {
     this._run(function (context, menuNs, Menu) {
       var items = ["a", { label: "b" }, function () "c"];
@@ -131,6 +161,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.add() should cause menu to contain correct items.
   testMenuAdd: function (runner) {
     this._run(function (context, menuNs, Menu, self) {
       function add(item, expected) {
@@ -144,6 +175,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.remove() should cause menu to contain correct items.
   testMenuRemove: function (runner) {
     this._run(function (context, menuNs, Menu, self) {
       function remove(target, expected) {
@@ -158,6 +190,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.replace() should cause menu to contain correct items.
   testMenuReplace: function (runner) {
     this._run(function (context, menuNs, Menu, self) {
       function replace(target, newItems, expected) {
@@ -170,6 +203,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.insertBefore() should cause menu to contain correct items.
   testMenuInsertBefore: function (runner) {
     this._run(function (context, menuNs, Menu, self) {
       function insertBefore(newItems, target, expected) {
@@ -185,6 +219,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.clear() should cause menu to contain correct items.
   testMenuClear: function (runner) {
     this._run(function (context, menuNs, Menu) {
       var menu = new Menu(["a", { label: "b" }, "c", "d"]);
@@ -193,6 +228,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.reset() should cause menu to contain correct items.
   testMenuReset: function (runner) {
     this._run(function (context, menuNs, Menu) {
       var menu = new Menu(["a", { label: "b" }, "c", "d"]);
@@ -201,6 +237,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.set() should cause menu to contain correct items.
   testMenuSet: function (runner) {
     this._run(function (context, menuNs, Menu) {
       var menu = new Menu(["a", { label: "b" }, "c", "d"]);
@@ -210,6 +247,7 @@ var MenuTests = {
     });
   },
 
+  // Menu.item() should return correct items.
   testMenuItem: function (runner) {
     this._run(function (context, menuNs, Menu) {
       function item(target, expectedLabel) {
@@ -242,6 +280,8 @@ var MenuTests = {
    });
   },
 
+  // Menu initialized with a falsey value should contain correct items,
+  // including a separator.
   testMenuSeparator: function (runner) {
     this._run(function (context, menuNs, Menu) {
       function test(separator) {
@@ -254,7 +294,10 @@ var MenuTests = {
     });
   },
 
+  // Menu.show(), Menu.hide(), Menu.beforeShow(), and Menu.beforeHide() should
+  // work correctly.
   testMenuShowHide: function (runner) {
+    runner.setTimeout(5000, "testMenuShowHide popup should not time out");
     this._run(function (context, menuNs, Menu, self) {
       var win = this._browserWindow();
       var doc = win.document;
@@ -286,11 +329,12 @@ var MenuTests = {
         }
       });
       m.show(doc.getElementById("stop-button"));
-      runner.setTimeout(5000, "Showing, hiding popup should not time out");
     });
   },
 
+  // Command function of a Menuitem should be triggered and work correctly.
   testMenuCommand: function (runner) {
+    runner.setTimeout(5000, "testMenuCommand popup should not time out");
     this._run(function (context, menuNs, Menu, self) {
       var win = this._browserWindow();
       var doc = win.document;
@@ -315,11 +359,13 @@ var MenuTests = {
         childNodes[0].click();
       }, true);
       m.show(doc.getElementById("stop-button"));
-      runner.setTimeout(5000, "Showing, clicking popup should not time out");
     });
   },
 
+  // Command function of a Menuitem with a submenu should be triggered and work
+  // correctly.
   testMenuCommandBubble: function (runner) {
+    runner.setTimeout(5000, "testMenuCommandBubble should not time out");
     this._run(function (context, menuNs, Menu, self) {
       var win = this._browserWindow();
       var doc = win.document;
@@ -353,7 +399,65 @@ var MenuTests = {
         subpopupItem.click();
       }, true);
       m.show(doc.getElementById("stop-button"));
-      runner.setTimeout(5000, "Showing, clicking popup should not time out");
+    });
+  },
+
+  // Modifications to menus from beforeShow() should be correctly applied.
+  testBeforeShow: function (runner) {
+    runner.setTimeout(5000, "testBeforeShow should not time out");
+    this._run(function (context, menuNs, Menu, self) {
+      var label = "testBeforeShow";
+      var m = new Menu({
+        beforeShow: function (menu) {
+          menu.add({
+            label: label,
+            command: function () {
+              menu.hide();
+              runner.success();
+            }
+          });
+        }
+      });
+      var win = this._browserWindow();
+      var doc = win.document;
+      win.addEventListener("popupshown", function popupshown(event) {
+        win.removeEventListener("popupshown", popupshown, true);
+        var popup = event.target;
+        var childNodes = self._childNodes(popup);
+        runner.assertEqual(childNodes.length, 1,
+                           "Popup should have expected number of children");
+        var item = childNodes[0];
+        runner.assertEqual(item.getAttribute("label"), label,
+                           "Popup should contain expected item");
+        item.click();
+      }, true);
+      m.show(doc.getElementById("stop-button"));
+    });
+  },
+
+  // Modifications to context menus from beforeShow() should be correctly
+  // applied.
+  testContextMenuBeforeShow: function (runner) {
+    runner.setTimeout(5000, "testContextMenuBeforeShow should not time out");
+    this._run(function (context, menuNs, Menu, self) {
+      menuNs.context.page.beforeShow = function (m) {
+        var label = "testContextMenuBeforeShow";
+        m.add(label);
+        var popup = self._contentContextMenupopup();
+        self._assertPopupContains(runner, popup, label, 1);
+
+        // Be sure to hide the popup.  Popups can't be hidden inside a
+        // popupshowing event, apparently, so use a timeout.
+        self._browserWindow().content.setTimeout(function () {
+          m.hide();
+          var bo = popup.boxObject.QueryInterface(Ci.nsIPopupBoxObject);
+          runner.assertEqual(bo.popupState, "closed",
+                             "m.hide() should have worked, context menu " +
+                             "should now be closed");
+          runner.success();
+        }, 0);
+      };
+      self._showContentContextMenu();
     });
   }
 };
