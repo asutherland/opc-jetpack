@@ -108,7 +108,7 @@ jetpack.slideBar.append({
       var tabWidget = makeTabWidget(tab);
       tabWidgets.push(tabWidget);
       tabs.push(tab);
-      tabWidget.hide().appendTo($("#tabList", slide.contentDocument.body)).
+      tabWidget.appendTo($("#tabList", slide.contentDocument.body)).
         fadeIn(500);
       $(slide.contentDocument.body).scrollTop(tabWidget.offset().top);
     }
