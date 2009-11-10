@@ -31,7 +31,7 @@ jetpack.tabs.onFocus( updateGraph );
 
 jetpack.statusBar.append({
   url: "statusbar.html",
-  width: 175,
+  width: 170,
   onReady: function(widget){
     data = $("#data", widget);
     legend = $("#legend", widget);
