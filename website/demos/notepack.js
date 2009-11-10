@@ -49,7 +49,7 @@ storage.notes = storage.notes && storage.notes.length > 0 ?
 
 // Makes a new note with the current time and given text body.
 function newNote(body) {
-  return { body: body, time: new Date().toLocaleString() };
+  return { body: body, time: new Date() };
 }
 
 // Add our content to the slidebar.
@@ -84,7 +84,7 @@ jetpack.slideBar.append({
     function showNote(note, button) {
       shownNote = note;
       shownNoteButton = button;
-      $("#noteTime", slide.contentDocument).text(note.time);
+      $("#noteTime", slide.contentDocument).text(new Date(note.time).toLocaleString();
       $("#noteBody", slide.contentDocument)[0].value = note.body;
       $("#noteBody", slide.contentDocument)[0].focus();
     }
