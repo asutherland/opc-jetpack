@@ -94,7 +94,7 @@ var theHTML = "<html><head><style>body{text-align: center} #trim{ color: #666; f
 
 jetpack.statusBar.append({
   html: theHTML,
-  width: 50,
+  width: 38,
   onReady: function(doc) {
     var trim = new Trim(doc);
   }
