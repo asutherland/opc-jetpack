@@ -11,7 +11,7 @@ var callback = function(document){
     document.title = "This site is blacklisted. Get some work done!";
     $(document).find("body").css({border:"3px solid #000000"});
     $(document).find("body").children().hide();
-    $(document).find("body").prepend($('<h1>Sorry this site is blacklisted until 17:00. sadface.</h1>'));
+    $(document).find("body").prepend($('<h1>Sorry this site is blacklisted until 17:00. sadface.</h1>', document));
   }
 
 };
