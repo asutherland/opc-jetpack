@@ -16,7 +16,6 @@
 		<span id="data"></span>
 		<script>
 		  function updateSparkline(){
-			//console.log( $("#data").text() );
 			$("#sparkline canvas").remove();
 		    var data = $("#data").text().split(",");
 		    $("#sparkline").sparkline( data, {
