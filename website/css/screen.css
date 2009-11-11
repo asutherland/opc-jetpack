@@ -10,7 +10,7 @@ body {
 	font-family: 'DroidSans';
 	background: #dbdbdb url('../images/back.jpg') repeat-x top center;
 	padding: 0px; 
-	color:#787878;
+	color:#444;
 	font-size:12px;
 	line-height: 18px;
 	margin: 0 auto;
@@ -27,7 +27,7 @@ body {
     h3 a:link, a:hover, a:active, a:focus, a:visited{color: #fff;}
 	h3 a:hover {color: #fff;}
 	
-	p, ul {font-size: 12px;}
+	p, ul {font-size: 16px; line-height: 22px;}
 	
 	a:link, a:hover, a:active, a:focus, a:visited {color: #9f423b; text-decoration: none;}
 	a:hover {color: #9f423b; text-decoration: none;}
@@ -193,7 +193,8 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 	-webkit-border-radius: 0.25em;
 	border: 1px solid rgba(132, 52, 46, 0.6);
 	-moz-box-shadow: inset rgba(0, 0, 0, 0.2) 0 -2px 4px, inset rgba(0, 0, 0, 0.2) 0 1px 2px;
-	background-color: rgba(159, 66, 59, 0.1);
+	/*background-color: rgba(159, 66, 59, 0.3);*/
+	background-color: rgba(255, 255, 255, 0.8);
 
 }
 
@@ -289,24 +290,21 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 }
 
 .video {
-    
-    padding: 20px;
-    font-family: 'DroidSans';
-    margin-top: 20px;
-    -moz-border-radius: 0.25em;
+  padding: 20px;
+  font-family: 'DroidSans';
+  margin-top: 20px;
+  -moz-border-radius: 0.25em;
 	-webkit-border-radius: 0.25em;
-	background-color: #000;
-	border-top: 8px solid #b2c4d3;
-	border-left: 8px solid #b2c4d3;
-	border-right: 8px solid #b2c4d3;
-	border-bottom: 8px solid #b2c4d3;
+	background-color: #FFF;
 	text-align: center;
+	-moz-box-shadow: 2px 2px 6px rgba(0,0,0,.3);
+	
 }
 
 .leftSidebar {
 	width: 400px;
 	padding-right: 20px;
-	font-size:10px;
+	font-size:16px;
 	vertical-align: top;
 }
 
@@ -385,6 +383,7 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 .menuOn a {color: #345b7d; text-decoration: none;}
 .menuOn a:hover {color: #345b7d; text-decoration: none; border-bottom: 1px dotted #345b7d;}
 
+#menu img{ padding-left: 3px;}
 
 /* ------- BUTTON ------- */
 

@@ -6,7 +6,9 @@
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 	<title>Mozilla Labs Jetpack | Exploring new ways to extend and personalize the Web</title>
 	<link rel="stylesheet" type="text/css" media="all" href="css/screen.css" />
-
+  <link rel="icon" type="image/png" href="images/jetpack.png">	
+  <script src = "http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"> </script>
+    
 </head>
 <body>
 
@@ -19,11 +21,10 @@
 			
 			<div id="menu">
 			
-				<span class="menuOn"><a href="index.html">Home</a></span>
-				<span class="menuItem"><a href="principles.html">Guiding Principles</a></span>
-				<span class="menuItem"><a href="demos.html">Jetpack Demos</a></span>
-				<span class="menuItem"><a href="getInvolved.html">Get Involved</a></span>
-			
+				<span class="menuOn"><a href="index.html#">Home</a></span>
+				<span class="menuItem"><a href="principles.html#">Guiding Principles</a></span>
+				<span class="menuItem"><a href="demos.html#">Jetpack Demos</a></span>
+				<span class="menuItem"><a href="https://developer.mozilla.org/en/Jetpack/">API & Documentation</a><img src="images/external.png"></span>			
 			</div>
 			
 			<div class="newsBg">
@@ -40,18 +41,24 @@
 					<tr>
 						<td class="leftSidebar">
 							
-							<p><a name="intro">Jetpack</a> is a newly formed experiment in using open Web technologies to enhance the browser, with the goal of allowing anyone who can build a Web site to participate in making the Web a better place to work, communicate and play.</p>
-					
-						<p>In short, Jetpack is an API for allowing you to write Firefox add-ons using the web technologies you already know.</p>
-						
-							<p>As with all Labs experiments, Jetpack is an open source project and everyone is welcome to participate in its design, development and testing.</p>
-		
-							<br><br>
+							<h2>What is Jetpack?</h2>
+							
+							<p><a name="intro">Jetpack</a> is a <a href="http://labs.mozilla.com">Mozilla Labs</a> project that enables anyone who knows HTML, CSS, and JavaScript to create powerful Firefox add-ons. Our goal is to allow anyone who can build a Web site to participate in making the Web a better place to work, communicate and play.</p>
 
-							<a href="http://labs.mozilla.com/2009/05/introducing-jetpack/">Read the full introduction &raquo;</a>&nbsp;
-		
-							<p><strong>Important Note:</strong> <em>This project includes pre-release software that it is still being actively designed and developed, and is being made available for developers and testers only.</em></p>
-		
+							<a href="http://labs.mozilla.com/2009/05/introducing-jetpack/">Read the full introduction &raquo;</a>&nbsp;<br/><br/>
+
+              <h2>Contribute</h2>
+						
+							<p>As with all Labs experiments, Jetpack is an open source project and everyone is welcome to participate in its design, development, and testing.</p>
+							
+              <ul>
+                <li><a href="file:///Users/aza/Dropbox/Mozilla/jetpack-new-computer/jetpack/website/tutorial.html">Write</a> a Jetpack</li>                
+              <li><a href="https://bugzilla.mozilla.org/enter_bug.cgi?product=Mozilla%20Labs&#038;component=Jetpack">Report</a> a bug</li>
+              <li><a href="http://groups.google.com/group/mozilla-labs-jetpack">Discuss</a> Jetpack</li>              
+              <li><a href="http://hg.mozilla.org/labs/jetpack/">Grab</a> the source code</li>
+              <li><a href="https://wiki.mozilla.org/Labs/Jetpack/JEPs">Propose</a> a new API</li>
+              </ul>
+									
 							
 						</td>
 				
@@ -64,8 +71,8 @@
 			
 							<div class="mainLink links">
 							<a href="tutorial.html">Jetpack Tutorial &raquo;</a><span class="sep">|</span>
-							<a href="api.html">API Reference &raquo;</a><span class="sep">|</span>
-							<a href="http://groups.google.com/group/mozilla-labs-jetpack/topics">Participate &raquo;</a></div>
+							<a href="https://developer.mozilla.org/en/Jetpack/">API Reference &raquo;</a><span class="sep">|</span>
+							<a href="http://groups.google.com/group/mozilla-labs-jetpack/topics">Discuss &raquo;</a></div>
 							
 							</div>
 						
@@ -88,9 +95,9 @@
 							<td>
 						
 								<div class="demo">
-								<span class="title">UnAd - Content Filter Demo</span>
-								<p>Demonstrates in ~80 lines of code how to build a Jetpack feature that can remove unwanted scripts, images, and iframes with a pretty UI for turning the feature on and off. It uses a blocklist created for AdBlock Plus.	
-								<p><a href="demos/unad-install.html">Install now &raquo;</a><span class="sep">|</span><a href="demos/unad.js">View Source &raquo;</a>
+								<span class="title">Jetpack Image Editor</span>
+								<p>Demonstrates in 14 lines of code how to build a Jetpack that let's you edit any image on the web with a single right-click. Shows the use of the <code>jetpack.menu</code> API.</p>
+								<p><a href="http://azarask.in/jetpack/editor/">Install now &raquo;</a><span class="sep">|</span><a href="http://azarask.in/jetpack/editor/pixlr.js">View Source &raquo;</a>
 								</div>
 						
 							</td>
@@ -102,7 +109,7 @@
 			
 			<div class="arrow"><img src="images/greyArrow.png"></div>&nbsp;
 			
-			<div class="downloadBg"><a href="install.html"><img class="buttonFloat buttonImg" src="images/download.png" border="0"><h1 class="buttonFloat">Get Started!</h1><h3 class="buttonFloat">&nbsp;Install the Jetpack Prototype &amp; API</h3></a><div class="reqs">Firefox Add-on for Windows, Mac or Linux</div></div>
+			<div class="downloadBg"><a href="install.html"><img class="buttonFloat buttonImg" src="images/download.png" border="0"><h1 class="buttonFloat">Download It Now!</h1><h3 class="buttonFloat">&nbsp;Get the Jetpack SDK</h3></a><div class="reqs">Firefox Add-on for Windows, Mac or Linux</div></div>
 			
 			
 					
@@ -112,7 +119,7 @@
 		<div class="footer"><a href="http://labs.mozilla.com/"><img class="moz" src="images/moz.png" border="0"></a>Copyright &copy;  2005–2009 Mozilla. All rights reserved. </div>
 		
 		
-
+<script src="js/jetpack.js"></script>
 </body>
 </html>
 
