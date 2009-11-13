@@ -1,2 +1,2 @@
 pref("extensions.jetpack.trustedDomains",
-     "jetpack.mozillalabs.com");
+     "jetpack.mozillalabs.com,jetpackgallery.mozillalabs.com");
