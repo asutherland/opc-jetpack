@@ -35,6 +35,7 @@
     <em:iconURL>chrome://jetpack/content/gfx/jetpack_32x32.png</em:iconURL>
     <em:homepageURL>http://jetpack.mozillalabs.com/</em:homepageURL>
     <em:optionsURL>chrome://jetpack/content/preferences.xul</em:optionsURL>
-    <em:updateURL>https://ubiquity.mozilla.com/jetpack-xpi/%ITEM_VERSION%/update.rdf</em:updateURL>
+
+<!-- Remove this when you upload Jetpack to AMO -->    <em:updateURL>https://ubiquity.mozilla.com/jetpack-xpi/%ITEM_VERSION%/update.rdf</em:updateURL>
   </Description>
 </RDF>
