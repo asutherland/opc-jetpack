@@ -392,9 +392,14 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 .menuItem a {color: #9f423b; text-decoration: none;}
 .menuItem a:hover {color: #9f423b; text-decoration: none; border-bottom: 1px dotted #9f423b;}
 
-
 .menuOn a {color: #345b7d; text-decoration: none;}
 .menuOn a:hover {color: #345b7d; text-decoration: none; border-bottom: 1px dotted #345b7d;}
+
+#menu .external{
+  background: url(../images/external.png) no-repeat;
+  background-position: 100% 45%;
+  padding-right: 13px;
+}
 
 #menu img{ padding-left: 3px;}
 
