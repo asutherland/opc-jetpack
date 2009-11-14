@@ -338,6 +338,22 @@ src: url('../fonts/DroidSans-Bold.ttf') format('truetype');
 }
 
 
+.action {
+  margin-top: 20px;
+  background: url("../images/jetpack-action.png") no-repeat;
+  width: 427px;
+  height: 73px;
+  color: white;
+  font-size: 16pt;
+  text-indent: 65px;
+  line-height: 73px;
+  text-shadow: 1px 1px 1px #333;
+}
+
+.action:hover{
+  opacity: .9;
+}
+
 
 /* ------- MENU ------- */
 
