@@ -17,10 +17,6 @@ if( !stash.history ) stash.history = [jetpack.tabs.length]
 
 jetpack.statusBar.append({
   url: "statusbar.html",
-<<<<<<< local
-  width: 170,
-=======
->>>>>>> other
   onReady: function(widget){
     data = $("#data", widget);
     legend = $("#legend", widget);

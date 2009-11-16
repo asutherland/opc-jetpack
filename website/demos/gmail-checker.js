@@ -71,10 +71,5 @@ jetpack.statusBar.append({
 		});
 		gmail.update(doc);
 		setInterval( function() { gmail.update(doc) }, 60*1000 );
-<<<<<<< local
-	},
-	width: 16
-=======
 	}
->>>>>>> other
 });
