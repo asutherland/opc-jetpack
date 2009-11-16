@@ -251,7 +251,7 @@ function GmailNotifier(doc){
 GmailNotifier.prototype = {
   goToInbox: function(){
     jetpack.tabs.open("http://mail.google.com");
-    jetpack.tabs[ Jetpack.tabs.length-1 ].focus();
+    jetpack.tabs[ jetpack.tabs.length-1 ].focus();
   },
   
   update: function(doc){
