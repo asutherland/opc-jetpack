@@ -84,7 +84,7 @@ jetpack.slideBar.append({
     function showNote(note, button) {
       shownNote = note;
       shownNoteButton = button;
-      $("#noteTime", slide.contentDocument).text(new Date(note.time).toLocaleString();
+      $("#noteTime", slide.contentDocument).text(new Date(note.time).toLocaleString());
       $("#noteBody", slide.contentDocument)[0].value = note.body;
       $("#noteBody", slide.contentDocument)[0].focus();
     }
