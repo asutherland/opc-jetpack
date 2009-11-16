@@ -60,16 +60,21 @@ jetpack.statusBar.append({
 		$("#count", doc).css({
 			position: "absolute",
 			fontFamily: "Tahoma, Arial, sans-serif",
-			left: 0, top: 8,
-			width: 20,
+			left: 0, top: 0,
 			display: "block",
 			textAlign: "center",
 			fontSize: "10px",
 			cursor: "pointer",
-			backgroundColor: "rgba(255,255,255,.5)"
+			"text-shadow": "0 0 1px white",
+			fontWeight: "bold",
+			fontSize: "5pt"
 		});
 		gmail.update(doc);
 		setInterval( function() { gmail.update(doc) }, 60*1000 );
+<<<<<<< local
 	},
 	width: 16
+=======
+	}
+>>>>>>> other
 });

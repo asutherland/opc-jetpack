@@ -5,7 +5,8 @@
 <head>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 	<title>Mozilla Labs Jetpack</title>
-	<link rel="stylesheet" type="text/css" media="all" href="css/screen.css" />
+  	<link rel="stylesheet" type="text/css" media="all" href="css/screen.css"/>
+    <link rel="icon" type="image/png" href="images/jetpack.png">	
 	
 	<link type="text/css" rel="stylesheet" href="css/SyntaxHighlighter.css"></link>
 	<script language="javascript" src="js/shCore.js"></script>
@@ -273,7 +274,7 @@ setInterval( getTweet, 1000*60 );
 GmailNotifier.prototype = {
   goToInbox: function(){
     jetpack.tabs.open("http://mail.google.com");
-    jetpack.tabs[ Jetpack.tabs.length-1 ].focus();
+    jetpack.tabs[ jetpack.tabs.length-1 ].focus();
   },
 
   update: function(doc){

@@ -16,7 +16,11 @@ FBL.ns(
       var JetpackTabWatcher = {
         shouldCreateContext: function(browser, uri) {
           if (uri == JETPACK_URL) {
-            Firebug.URLSelector.watchBrowser(browser);
+            if (Firebug.Activation){
+              Firebug.Activation.watchBrowser(browser);
+            }else{
+              Firebug.URLSelector.watchBrowser(browser);
+            }
             return true;
           }
         },
