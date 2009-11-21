@@ -4,7 +4,7 @@
      xmlns:em="http://www.mozilla.org/2004/em-rdf#">
   <Description about="urn:mozilla:install-manifest">
     <em:id>jetpack@labs.mozilla.com</em:id>
-    <em:version>0.6.2</em:version>
+    <em:version>0.6.3</em:version>
     <em:type>2</em:type>
 
     <!-- Target Application this extension can install into, 
@@ -36,6 +36,6 @@
     <em:homepageURL>http://jetpack.mozillalabs.com/</em:homepageURL>
     <em:optionsURL>chrome://jetpack/content/preferences.xul</em:optionsURL>
 
-<!-- Remove this when you upload Jetpack to AMO -->    <em:updateURL>https://ubiquity.mozilla.com/jetpack-xpi/%ITEM_VERSION%/update.rdf</em:updateURL>
+<!-- Remove this when you upload Jetpack to AMO -->    <!--<em:updateURL>https://ubiquity.mozilla.com/jetpack-xpi/%ITEM_VERSION%/update.rdf</em:updateURL>-->
   </Description>
 </RDF>
