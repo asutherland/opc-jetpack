@@ -1,6 +1,7 @@
 (function(){
 
 var messages = [
+  'Take the <a href="http://design-challenge.mozillalabs.com/jetpack-for-learning/">Jetpack for Learning Design Challenge</a> to advanced online learning.',
   'Enter the <a href="http://mozillalabs.com/jetpack/2009/11/13/jetpack-50-line-code-challenge/">Jetpack 50-line Challenge</a>. Win a netbook.',
   '<a href="http://mozillalabs.com/blog/2009/11/announcing-jetpack-0-6-jetpack-gallery/">Jetpack 0.6</a> adds two major APIs.</li>',
   'Jetpack 0.6.2 just released. Brings the built-in Bespin editor to Windows and Linux.',
