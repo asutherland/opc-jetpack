@@ -27,6 +27,15 @@ var manifest = {
 
 jetpack.future.import("storage.settings");
 
+// Make sure we can get settings' default values.
 test.assertEqual(jetpack.storage.settings.facebook.username, "jdoe");
 test.assertEqual(jetpack.storage.settings.music, true);
 test.assertEqual(jetpack.storage.settings.volume, 5);
+
+// Make sure we can change a setting with a default value programmatically.
+jetpack.storage.settings.volume = 6;
+test.assertEqual(jetpack.storage.settings.volume, 6);
+
+// Make sure we can change a setting without a default value programmatically.
+jetpack.storage.settings.twitter.username = "johnd";
+test.assertEqual(jetpack.storage.settings.twitter.username, "johnd");
