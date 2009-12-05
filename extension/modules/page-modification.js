@@ -128,7 +128,12 @@ PageMods.prototype = {
     this.jetpack.tabs.onReady(function() {
       for (var i=0; i < scope.patterns.length; i++){
         if(scope.patterns[i].pattern.doMatch(this.contentDocument.location)){
-          scope.patterns[i].callback(this.contentDocument);
+          try {
+            scope.patterns[i].callback(this.contentDocument);
+          }
+          catch (err) {
+            Components.utils.reportError(err);
+          }
         }
         else {
           // match failure, noop
