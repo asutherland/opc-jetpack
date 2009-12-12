@@ -68,7 +68,12 @@ if (Application.name == "Firefox") {
         tabbrowser.selectedTab = tab;
     },
     getBrowserFromContentWindow: function(aMainWindow, aWindow) {
-      return aMainWindow.getBrowserFromContentWindow(aWindow);
+      var browsers = aMainWindow.gBrowser.browsers;
+      for (var i = 0; i < browsers.length; i++) {
+        if (browsers[i].contentWindow == aWindow)
+          return browsers[i];
+      }
+      return null;
     }
   };
 } else if (Application.name == "Thunderbird") {
