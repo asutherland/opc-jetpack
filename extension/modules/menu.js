@@ -424,7 +424,7 @@ function Menu(aOpts, aFeatureContext, aTransforms, aStack) {
       ContextMenuDomain.removeNode(aNode);
     });
     unloader.onFeatureContext(mFeatureContext);
-    unloader.onDocUnload(aNode.ownerDocument);
+    unloader.onDocUnload(aNode.ownerDocument || aNode);
   }
 
   // XUL nodes have a "context" attribute, so attach the Menu to it.
@@ -461,14 +461,14 @@ function Menu(aOpts, aFeatureContext, aTransforms, aStack) {
         showPopup(aNode, event.screenY);
     }
     aNode.addEventListener("click", popupOnHtml_onClick, true);
- 
+
     // Remove the click event listener when the feature context or the node's
     // document is unloaded.
     let unloader = new Unloader(function popupOnHtml_unload() {
       aNode.removeEventListener("click", popupOnHtml_onClick, true);
     });
     unloader.onFeatureContext(mFeatureContext);
-    unloader.onDocUnload(aNode.ownerDocument);
+    unloader.onDocUnload(aNode.ownerDocument || aNode);
   }
 
   // XUL nodes have a "popup" attribute, so attach the Menu to it.
@@ -1368,7 +1368,8 @@ function boxMenuitems(aObj) {
 
 // Returns the browser XUL doc that contains the given node.
 function browserXulDocFromNode(aNode) {
-  return browserXulDocFromContentWindow(aNode.ownerDocument.defaultView);
+  let doc = aNode.ownerDocument || aNode;
+  return browserXulDocFromContentWindow(doc.defaultView);
 }
 
 // Returns the browser XUL doc that contains the given content window.
