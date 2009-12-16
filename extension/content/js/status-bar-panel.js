@@ -214,11 +214,12 @@ StatusBar.prototype = {
                                                     false);
           }
           else {
-            // Set the initial width of the iframe based on the width specified
-            // by the feature.  The specified width we get here is an integer
-            // number of pixels, so we have to convert it to a CSS value before
-            // setting style.width to it.
+            // Set the initial width of the iframe and the document based on
+            // the width specified by the feature.  The specified width we get
+            // here is an integer number of pixels, so we have to convert it
+            // to a CSS value before setting style.width to it.
             iframe.style.width = width + "px";
+            iframe.contentDocument.documentElement.style.width = width + "px";
 
             // Listen for DOM mutation events on the document's style attribute
             // and update the iframe's width when its document's width changes.
@@ -235,7 +236,7 @@ StatusBar.prototype = {
                 // update the iframe's width if it's the property that changed.
                 // TODO: parse the value of the document's width property
                 // and only update the iframe's width if the document's width
-                // is an specific width.
+                // is a specific width.
                 // XXX if it's a relative width (auto, inherit), should we
                 // switch to auto-width mode?
                 iframe.style.width =
