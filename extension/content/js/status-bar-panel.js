@@ -79,6 +79,10 @@ StatusBar.prototype = {
     var statusBar = document.getElementById("status-bar");
     var statusBarPanel = document.createElement("statusbarpanel");
 
+    // This, combined with setting the iframe height to "100%" below,
+    // causes the iframe to stretch to the height of the status bar.
+    statusBarPanel.setAttribute("align", "stretch");
+
     // Set up the panel's context menu.  It must be the first child!  If the
     // feature hasn't loaded the jetpack.menu namespace, cancel the menu.
     var contextMenu = document.createElement("menupopup");
@@ -108,9 +112,13 @@ StatusBar.prototype = {
       embedIframe();
 
     function embedIframe() {
-      iframe.setAttribute("height", statusBar.boxObject.height);
       iframe.setAttribute("src", url);
       iframe.style.overflow = "hidden";
+
+      // This, combined with setting the statusBarPanel alignment to "stretch"
+      // above, causes the iframe to stretch to the height of the status bar.
+      iframe.style.height = "100%";
+
       iframe.addEventListener(
         "DOMContentLoaded",
         function onPanelLoad(evt) {
