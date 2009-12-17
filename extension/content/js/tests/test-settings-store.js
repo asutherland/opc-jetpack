@@ -45,16 +45,16 @@ var SettingsStoreTests = {
       addUnloader: function() {},
       manifest: {
         settings: [
-          { name: "group", type: "group",
-            settings: [ { name: "foo", type: "number" } ]
-          },
-          { name: "boolean", type: "boolean" },
-          { name: "text", type: "text" },
-          { name: "number", type: "number" },
-          { name: "password", type: "password" },
-          { name: "range", type: "range" },
-          { name: "member", type: "member" },
-          { name: "hasDefault", type: "text", default: "foo" }
+          { name: "group", label: "Group", type: "group",
+            settings: [ { name: "foo", label: "Foo", type: "number" } ] },
+          { name: "boolean", label: "Boolean", type: "boolean" },
+          { name: "text", label: "Text", type: "text" },
+          { name: "number", label: "Number", type: "number" },
+          { name: "password", label: "Password", type: "password" },
+          { name: "range", label: "Range", type: "range" },
+          { name: "member", label: "Member", type: "member", set: [] },
+          { name: "hasDefault", label: "Has Default", type: "text",
+            default: "foo" }
         ]
       }
     };

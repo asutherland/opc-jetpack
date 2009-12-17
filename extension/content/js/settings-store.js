@@ -48,11 +48,136 @@ function SettingsStore(context) {
   if ("manifest" in context &&
       context.manifest &&
       typeof(context.manifest) == "object" &&
-      "settings" in context.manifest)
+      "settings" in context.manifest) {
     manifest = context.manifest.settings;
+    Validator.validate(manifest);
+  }
 
   return new SettingsWrapper(ss, ss, context.id, manifest, []);
 }
+
+/**
+ * An object that checks the structure of the settings manifest to make sure
+ * it is valid.  Call its validate method, passing it a manifest, to validate
+ * the manifest.  If the manifest is invalid, the call will throw an exception
+ * containing a list of the problems.
+ **/
+let Validator = {
+  validate: function(manifest) {
+    let path = [];
+    let errors = [];
+
+    if (this._isArray(manifest)) {
+      for each (let setting in manifest)
+        this.validateSetting(path, setting, errors);
+    }
+    else {
+      errors.push(new SettingError(path, "manifest.settings is not an array"));
+    }
+
+    if (errors.length > 0)
+      throw new Error("problem with settings manifest:\n" + errors.join("\n"));
+  },
+
+  validateSetting: function(path, setting, errors) {
+    path = path.concat(setting.name);
+
+    if (!("name" in setting))
+      errors.push(new SettingError(path, "missing name"));
+
+    if (!("label" in setting))
+      errors.push(new SettingError(path, "missing label"));
+
+    if (!("type" in setting)) {
+      errors.push(new SettingError(path, "missing type"));
+    }
+    else {
+      switch (setting.type) {
+        case "group":
+          this.validateGroup(path, setting, errors);
+          break;
+        case "boolean":
+          this.validateBoolean(path, setting, errors);
+          break;
+        case "text":
+          this.validateText(path, setting, errors);
+          break;
+        case "number":
+          this.validateNumber(path, setting, errors);
+          break;
+        case "password":
+          this.validatePassword(path, setting, errors);
+          break;
+        case "range":
+          this.validateRange(path, setting, errors);
+          break;
+        case "member":
+          this.validateMember(path, setting, errors);
+          break;
+        default:
+          errors.push(
+            new SettingError(path, "unknown type '" + setting.type + "'")
+          );
+      }
+    }
+
+    // default is an optional property.
+  },
+
+  validateGroup: function(path, setting, errors) {
+    if (!("settings" in setting))
+      errors.push(new SettingError(path, "missing settings"));
+
+    if (this._isArray(setting.settings)) {
+      for each (let subsetting in setting.settings)
+        this.validateSetting(path, subsetting, errors);
+    }
+    else {
+      errors.push(new SettingError(path, "group settings is not an array"));
+    }
+  },
+
+  validateBoolean: function(path, setting, errors) {
+    // trueLabel is an optional property.
+    // falseLabel is an optional property.
+  },
+
+  validateText: function(path, setting, errors) {},
+  validateNumber: function(path, setting, errors) {},
+  validatePassword: function(path, setting, errors) {},
+
+  validateRange: function(path, setting, errors) {
+    // min is an optional property.
+    // max is an optional property.
+    // step is an optional property.
+
+    if (setting.min >= setting.max)
+      errors.push(new SettingError(path, "min must be less than max"));
+
+    if (setting.step > setting.max - setting.min) {
+      errors.push(
+        new SettingError(path, "step must be less than or equal to max - min")
+      );
+    }
+  },
+
+  validateMember: function(path, setting, errors) {
+    if (!("set" in setting))
+      errors.push(new SettingError(path, "missing set"));
+
+    if (!this._isArray(setting.set))
+      errors.push(new SettingError(path, "set is not an array"));
+  },
+
+  _isArray: function(val) {
+    return ((typeof val == "object") && (val.constructor.name == Array.name));
+  }
+};
+
+function SettingError(path, message) {
+  Error.call(this, (path.length > 0 ? path.join(".") + ": " : "") + message);
+}
+SettingError.prototype.__proto__ = Error.prototype;
 
 /**
  * A flexible membrane wrapper that stores passwords using the login manager
