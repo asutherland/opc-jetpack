@@ -93,10 +93,7 @@ var JetpackRuntime = {
         return null;
       });
     this.srcUrl = feed.srcUri.spec;
-    // Generate an ID for the feature based on its source URL.
-    // TODO: this.srcUrl or this.url?  We hash this as the feature's ID,
-    // so it should be unique to this feature. -adw
-    this.id = JetpackRuntime.featureUrlToId(this.srcUrl);
+    this.id = feed.id;
     this.urlFactory = new UrlFactory(feed.uri.spec);
     this.addUnloader = function addUnloader(unloader) {
       unloaders.push(unloader);
@@ -370,33 +367,8 @@ var JetpackRuntime = {
     feeds = null;
   },
 
-  FeedPlugin: {},
+  FeedPlugin: {}
 
-  // Hashes the given feature URL.  Hey, an ID.
-  featureUrlToId: function(aFeatureUrl) {
-    return this._hashString(aFeatureUrl);
-  },
-
-  // Returns a hex string hash of the given string.  We use this to generate
-  // IDs for features based on their URLs.
-  _hashString: function(aStr) {
-    var stream = Cc["@mozilla.org/io/string-input-stream;1"].
-                 createInstance(Ci.nsIStringInputStream);
-    stream.setData(aStr, aStr.length);
-    var cryp = Cc["@mozilla.org/security/hash;1"].
-               createInstance(Ci.nsICryptoHash);
-    cryp.init(cryp.SHA1);
-    cryp.updateFromStream(stream, aStr.length);
-    return this._bytesToHexString(cryp.finish(false));
-  },
-
-  // Maps the given string of bytes to its hexidecimal representation.  Returns a
-  // string.
-  _bytesToHexString: function(aByteStr) {
-    return Array.map(
-      aByteStr, function (c) ("0" + c.charCodeAt(0).toString(16)).slice(-2)
-    ).join("");
-  }
 };
 
 JetpackRuntime.addUnloader(JetpackRuntime.unloadAllJetpacks);

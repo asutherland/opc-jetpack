@@ -50,6 +50,8 @@ var Ci = Components.interfaces;
 
 var UrlUtils = {};
 Components.utils.import("resource://jetpack/modules/url_utils.js", UrlUtils);
+var HashUtils = {};
+Components.utils.import("resource://jetpack/modules/hash_utils.js", HashUtils);
 Components.utils.import("resource://jetpack/ubiquity-modules/eventhub.js");
 Components.utils.import("resource://jetpack/modules/xulapp.js");
 
@@ -492,6 +494,14 @@ FMgrProto.__makeFeed = function FMgr___makeFeed(uri) {
         if (annSvc.pageHasAnnotation(uri, ann))
           annSvc.removePageAnnotation(uri, ann);
       });
+
+    // Delete the data in the simple store.
+    let s = {};
+    Components.utils.import("resource://jetpack/modules/simple-storage.js", s);
+    let id = feedInfo.id;
+    new s.simpleStorage.SimpleStorage(id).deleteBackingFile();
+    new s.simpleStorage.SimpleStorage(id, "settings").deleteBackingFile();
+
     hub.notifyListeners("purge", uri);
   };
 
@@ -530,6 +540,15 @@ FMgrProto.__makeFeed = function FMgr___makeFeed(uri) {
 
   var val = annSvc.getPageAnnotation(uri, FEED_SRC_URL_ANNO);
   feedInfo.srcUri = UrlUtils.url(val, "data:text/plain,");
+
+  // === {{{Feed.id}}} ===
+  //
+  // A {{{String}}} that uniquely identifies the feature being provided by
+  // the feed.  It is a hexadecimal representation of the SHA1 hash of the URL
+  // for the feed's source code.
+  // Read-only.
+
+  feedInfo.id = HashUtils.hashString(feedInfo.srcUri.spec);
 
   // === {{{Feed.canAutoUpdate}}} ===
   //
