@@ -20,6 +20,12 @@ span.buttony:active {
     background-color: #666666;
 }
 
+span.buttony[disabled] {
+    cursor: auto;
+    color: #444444;
+    background-color: #eeeeee;
+}
+
 a {
     color: black;
 }

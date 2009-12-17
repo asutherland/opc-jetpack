@@ -1,14 +1,19 @@
 var App = {
   _jetpackLinks: {},
 
-  _addButton: function _addButton(div, name, label) {
+  _addButton: function _addButton(div, name, label, disabled) {
     var self = this;
     if (!label)
       label = name;
     var button = $('<span class="buttony"></span>');
     $(button).attr('name', name);
     button.text(label);
-    button.mouseup(function() { self._onButton($(this)); });
+    button.mouseup(function() {
+      if (typeof $(this).attr('disabled') == 'undefined')
+        self._onButton($(this));
+    });
+    if (disabled)
+      $(button).attr('disabled', 'disabled');
     $(div).append($('<span>&nbsp;</span>'));
     $(div).append(button);
   },
@@ -232,7 +237,10 @@ var App = {
     }
 
     this._addButton(div, "view-source", "view source");
-    this._addButton(div, "open-settings", "settings");
+
+    var context = JetpackRuntime.getJetpack(url);
+    this._addButton(div, "open-settings", "settings",
+                    !context.manifest.settings);
 
     div.hide();
     if (parent.children('.jetpack').length == 0)
