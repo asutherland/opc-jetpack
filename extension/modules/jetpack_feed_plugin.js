@@ -108,7 +108,7 @@ function FeedPlugin(feedManager) {
                                        canAutoUpdate: true,
                                        sourceCode: data,
                                        type: TYPE});
-        XULApp.openTab(confirmUrl);
+        // The first-run page will now be triggered by the new subscription.
       }
 
       if (UrlUtils.isRemote(commandsUrl)) {

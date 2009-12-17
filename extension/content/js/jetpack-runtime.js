@@ -50,7 +50,7 @@ var JetpackRuntime = {
   // all existing Contexts.
   contexts: [],
 
-  Context: function JetpackContext(feed, environment) {
+  Context: function JetpackContext(feed, environment, isFirstRun) {
     MemoryTracking.track(this);
 
     if (!environment)
@@ -169,6 +169,9 @@ var JetpackRuntime = {
           unloaders.shift().unload();
         unloaders = null;
       });
+
+    if (isFirstRun)
+      JetpackRuntime.showFirstRunPage(this);
   },
 
   getJetpack: function getJetpack(url) {
@@ -179,11 +182,11 @@ var JetpackRuntime = {
     return null;
   },
 
-  addJetpack: function addJetpack(url) {
+  addJetpack: function addJetpack(url, isFirstRun) {
     var self = this;
     var feed = JetpackRuntime.FeedPlugin.FeedManager.getFeedForUrl(url);
     if (feed && feed.isSubscribed && feed.type == "jetpack")
-      self.contexts.push(new self.Context(feed));
+      self.contexts.push(new self.Context(feed, null, isFirstRun));
     else
       throw new Error("Not a subscribed jetpack feed: " + uri);
   },
@@ -367,8 +370,44 @@ var JetpackRuntime = {
     feeds = null;
   },
 
-  FeedPlugin: {}
+  FeedPlugin: {},
 
+  // Opens the first-run page in a new foreground tab.  The page will tailor
+  // itself to the given context when it loads.
+  showFirstRunPage: function (context) {
+
+    // Get the context's first-run page from its manifest.
+    var page = context.manifest.firstRunPage;
+
+    // Determine the URI of the feature's embedded iframe.  Treat page as HTML
+    // unless it's both a string and a valid URI.  The first-run page sets a
+    // default URI if uri is the empty string.
+    var uri = "";
+    var isStr = typeof(page) === "string";
+    if (isStr) {
+      try {
+        uri = Cc["@mozilla.org/network/io-service;1"].
+                getService(Ci.nsIIOService).
+                newURI(page.trim(), null, null).
+                spec;
+      }
+      catch (err) {
+        // Malformed URI.
+      }
+    }
+    if ((isStr && !uri) || typeof(page) === "xml") {
+      uri = "data:text/html,<html><head>" +
+            '<link rel="stylesheet" type="text/css" media="all" ' +
+            'href="chrome://jetpack/content/css/first-run.css" />' +
+            "</head><body>" +
+            page +
+            "</body></html>";
+    }
+
+    XULApp.openTab("chrome://jetpack/content/first-run.xhtml" +
+                   "?title=" + encodeURIComponent(context.feed.title) +
+                   "&contentUri=" + encodeURIComponent(uri));
+  }
 };
 
 JetpackRuntime.addUnloader(JetpackRuntime.unloadAllJetpacks);
@@ -407,7 +446,7 @@ $(window).ready(
       case "subscribe":
         var feed = FeedManager.getFeedForUrl(uri);
         if (feed && feed.type == "jetpack")
-          JetpackRuntime.addJetpack(uri.spec);
+          JetpackRuntime.addJetpack(uri.spec, !feed.isBuiltIn);
         break;
       }
     }

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <head>
+    <base href="chrome://jetpack/content/" />
+    <link rel="stylesheet" type="text/css" media="all"
+          href="css/first-run.css" />
+    <link rel="icon" href="gfx/jetpack_32x32.png" />
+    <title></title>
+  </head>
+  <body style="display: none;">
+    <table id="content">
+      <tr>
+        <td id="banner">
+          <div id="bannerHeading">
+            <span id="featureName"></span> has been installed.
+          </div>
+          <div id="bannerSubheading" style="display: none;">
+            Visit <a href="about:jetpack" target="_blank">about:jetpack</a>
+            to uninstall it at any time.
+            <a href="javascript:closeWindow();">Close this page?</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td id="featureContentContainer">
+          <xul:iframe id="featureContent" type="content" src="data:text/html,&#x3c;p style=&#x22;text-align: center;&#x22;&#x3e;&#x3c;img src=&#x22;chrome://jetpack/content/gfx/loading.png&#x22;&#x3e;&#x3c;/p&#x3e;" />
+        </td>
+      </tr>
+    </table>
+  </body>
+  <script src="js/ext/jquery.js"></script>
+  <script type="application/javascript;version=1.8" src="js/first-run.js">
+  </script>
+</html>

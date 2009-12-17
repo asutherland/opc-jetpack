@@ -55,27 +55,6 @@ function getUrlParams() {
 
 var gCommandFeedInfo = getUrlParams();
 
-function showConfirmation() {
-  var smallIconUrl = "chrome://global/skin/icons/information-16.png";
-  var largeIconUrl = "chrome://global/skin/icons/information-64.png";
-
-  $("html").removeClass("blacklist");
-
-  $("#favicon").remove();
-  $("head").append('<link rel="icon" type="image/png" id="favicon" ' +
-                   'href="' + smallIconUrl + '"/>');
-
-  $("#errorPageContainer").css("background-image",
-                               "url('" + largeIconUrl + "')");
-
-  $("title").text("Jetpack Feature Installation Successful");
-  $("#errorTitle").html("<h1>Installation Successful</h1>");
-
-  $("#errorShortDesc").html($("#confirmationShortDesc").html());
-  $("#errorLongDesc").html($("#confirmationLongDesc").html());
-  $("#buttons").remove();
-}
-
 function onSubmit() {
   var code = $("#sourceCode").text();
   var canAutoUpdate = $("#autoupdate").attr("checked") ? true : false;
@@ -87,7 +66,10 @@ function onSubmit() {
                                canAutoUpdate: canAutoUpdate,
                                title: gCommandFeedInfo.title,
                                type: "jetpack"});
-    showConfirmation();
+
+    // The first-run page will now be triggered by the new subscription.
+    window.close();
+    return;
   }
 }
 
@@ -121,14 +103,13 @@ function fetchSource(uri, onSuccess) {
 
 function onReady() {
   var feedMgr = JetpackSetup.createServices().feedManager;
-  if (feedMgr.isSubscribedFeed(gCommandFeedInfo.url)) {
-    if (gCommandFeedInfo.updateCode)
-      // TODO: Also check to see if updateCode is different from
-      // the current code.
-      displayCode(gCommandFeedInfo.updateCode);
-    else
-      showConfirmation();
-  } else
+  if (feedMgr.isSubscribedFeed(gCommandFeedInfo.url))
+    // This page is opened only when the installation warning needs to be shown.
+    // If the feed is subscribed, gCommandFeedInfo.updateCode is defined.
+    // TODO: Also check to see if updateCode is different from
+    // the current code.
+    displayCode(gCommandFeedInfo.updateCode);
+  else
     fetchSource(gCommandFeedInfo.sourceUrl, displayCode);
 
   $("#targetLink").text(gCommandFeedInfo.url);
