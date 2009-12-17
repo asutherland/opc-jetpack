@@ -240,7 +240,7 @@ var App = {
 
     var context = JetpackRuntime.getJetpack(url);
     this._addButton(div, "open-settings", "settings",
-                    !context.manifest.settings);
+                    !(context && context.manifest.settings));
 
     div.hide();
     if (parent.children('.jetpack').length == 0)
