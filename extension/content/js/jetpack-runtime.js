@@ -85,13 +85,13 @@ var JetpackRuntime = {
     this.__defineGetter__(
       "manifest",
       function() {
+        delete this.manifest;
         // TODO: Ultimately we should get the manifest via static
         // analysis of the code, or by executing the Jetpack in an
         // extremely limited sandbox.
-        if ("manifest" in this.unsafeSandbox)
-          return this.unsafeSandbox.manifest;
-        return null;
-      });
+        return this.manifest = this.unsafeSandbox.manifest || {};
+      }
+    );
     this.srcUrl = feed.srcUri.spec;
     this.id = feed.id;
     this.urlFactory = new UrlFactory(feed.uri.spec);

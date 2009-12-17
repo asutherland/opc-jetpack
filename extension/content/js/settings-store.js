@@ -44,16 +44,12 @@ function SettingsStore(context) {
   s.simpleStorage.register(ss);
   context.addUnloader({ unload: function () s.simpleStorage.unregister(ss) });
 
-  let manifest;
-  if ("manifest" in context &&
-      context.manifest &&
-      typeof(context.manifest) == "object" &&
-      "settings" in context.manifest) {
-    manifest = context.manifest.settings;
-    Validator.validate(manifest);
-  }
+  if (!("settings" in context.manifest))
+    throw("can't initialize settings: no settings specified in manifest");
 
-  return new SettingsWrapper(ss, ss, context.id, manifest, []);
+  Validator.validate(context.manifest.settings);
+
+  return new SettingsWrapper(ss, ss, context.id, context.manifest.settings, []);
 }
 
 /**
