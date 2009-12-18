@@ -119,6 +119,18 @@ var JetpackRuntime = {
       importer.call(obj, self);
     };
 
+    // Applies callback, a function, against unsafeSandbox.  args is either an
+    // array or undefined.  This provides an explicit mechanism for doing
+    // unsafe callbacks passed in from arbitrary feature code.
+    this.doUnsafeCallback = function doUnsafeCallback(callback, args) {
+      try {
+        callback.apply(this.unsafeSandbox, args);
+      }
+      catch (err) {
+        Components.utils.reportError(err);
+      }
+    };
+
     var names = [name for (name in importers)];
     names.sort();
 
@@ -170,8 +182,11 @@ var JetpackRuntime = {
         unloaders = null;
       });
 
-    if (isFirstRun)
+    if (isFirstRun) {
       JetpackRuntime.showFirstRunPage(this);
+      if (this.firstRunCallback)
+        this.firstRunCallback();
+    }
   },
 
   getJetpack: function getJetpack(url) {
@@ -405,7 +420,7 @@ var JetpackRuntime = {
     }
 
     XULApp.openTab("chrome://jetpack/content/first-run.xhtml" +
-                   "?title=" + encodeURIComponent(context.feed.title) +
+                   "?title=" + encodeURIComponent(context.feed.title || "") +
                    "&contentUri=" + encodeURIComponent(uri));
   }
 };

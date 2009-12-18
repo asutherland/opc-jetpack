@@ -209,6 +209,9 @@ window.addLazyLoaders(
    ],
    "js/jquery-sandbox.js": [
      "JQuerySandbox"
+   ],
+   "js/me.js": [
+     "Me"
    ]
   });
 
@@ -400,8 +403,12 @@ JetpackEnv.setFutures(
      var s = {};
      Cu.import("resource://jetpack/modules/menu.js", s);
      return s.exports.menu(context);
+   },
+
+   "jetpack.me": function (context) {
+     return Me.exports(context);
    }
-  });
+});
 
 // == Deprecations ==
 //
