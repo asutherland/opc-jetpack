@@ -3,9 +3,14 @@ var JetpackRuntimeTests = {
     function fakeUri(url) {
       return {spec: url};
     }
+    var HashUtils = {};
+    Components.utils.import("resource://jetpack/modules/hash_utils.js",
+                            HashUtils);
+    var srcUrl = "http://www.foo.com/blah.js";
     return {
       uri: fakeUri("http://www.foo.com/blah.html"),
-      srcUri: fakeUri("http://www.foo.com/blah.js"),
+      srcUri: fakeUri(srcUrl),
+      id: HashUtils.hashString(srcUrl),
       getCode: function() {
         return contents;
       }

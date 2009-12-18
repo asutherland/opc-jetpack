@@ -37,6 +37,10 @@
    var ios = Cc["@mozilla.org/network/io-service;1"]
              .getService(Ci.nsIIOService);
 
+   var HashUtils = {};
+   Components.utils.import("resource://jetpack/modules/hash_utils.js",
+                           HashUtils);
+
    files.forEach(
      function(filename) {
        var file = dir.clone();
@@ -47,6 +51,7 @@
          var feed = {
            uri: uri,
            srcUri: uri,
+           id: HashUtils.hashString(uri.spec),
            getCode: function() {
              return FileIO.read(file, "utf-8");
            }
