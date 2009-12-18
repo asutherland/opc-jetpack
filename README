@@ -20,59 +20,6 @@ your Thunderbird profile called 'work', run:
 
   python manage.py install --app=thunderbird --profile=work
 
-Building Binary Components
---------------------------
-
-Pre-compiled binary components needed by Jetpack are kept in the
-repository, so it's likely that you don't need to compile anything to
-start using it. However, if a version of the components don't exist
-for your OS and/or Gecko platform, you'll need to build them yourself.
-
-First, build a version of Firefox or Thunderbird:
-
-  https://developer.mozilla.org/En/Developer_Guide/Build_Instructions
-
-Assuming your source directory is in "../mozilla" and your objdir is
-in "../mozobj" relative to Jetpack's manage.py, run:
-
-  python manage.py xpcom --srcdir=../mozilla --objdir=../mozobj
-
-This will compile the components, run their tests, and install
-them in the proper location.
-
-Building Binary Components with The XULRunner SDK
--------------------------------------------------
-
-If there's a XULRunner SDK that corresponds to the version of Firefox
-or Thunderbird you want to build for, you can get away with not having
-to build the entire Mozilla platform.  You can get the SDK here:
-
-  https://developer.mozilla.org/en/Gecko_SDK
-
-Once you've set this up, you'll still need to download the source
-code for the Mozilla platform, since our build script uses the
-Mozilla Build System, which doesn't come with the XULRunner SDK.
-
-You'll need to use a mozconfig that looks something like this:
-
-  ac_add_options --enable-application=dummy
-  ac_add_options --with-libxul-sdk=/path/to/xulrunner-sdk
-  ac_add_options --with-system-nspr
-
-To create the 'dummy' application, just make a directory called
-'dummy' in the root of your Mozilla source code directory, and
-then put an empty file called 'build.mk' in it.
-
-Build Mozilla with your mozconfig file to create the dummy
-application, which also creates the Mozilla Build System
-infrastructure our build scripts need.  Then, go to Jetpack's root
-directory and run 'manage.py xpcom' as per the instructions above,
-passing in the objdir of the dummy application and the directory to
-your Mozilla source.
-
-Aside from compiling the binary components, manage.py will also use
-the XULRunner SDK's binaries to run the test suite.
-
 Using Jetpack
 -------------
 
