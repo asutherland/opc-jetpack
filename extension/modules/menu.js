@@ -144,7 +144,27 @@ function makeMenubarMenus(aFeatureContext, aDocs) {
       }
 
       // Add each browser doc's popup to the menu.
-      aDocs.forEach(makeMenubarMenus_setupPopup);
+      aDocs.forEach(function (doc) {
+        // Getting the menu popups of the menu bar -- or any element in the
+        // toolbox -- before the document has loaded interferes with other
+        // add-ons for unknown reasons.  See bug 530169.  So the strategy is, if
+        // the doc has loaded, setup the popup right away; otherwise, wait until
+        // load.  But in Fx 3.5, there's no good way to tell whether a doc has
+        // loaded.  Getting the doc's width or height seems to throw if it
+        // hasn't loaded yet, so do that.  A crappy hack.
+        try {
+          doc.width; doc.height;
+          makeMenubarMenus_setupPopup(doc);
+        }
+        catch (err) {
+          doc.defaultView.addEventListener("load", function docLoad(event) {
+            if (event.target == doc) {
+              doc.defaultView.removeEventListener("load", docLoad, true);
+              makeMenubarMenus_setupPopup(doc);
+            }
+          }, true);
+        }
+      });
 
       // When new browser windows open, add their docs' popups, too.
       let bw = new BrowserWatcher(aFeatureContext);
