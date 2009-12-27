@@ -331,9 +331,18 @@ var App = {
 
   buildApiReference: function buildApiReference(data, output) {
     var fakeUri = {spec: "http://jetpack.mozillalabs.com/"};
+
+    // Settings complains about a broken manifest when we import it below unless
+    // we specify settings in the manifest.
+    var fakeSrc = "var manifest = { settings: [] }";
+
+    var HashUtils = {};
+    Components.utils.import("resource://jetpack/modules/hash_utils.js",
+                            HashUtils);
     var fakeFeed = {uri: fakeUri,
                     srcUri: fakeUri,
-                    getCode: function() { return ""; }};
+                    id: HashUtils.hashString(fakeUri.spec),
+                    getCode: function() fakeSrc };
 
     var context = new JetpackRuntime.Context(fakeFeed);
 
