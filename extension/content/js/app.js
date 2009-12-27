@@ -351,6 +351,7 @@ var App = {
         context.sandbox.jetpack.future.import(name);
       });
 
+    this.buildDocsForObject(output, data, {}, data.find("[name=intro]"));
     this.buildDocsForObject(output, data, context.sandbox,
                             data.find("[name=globals]"));
     this.buildDocsForObject(output, data,
