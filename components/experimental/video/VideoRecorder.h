@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef Videoecorder_h_
+#ifndef VideoRecorder_h_
 #define VideoRecorder_h_
 
 #include "IVideoRecorder.h"
