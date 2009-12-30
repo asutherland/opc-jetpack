@@ -1162,8 +1162,8 @@ PopupWrapper.prototype = {
 
   _itemByRegExp: function PopupWrapper_proto__itemByRegExp(aRegExp) {
     for (let item in popupIterator(this.popup))
-      if (aTarget.test(item.getAttribute("label") || "") ||
-          aTarget.test(item.id || ""))
+      if (aRegExp.test(item.getAttribute("label") || "") ||
+          aRegExp.test(item.id || ""))
         return item;
     return null;
   },
