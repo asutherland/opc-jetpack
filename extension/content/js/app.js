@@ -251,6 +251,18 @@ var App = {
     this._jetpackLinks[url] = div;
   },
 
+  updateLinkForJetpack: function updateLinkForJetpack(url) {
+    // Enable/disable the settings button based on whether or not the feature
+    // has settings.
+    var context = JetpackRuntime.getJetpack(url);
+    var div = this._jetpackLinks[url];
+    var settingsButton = $(div).find('[name="open-settings"]');
+    if (context && context.manifest.settings)
+      settingsButton.removeAttr("disabled");
+    else
+      settingsButton.attr("disabled", "disabled");
+  },
+
   // Open the view-source window. This code was taken from Firebug's source code.
   viewSource: function viewSource(url, lineNumber) {
     window.openDialog("chrome://global/content/viewSource.xul",
@@ -664,6 +676,9 @@ $(window).ready(
         if (feed && feed.type == "jetpack")
           App.addLinkForJetpack(feed, eventName);
         break;
+      case "feed-change":
+        App.updateLinkForJetpack(uri.spec);
+        break;
       }
     }
 
@@ -671,6 +686,7 @@ $(window).ready(
     watcher.add("subscribe", onFeedEvent);
     watcher.add("unsubscribe", onFeedEvent);
     watcher.add("purge", onFeedEvent);
+    watcher.add("feed-change", onFeedEvent);
 
     // Finish up.
 
