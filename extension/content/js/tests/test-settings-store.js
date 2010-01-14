@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 var SettingsStoreTests = {
-  _store: (function() {
+  _makeStore: function() {
     Cc["@mozilla.org/moz/jssubscript-loader;1"]
     .getService(Ci.mozIJSSubScriptLoader)
     .loadSubScript("resource://jetpack/content/js/settings-store.js");
@@ -54,13 +54,19 @@ var SettingsStoreTests = {
           { name: "range", label: "Range", type: "range" },
           { name: "member", label: "Member", type: "member", set: [] },
           { name: "hasDefault", label: "Has Default", type: "text",
-            default: "foo" }
+            default: "foo" },
+          { name: "changesSynced", label: "Changes Synced", type: "boolean" }
         ]
       }
     };
 
     return new SettingsStore(fakeContext);
-  })(),
+  },
+
+  get _store() {
+    delete this._store;
+    return this._store = this._makeStore();
+  },
 
   testStore: function(runner) {
     // FIXME: figure out how to make this report SettingsStore.
@@ -146,6 +152,21 @@ var SettingsStoreTests = {
     runner.assertEqual(this._store.hasDefault, "bar");
 
     delete this._store.hasDefault;
+  },
+
+  testChangesSynced: function(runner) {
+    let store1 = this._store;
+    let store2 = this._makeStore();
+
+    store1.changesSynced = true;
+    runner.assertEqual(store1.changesSynced, store2.changesSynced);
+    store2.changesSynced = false;
+    runner.assertEqual(store1.changesSynced, store2.changesSynced);
   }
 
 };
+
+// Make sure SettingsStoreTests._store is defined before running tests
+// so it doesn't cause the test runner to report errors about differences
+// in the number of references to SimpleStore objects.
+SettingsStoreTests._store;

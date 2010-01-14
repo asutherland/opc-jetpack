@@ -36,20 +36,36 @@
 
 let HOSTNAME = "chrome://jetpack";
 
+/**
+ * Gives us settingStores, which is an app-wide cache of setting stores,
+ * indexed by feature ID.  We use it to avoid instantiating more than one store
+ * instance per feature, so we don't have to worry about synchronizing changes
+ * between store instances.
+ */
+Cu.import("resource://jetpack/modules/settings.js");
+
 function SettingsStore(context) {
-  let s = {};
-  Cu.import("resource://jetpack/modules/simple-storage.js", s);
+  if (!(context.id in settingStores)) {
+    let s = {};
+    Cu.import("resource://jetpack/modules/simple-storage.js", s);
+  
+    let ss = new s.simpleStorage.SimpleStorage(context.id, "settings");
+    s.simpleStorage.register(ss);
+    context.addUnloader({ unload: function () {
+      s.simpleStorage.unregister(ss);
+      delete settingStores[context.id];
+    }});
+  
+    if (!("settings" in context.manifest))
+      throw("can't initialize settings: no settings specified in manifest");
+  
+    Validator.validate(context.manifest.settings);
+  
+    settingStores[context.id] =
+      new SettingsWrapper(ss, ss, context.id, context.manifest.settings, []);
+  }
 
-  let ss = new s.simpleStorage.SimpleStorage(context.id, "settings");
-  s.simpleStorage.register(ss);
-  context.addUnloader({ unload: function () s.simpleStorage.unregister(ss) });
-
-  if (!("settings" in context.manifest))
-    throw("can't initialize settings: no settings specified in manifest");
-
-  Validator.validate(context.manifest.settings);
-
-  return new SettingsWrapper(ss, ss, context.id, context.manifest.settings, []);
+  return settingStores[context.id];
 }
 
 /**
